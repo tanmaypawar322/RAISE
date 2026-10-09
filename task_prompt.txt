@@ -1,0 +1,202 @@
+<USER_REQUEST>
+# TASK: Build the "Pilot-Ready Core" of RAISE (everything needed before a real ward test)
+
+You are working in the RAISE monorepo (`backend/` = Node.js + Express 4 + TypeScript + Mongoose + Zod; `frontend/` = Next.js 16 App Router + React 19 + Tailwind v4 + TypeScript; `marketing/` = separate site, do not touch). Database: MongoDB (2dsphere indexes already used for locations).
+
+RAISE is an independent, non-profit civic grievance platform for India. Citizens report civic issues (photo, GPS, voice note), others "raise" (support) them, and responsible offices respond publicly with an SLA clock. Escalation drafts for CPGRAMS/RTI exist. The first real test will be in **one ward** of Pimpri-Chinchwad / Pune with real citizens and 2-3 real officials. Many users are first-time smartphone users on weak networks, in Marathi/Hindi/English.
+
+## ALREADY DONE: do NOT redo
+The authentication rebuild is implemented: phone-OTP citizen login (extended by the AUTH ADJUSTMENT below to also allow email + password sign-in), roles (`citizen|official|agency|admin`), `officeMemberships`, pending/approved official claims, MFA for admin/office admins, short-lived access tokens + rotating refresh tokens in httpOnly cookies, `AuditLog`, consent versioning, account deletion, anonymous posting. **Inspect it and reuse it.** If anything you need from it is missing or different from what this prompt assumes, tell me and adapt minimally. Billing/donations are NOT part of this task.
+
+---
+
+## AUTH ADJUSTMENT (do this FIRST, before Phase 1): phone optional; email + password sign-in for the initial build
+
+**Why:** getting SMS OTPs while testing is hard, and for the initial build I do **not** want to send verification codes (no SMS, no email codes). The one exception is the password-reset link by email (point 6), which in development is printed to the console instead of being sent. Citizens will sign up and sign in with email and password. This **overrides** two earlier rules: "citizens must use phone OTP" and "do not use email as a login method for citizens". Officials, agencies and admins keep their stricter rules (point 9). Phone OTP stays in the code and keeps working; it is just no longer required.
+
+1. **Two ways in.** A citizen account is created either with email + password, or with phone OTP (already built). Phone is optional. At least one identifier is required. Existing phone-only users are unaffected.
+2. **Sign-up (email):** email, password, display name (pseudonym allowed). The account is active immediately with `emailVerified: false`. **No verification email or code is sent.** Then the usual profile-completion and consent steps. **Sign-in:** email + password.
+3. **Password rules:** hash with bcrypt (cost 12 or higher) or argon2; minimum 10 characters, maximum 128; reject very common passwords using a bundled list kept in a data file; no forced symbol/uppercase rules; strict Zod validation; never log or return passwords or hashes.
+4. **Login hardening:** one generic error ("Invalid email or password"); rate limits per email and per IP; temporary lockout after repeated failures (for example 5 failures -> 15 minutes, increasing); Turnstile in production; run a dummy hash comparison for unknown emails so response time does not reveal whether an account exists. Sessions work exactly as already built (short-lived access token and rotating refresh token in httpOnly cookies).
+5. **Storage:** normalise the email (trim, lowercase; for gmail.com/googlemail.com also strip dots and `+tags`); store `emailHash` (HMAC with a server secret, unique), `emailEnc` (AES-256-GCM), `passwordHash`, `emailVerified` (false), `emailVerifiedAt` (null). **MongoDB detail:** because either identifier can be absent, the unique indexes on `phoneHash` and `emailHash` must be **partial/sparse**, otherwise a second account without a phone fails. Add a migration and a test for two email-only accounts. Emails are never shown publicly, to other users or to officials; never logged in full; included in account deletion and data export; update the consent/privacy text to mention email.
+6. **Forgot password (required).** Standard reset-by-link flow, built so it works without sending any real email during development:
+   - `POST /api/auth/password/forgot` `{ email }` (Turnstile in production). It **always** returns the same generic response ("If an account exists, a reset link has been sent") with similar response time, whether or not the account exists. Rate limit per email (for example 3 per hour) and per IP (for example 10 per hour). A token is created only for an existing account that has a password.
+   - **Token:** 32 random bytes from `crypto.randomBytes`, URL-safe; store **only a SHA-256 hash** in a `PasswordResetToken` collection `{ userId, tokenHash, expiresAt, usedAt, ip, userAgent, createdAt }` with a TTL index. Expiry from `PASSWORD_RESET_TTL_MINUTES` (default 30), single use, and a new request invalidates any earlier unused token for that user.
+   - **Email:** sent through the `EmailProvider` interface. The email contains a link `${PUBLIC_BASE_URL}/reset-password?token=...`, a line saying "If you didn't request this, ignore this email", never a password, and is available in en/mr/hi (default English, templates kept as data). Providers: `console` (default; prints the link to the server log **only when `NODE_ENV !== 'production'`**), plus an `smtp` adapter (and a skeleton for Resend/SES) configured by env vars. Also add a **dev-only mailbox page** `/dev/mailbox` that lists the last 20 emails in memory so testers do not need server logs; mount it only when `NODE_ENV !== 'production'` and `DEV_MAILBOX=true`, and make startup fail if it is enabled in production.
+   - If `NODE_ENV=production` and `EMAIL_PROVIDER=console`, the forgot-password page shows a neutral "Password reset is temporarily unavailable, please contact support" message, the server logs a warning, and the admin-assisted reset (below) remains the fallback.
+   - `POST /api/auth/password/reset` `{ token, newPassword }`: validate the token (hash match, not expired, not used), apply the same password rules as sign-up, set the new `passwordHash`, mark the token used, bump `tokenVersion` and revoke **all** of the user's sessions and refresh tokens, set `emailVerified = true` (the person proved they control the address), write an `AuditLog` entry, send a "Your password was changed" email (and an in-app notification), and require a fresh sign-in (no automatic login). Always reject reused, expired or unknown tokens with one generic message.
+   - **Scope:** the email reset is for **citizen** accounts. Admin accounts are excluded (CLI or admin-assisted reset only). Phone-only users have no password and keep using phone OTP; users with both can reset their email password this way.
+   - **Reset page hygiene:** set `Referrer-Policy: no-referrer` on `/reset-password`, remove the token from the address bar after loading (`history.replaceState`), and never log the token outside the dev console provider.
+   - **Also keep:** a signed-in "Change password" endpoint that needs the current password and invalidates the user's other sessions; and an **admin-assisted reset** as a fallback: an admin-console action "Set temporary password" (admin MFA required, audit-logged, forces a change at next login) plus the CLI `npm run reset-user-password -- --email <e>` for local use.
+7. **Ready for later (build the switches, not the codes):** env flags `AUTH_ALLOW_EMAIL_PASSWORD=true`, `AUTH_REQUIRE_EMAIL_VERIFICATION=false`, `AUTH_REQUIRE_PHONE_TO_RAISE=false`. Keep the DB fields above. Email **verification** (codes or magic links) is NOT built now; write a short README note on where it will plug into the existing `EmailProvider` and the reset flow. When `AUTH_REQUIRE_EMAIL_VERIFICATION` is later turned on, unverified email users must verify before raising, supporting or reporting; when `AUTH_REQUIRE_PHONE_TO_RAISE` is on, email-only users can browse but must add and verify a phone first.
+8. **Anti-abuse (unverified email accounts are easy to fake, and someone can sign up with another person's email):**
+   - Accounts younger than 24 hours can raise/support at most `NEW_ACCOUNT_DAILY_ACTION_LIMIT` (default 20) times per day.
+   - Block disposable-email domains using a configurable data file.
+   - Signup rate limits per IP and device, plus Turnstile in production.
+   - Store `verifiedMethods` (empty for an unverified email-only account). **Do not weight raises in public ranking by login method** (neutrality rule); instead add an admin anomaly report flagging clusters of email-only accounts created from the same IP/device/time window and unusual raise bursts.
+   - **Never send notifications or marketing to an unverified email address.** The only emails allowed to an unverified address are the transactional password-reset and password-changed emails from point 6, rate limited and sent only when requested through forgot-password.
+9. **Officials, agencies and admins:** production rules stay as already built (verified phone plus second factor for officials; email + password + TOTP for admins). Add the flag `DEV_SKIP_OFFICIAL_SECOND_FACTOR=true`, honoured **only when `NODE_ENV !== 'production'`**, so testers can exercise the official flow without OTPs; in production it is ignored and startup fails if it is set. `OTP_DEV_FIXED_CODE` keeps working in non-production only.
+10. **Public-pilot safeguard:** if `NODE_ENV=production` while email + password is enabled and `AUTH_REQUIRE_EMAIL_VERIFICATION=false`, log a loud startup warning and show an admin-console banner "Unverified email sign-ups are enabled". Add a line to the README pre-launch checklist: decide before the public pilot whether to require verification (email code) or a verified phone.
+11. **Frontend:** one sign-in/sign-up screen with "Email" and "Phone" options (show/hide password, clear errors, large inputs); a "Change password" section in the profile; the "Forgot password?" page and the reset-password page from point 6 (new password + confirm, show/hide, clear states for expired, used or invalid links); a profile option to add a phone number later (verified by OTP); all strings in en, mr and hi.
+12. **Notifications** for email-only accounts are in-app only until the email is verified (see Phase 4).
+13. **Tests:** sign-up and sign-in with email + password; duplicate email rejected; wrong-password lockout and rate limit; generic error and similar response time for unknown vs known emails; common-password rejection; change-password invalidates other sessions; admin temporary password forces a change; two email-only accounts coexist (partial index); disposable-domain block; new-account action limit; dev-only flags are ignored in production and make startup fail; no notification or marketing email is ever sent to unverified addresses; forgot-password returns the same response for known and unknown emails and is rate limited; reset tokens are stored hashed, single-use, expire, and a new request invalidates the old one; a successful reset revokes all sessions, sets `emailVerified`, sends a password-changed email and requires a fresh sign-in; admin accounts are excluded from email reset; the reset email never contains a password; the console provider and `/dev/mailbox` work only outside production and make startup fail when enabled in production; production with the console provider disables the feature gracefully; passwords, hashes and emails never appear in logs or in public/official API responses.
+
+---
+
+## NON-NEGOTIABLE RULES
+
+1. **Neutrality:** nothing in this task may favour any party, office, donor or paying account. Rankings and visibility are driven only by citizen support, recency and status.
+2. **Offices, not individuals:** issues target an office/department. Add a soft warning in the issue form if the text looks like it names a private person (simple heuristics only; do not block).
+3. **Privacy:** never expose phone numbers, email addresses, a user's home ward/location, or the author of an anonymous issue. Issue location (a public place) is public; user location is not. Strip EXIF/GPS metadata from publicly served media after extracting what the server needs.
+4. **No paywalls, no ads, no third-party trackers** anywhere in this work.
+5. **Low bandwidth first:** every new screen must work on a cheap phone on a slow network (target: usable on 3G, 360px width).
+6. **All user-facing strings in en, mr and hi** in `lib/translations.ts`; no mixed-language strings. Notification templates also need all three languages.
+7. **Real data is mine, not yours.** Do NOT invent real PCMC/Pune offices, officials, phone numbers or ward boundaries. Provide import tooling and templates, plus clearly fake placeholder data (`[SAMPLE]` prefix) that only loads in non-production via `npm run seed:dev`.
+8. Every status change, merge, moderation action, escalation and export is written to `AuditLog`.
+9. Never log secrets, OTPs, tokens, full phone numbers or email addresses.
+
+---
+
+## HOW TO WORK
+
+1. **Inspect first.** Read the models (`User`, `Issue`, `Office`, `OfficeReport`, `ModerationReport`, memberships, `AuditLog`), issue and office modules, `RaiseModal`, `IssueCard`, feed page, dashboard, office portal, admin console, `translations.ts`. Produce a short **findings report** (what exists, what you'll reuse/change, file paths, conflicts) and show it before the large build; then continue unless I object.
+2. Build in the phases below, in order. After each phase: `tsc` and `npm run build` pass in both apps, tests pass, and give a 5-line summary.
+3. Keep it simple and modular (`backend/src/modules/<feature>/`). Use interfaces for anything external (SMS/WhatsApp, moderation provider, queue) with a dev/mock implementation.
+4. Write tests for every rule listed in the acceptance criteria.
+5. Update `.env.example` and the README as you go.
+
+---
+
+## PHASE 1: Jurisdictions, office routing and escalation ladder (foundation)
+
+**Goal:** a citizen's issue reaches the right office automatically, and has a defined next level when ignored.
+
+1. **Jurisdiction model:** `Jurisdiction` {id, name, nameMr, nameHi, level (`ward|zone|corporation|district|state|centre`), parentId, boundary (GeoJSON Polygon/MultiPolygon, optional, 2dsphere indexed), code}. Seed structure only via import; no invented real data.
+2. **Office model additions:** link each `Office` to a `jurisdictionId`, a `department` key and an `escalatesToOfficeId` (next level up the ladder).
+3. **Category-to-department mapping:** `CategoryRouting` {category, jurisdictionLevel, department, defaultOfficeLookup}. Editable by admin; stored as data, not hard-coded.
+4. **Auto-suggestion:** `POST /api/issues/suggest-office` takes `{lat, lng, category}` and returns ranked suggested offices: find the ward polygon containing the point (`$geoIntersects`), then map category to department and find the office in that jurisdiction (fall back to the parent jurisdiction). If no polygon data exists, fall back to the user's `homeWard` and then to manual choice. The citizen can always override.
+5. **Escalation ladder:** when an issue passes its SLA with no acknowledgement (or is reopened N times), a scheduled job records an `Escalation` event {issueId, fromOfficeId, toOfficeId, reason, createdAt}, shows "Escalated to <office>" on the public timeline, notifies both offices (hook into Phase 4), and lets the next-level office respond. SLA values per category/office are data (`slaHours`), default 48h acknowledge / configurable resolve.
+6. **Import tooling:** `npm run import:jurisdictions -- file.geojson|csv` and `npm run import:offices -- file.csv` with validation, dry-run mode, and a clear error report. Provide sample CSV/GeoJSON templates in `backend/data/templates/` with obviously fake `[SAMPLE]` rows.
+7. **Admin UI:** manage jurisdictions, offices, category routing and SLA values (list, edit, import preview). Admin-only, audit-logged.
+8. Existing "tag office manually" behaviour keeps working as the override path.
+
+---
+
+## PHASE 2: Issue lifecycle: resolution proof, citizen confirmation, duplicates and merge
+
+### 2A. Resolution proof and citizen confirmation
+1. Statuses: `submitted -> published -> acknowledged -> in_progress -> resolved_pending_confirmation -> resolved | disputed (reopened)`; plus `rejected` (with required reason). Add `resolvedUnconfirmed` as a labelled final state (below). Migrate existing statuses safely.
+2. To mark an issue resolved, an official/agency member of the **owning office** must provide: a public note (required) and **at least one "after" photo** (or an explicit exception reason such as "no physical work required", shown publicly). Reject the request with 422 otherwise.
+3. Server records an after-photo's upload timestamp. If the photo has GPS metadata, compute distance to the issue location and flag (not block) when it exceeds a configurable radius (default 150 m); strip metadata before serving publicly.
+4. After "resolved_pending_confirmation", the reporter and supporters in the same ward (verified accounts, one vote each) can **Confirm** or **Dispute** within `CONFIRM_WINDOW_DAYS` (default 7). Dispute requires a reason and optional photo; it reopens the issue (`disputed`), restarts the SLA clock, increments `reopenCount`, and notifies the office.
+5. If the window passes with no dispute: the issue becomes `resolved` labelled "Resolved (unconfirmed by citizens)". If at least one confirmation arrives: "Resolved (confirmed by N citizens)". Show before/after photos side by side on the issue page.
+6. Official notes cannot be deleted; corrections create visible edit history (reuse existing audit pattern).
+7. Objects-level authorization: only members of the owning office (or its escalation office, or admin) can change status. Add IDOR tests.
+
+### 2B. Duplicate detection and merge
+1. In the Raise flow, after location + category are chosen, call `GET /api/issues/similar?lat&lng&category&text`: return open issues within a configurable radius (default 100 m, same category family, last 90 days) ranked by distance and text similarity (use a MongoDB text index and simple token-overlap scoring; no external AI service). Show up to 3 suggestions: "Already reported? Raise it instead".
+2. If the user still submits, store `possibleDuplicateOf` for moderator/office review.
+3. **Merge tool** for moderators, admins and the owning office admin: choose a canonical issue and merge others into it. Merging: combine raises de-duplicated by user (one per user), keep media, set merged issues to `merged` with `mergedIntoId` and a permanent redirect from the old URL, notify authors (Phase 4), and write an `AuditLog` entry. A merge can be undone by an admin within 7 days.
+4. Rate-limit similarity queries and make them fast with proper indexes.
+
+---
+
+## PHASE 3: Discovery: search, filters, map, public issue pages and share cards
+
+1. **Search & filters** on the public feed: free-text search (text index), category, status, ward/jurisdiction, date range, sort (`most_raised`, `newest`, `overdue`, `recently_updated`). **Cursor-based pagination**, indexed queries, response size limits. Keep the feed 2-column responsive grid and voice/photo badges.
+2. **Map view:** Leaflet + OpenStreetMap tiles (respect the tile usage policy; make the tile URL configurable via `MAP_TILE_URL` so a provider can be swapped), marker clustering, issue preview card on tap, "near me" using the browser Geolocation API only with explicit user permission and a manual ward-picker fallback. Load the map lazily so it doesn't slow the feed. Never show a user's own home location.
+3. **Public issue pages** at `/issues/[id]/[slug]`: server-rendered, showing title, description, photos/audio, location (map), category, office, status timeline, SLA clock, raise count, before/after proof, official notes, escalation events, and merge redirect handling. Only `published+` issues are public; hidden/removed ones return 404/410 with a neutral page. Handle anonymous issues without author details.
+4. **Share cards:** Open Graph and Twitter meta per issue, plus a generated OG image (`next/og`) with issue title, ward, status, raise count and RAISE branding, in the viewer's language where possible. Add a **WhatsApp share button** (`https://wa.me/?text=` with a short localized text + URL) and "Copy link".
+5. `sitemap.xml` and `robots.txt` for public issues; `noindex` for anything not published.
+6. Caching: use ISR or short-lived cache for public pages; invalidate on status change.
+
+---
+
+## PHASE 4: Notifications
+
+1. **Infrastructure:** a `Notification` collection (in-app) and a delivery layer with a channel interface: `InApp`, `Sms`, `WhatsApp`, `Email`, each with a dev/console implementation. SMS adapter reuses the OTP provider (MSG91 skeleton, DLT template ids via env); WhatsApp adapter is a stub with a clear TODO. Use a job queue: BullMQ if `REDIS_URL` is set, otherwise a minimal Mongo-backed queue behind the same interface. Jobs retry with backoff, and failures are logged without secrets.
+2. **Events -> recipients:**
+   - Citizens: issue published, acknowledged, status updated, resolved (ask to confirm/dispute), disputed result, escalated, merged, moderation outcome (removed/appeal result), a supported issue changed status.
+   - Offices (members of the owning office): new issue assigned, SLA at 75%, SLA breached, issue disputed/reopened, merge affecting them, escalation arrived. Optional daily digest for offices.
+3. **Preferences:** per-user channel preferences and language; per-event opt-out except essential ones; quiet hours (no SMS/WhatsApp 9pm-8am IST). SMS only for a small set of high-value events (acknowledged, resolved/confirm request, dispute outcome) to control cost; everything else in-app (and optionally email). **Users without a phone number** (email-only accounts) receive these in-app, and by email only once their email is verified (never send notifications to an unverified address); a missing phone or unverified email must never cause an error or a dropped in-app notification.
+4. **Cost and abuse controls:** daily SMS cap (`SMS_DAILY_CAP`), per-user rate limits, de-duplication of identical notifications, and a kill switch (`NOTIFICATIONS_ENABLED`).
+5. **Privacy:** SMS/WhatsApp text must contain no phone numbers, names or sensitive content; just a short message and a deep link to the issue page.
+6. **Templates** stored as data with en/mr/hi variants and variable placeholders; unit-test rendering for all three languages.
+7. **Frontend:** notification bell with unread count and list, mark-as-read, preferences page. Deep links open the correct issue or portal screen (and, if logged out, continue after sign-in).
+8. Endpoints: `GET /api/notifications`, `POST /api/notifications/:id/read`, `POST /api/notifications/read-all`, `GET/PATCH /api/notifications/preferences`.
+
+---
+
+## PHASE 5: Moderation upgrades and legal/trust pages
+
+### 5A. Moderation
+1. **Provider interface** `ModerationProvider` with `checkText`, `checkImage`, `checkAudio?` returning `{decision: allow|review|block, labels[], score}`; implement a `MockProvider` and a simple rule-based text screen (profanity/hate/violence/sexual keywords for en/mr/hi, configurable word lists in data files, not hard-coded). Leave documented adapter slots for an external moderation API.
+2. Issue pipeline: `submitted -> auto-screen -> (allow: published | review: held for moderator | block: rejected with reason)`. Auto-held items never silently disappear: the author is notified and can edit/resubmit or appeal.
+3. **Reports:** report reasons (violence/incitement, sexual content, hate, fake or misleading, personal data/doxxing, spam, other). Auto-hold an issue for review when it receives N distinct reports (configurable) from verified accounts; guard against abuse (reports by one user count once; repeated false reporters are flagged).
+4. **Labels:** `Unverified claim`, `Disputed`, `Verified by citizens` (from confirmations), shown on the issue page.
+5. **Appeals:** author can appeal a removal once; moderator decision is logged and notified.
+6. **Moderator role** (use existing role system): queue UI with filters, bulk actions, reasons required, audit logged. Admin can suspend users (invalidates sessions via `tokenVersion`).
+7. **Public takedown log** page `/transparency/moderation`: counts by reason and outcome per month, with no personal data.
+
+### 5B. Legal and trust pages (all en/mr/hi, linked in the footer and consent flow)
+- `/terms`, `/privacy`, `/community-guidelines`, `/how-it-works`, `/grievance-officer`, and `/report-content` (public removal/takedown request form creating a case in the moderation queue; rate-limited and CAPTCHA-protected).
+- Organisation details (legal name, address, grievance officer name/email/phone, response timelines) come from env/config (`ORG_*`, `GRIEVANCE_OFFICER_*`), never hard-coded.
+- Write sensible **DRAFT** legal text and mark each page's text with a visible internal constant `LEGAL_TEXT_STATUS = 'DRAFT_NOT_REVIEWED'` that logs a warning at production startup until I set it to `REVIEWED`. Add a code comment that a lawyer must review these (IT Rules intermediary obligations, DPDP Act).
+- Bumping the terms/privacy version prompts users to re-consent on their next login (reuse `consentVersion`).
+
+---
+
+## PHASE 6: Low-bandwidth and PWA
+
+1. Installable PWA: manifest, icons, theme color, service worker (use a maintained library such as Serwist or next-pwa-compatible approach), offline app shell, and a friendly offline screen.
+2. **Draft saving:** the Raise form saves progress in IndexedDB (text, category, location, media references) and restores it after a crash, refresh or lost connection.
+3. **Upload queue:** photos/audio selected offline or on a failed connection are queued and retried with backoff when the network returns; show clear per-item status ("waiting for network", "uploading", "sent").
+4. **Client-side compression:** resize and compress photos before upload (target <= ~400 KB, max 1600 px longest side) and record voice notes in a compact format (Opus/WebM where supported) with the existing 60-second limit. Show upload progress.
+5. Performance budget: lazy-load images and the map, use responsive image sizes, avoid large client bundles on the feed and Raise screens; run Lighthouse (mobile, throttled) and record results in the README (target: Performance >= 80, Accessibility >= 90).
+6. A simple "Data saver" toggle (text-first feed with images on demand).
+7. Accessibility pass on new and existing key flows: focus states, labels, 16px+ text, contrast, large tap targets, screen-reader labels for icon buttons.
+
+---
+
+## PHASE 7: Pilot readiness: metrics, tooling, reliability
+
+1. **Pilot metrics dashboard** in `/admin` (and CSV export): issues per week, share acknowledged, median time to acknowledge, median time to resolve, resolution rate, citizen-confirmed rate, dispute/reopen rate, escalations, repeat users within 30 days, offices claimed vs unclaimed, moderation volume and median review time. Show per ward/office. Compute from data (no third-party analytics).
+2. **Office scorecard (simple v1):** public per-office page section with response rate, median time to acknowledge/resolve and open/overdue counts, with a link to the methodology. Identical presentation for every office.
+3. **Pilot runbook** in the README: how to import the ward's jurisdictions/offices, how to onboard officials, how moderators work, daily checks, and a rollback plan.
+4. **Reliability:** `/health` and `/ready` endpoints; structured JSON logs with request ids; Sentry (or equivalent) wired through env DSN, disabled when unset; global rate limits; graceful shutdown; MongoDB indexes verified at startup; documented backup and restore steps (script or README, with a restore test note).
+5. Seed script for dev: `npm run seed:dev` creates a sample ward with `[SAMPLE]` offices, issues in all lifecycle states and test users (dev only, refuses to run in production).
+6. **Pre-launch checklist** section in the README covering: legal pages reviewed, entity details configured, auth hardening verified, moderation staffed, real ward data imported, SMS DLT templates approved, backups tested, error tracking live.
+
+---
+
+## ENVIRONMENT VARIABLES to add/document
+`MAP_TILE_URL`, `CONFIRM_WINDOW_DAYS`, `RESOLUTION_PHOTO_RADIUS_METERS`, `SIMILAR_RADIUS_METERS`, `DEFAULT_SLA_ACK_HOURS`, `DEFAULT_SLA_RESOLVE_HOURS`, `NOTIFICATIONS_ENABLED`, `SMS_DAILY_CAP`, `SMS_PROVIDER`, `WHATSAPP_PROVIDER`, `EMAIL_PROVIDER` + credentials, `REDIS_URL` (optional), `MODERATION_PROVIDER`, `AUTO_HOLD_REPORT_THRESHOLD`, `ORG_LEGAL_NAME`, `ORG_ADDRESS`, `GRIEVANCE_OFFICER_NAME`, `GRIEVANCE_OFFICER_EMAIL`, `GRIEVANCE_OFFICER_PHONE`, `LEGAL_TEXT_STATUS`, `SENTRY_DSN`, `PUBLIC_BASE_URL`, `AUTH_ALLOW_EMAIL_PASSWORD`, `AUTH_REQUIRE_EMAIL_VERIFICATION`, `AUTH_REQUIRE_PHONE_TO_RAISE`, `NEW_ACCOUNT_DAILY_ACTION_LIMIT`, `DEV_SKIP_OFFICIAL_SECOND_FACTOR` (dev only), `EMAIL_PROVIDER` (`console|smtp|resend|ses`, default `console`), `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `EMAIL_FROM` (or the chosen provider's credentials), `PASSWORD_RESET_TTL_MINUTES` (default 30), `DEV_MAILBOX` (dev only).
+
+---
+
+## ACCEPTANCE CRITERIA (write tests)
+
+1. Auto-suggestion returns the correct office for a point inside a ward polygon and falls back gracefully; manual override always works.
+2. An unacknowledged issue past its SLA escalates exactly once per level, appears on the public timeline, and notifies both offices.
+3. Marking resolved without a note and an after-photo (or an explicit exception reason) is rejected (422); only members of the owning/escalation office or admin can change status (IDOR tests).
+4. Dispute reopens the issue, restarts the SLA and increments `reopenCount`; with no dispute after the window, the issue shows "Resolved (unconfirmed)"; with confirmations, it shows the confirmed count; one vote per verified user.
+5. Duplicate suggestions appear for a nearby same-category issue; merge de-duplicates raises per user, redirects the old URL, is audit-logged, and can be undone within the allowed window.
+6. Search/filter/sort/pagination return correct, indexed results; map loads lazily; "near me" works only with permission and has a manual fallback.
+7. Public issue pages render server-side with correct OG tags and image; non-published issues return 404/410; anonymous issues expose no author data.
+8. Notifications: correct recipients per event; quiet hours respected; daily SMS cap enforced; duplicate suppression works; templates render in en/mr/hi; SMS/WhatsApp content contains no personal data; opting out of non-essential events works.
+9. Moderation: blocked content never publishes; held content notifies the author; N distinct reports auto-hold; repeated reports from one user count once; appeals work once; takedown log shows counts only.
+10. Legal pages exist in 3 languages, take organisation details from config, and production startup warns while `LEGAL_TEXT_STATUS` is `DRAFT_NOT_REVIEWED`.
+11. Offline: a draft survives refresh; queued uploads retry and complete after the network returns; images are compressed under the target size.
+12. **Neutrality test:** public ranking and visibility depend only on support, recency and status (no hidden weighting by account type, office or payment).
+13. Admin metrics match a hand-computed fixture dataset; CSV export works; scorecards are identical in format for all offices.
+14. No secrets, tokens, OTPs, full phone numbers or user home locations appear in logs or public API responses.
+15. Email + password sign-up and sign-in work end to end with no verification code sent; forgot-password and reset-password work end to end (the link is printed to the console or `/dev/mailbox` in development); phone is optional; two email-only accounts can coexist; lockout, rate limits, change-password and admin-assisted reset work; dev-only auth flags are ignored in production and cause startup failure if set; passwords, hashes and emails never appear in logs or public/official API responses; the production warning and admin banner appear while unverified email sign-ups are enabled.
+16. Email-only unverified users get in-app notifications only and no notification is ever sent to an unverified address; with `AUTH_REQUIRE_PHONE_TO_RAISE=true` they can browse but must verify a phone before raising, supporting or reporting.
+17. `tsc` and `npm run build` pass in `backend/` and `frontend/`; all tests pass; Lighthouse results recorded; README updated with the pilot runbook and pre-launch checklist.
+
+## DELIVERABLES
+The code, migrations (existing issue statuses, new fields), import scripts and templates, tests, `.env.example`, README updates, and a final summary listing: files changed, new endpoints and collections, anything incomplete, risks, and decisions for me to confirm (queue choice, moderation provider, SMS/WhatsApp provider, map tile provider, search approach).
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-10-09T13:02:51+05:30.
+</ADDITIONAL_METADATA>

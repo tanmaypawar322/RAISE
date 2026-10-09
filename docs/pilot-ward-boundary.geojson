@@ -1,0 +1,76 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "PCMC Ward 12 (Nigdi - Pradhikaran)",
+        "nameMr": "पिं.चिं.म.न.पा. प्रभाग १२ (निगडी - प्राधिकरण)",
+        "nameHi": "पिं.चिं.म.न.पा. वार्ड १२ (निगडी - प्राधिकरण)",
+        "code": "WARD-12",
+        "type": "ward",
+        "parentName": "PCMC Zone A (Pradhikaran - Akurdi)",
+        "slaHoursDefault": 48
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [73.765, 18.650],
+            [73.795, 18.650],
+            [73.795, 18.675],
+            [73.765, 18.675],
+            [73.765, 18.650]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "PCMC Zone A (Pradhikaran - Akurdi)",
+        "nameMr": "पिं.चिं.म.न.पा. ‘अ’ क्षेत्रीय कार्यालय कार्यक्षेत्र",
+        "nameHi": "पिं.चिं.म.न.पा. 'अ' जोनल कार्यालय कार्यक्षेत्र",
+        "code": "ZONE-A",
+        "type": "zone",
+        "parentName": "PCMC Central Headquarters",
+        "slaHoursDefault": 72
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [73.750, 18.630],
+            [73.810, 18.630],
+            [73.810, 18.690],
+            [73.750, 18.690],
+            [73.750, 18.630]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "PCMC Central Headquarters",
+        "nameMr": "पिं.चिं.म.न.पा. मुख्य प्रशासकीय मुख्यालय",
+        "nameHi": "पिं.चिं.म.न.पा. मुख्य प्रशासनिक मुख्यालय",
+        "code": "PCMC-HQ",
+        "type": "hq",
+        "slaHoursDefault": 96
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [73.700, 18.580],
+            [73.900, 18.580],
+            [73.900, 18.720],
+            [73.700, 18.720],
+            [73.700, 18.580]
+          ]
+        ]
+      }
+    }
+  ]
+}

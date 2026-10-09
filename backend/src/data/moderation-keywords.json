@@ -1,0 +1,20 @@
+{
+  "en": {
+    "hate": ["hate", "kill", "terrorist", "lynch", "slur", "genocide"],
+    "violence": ["bomb", "attack", "murder", "weapon", "shoot", "assassinate"],
+    "sexual": ["porn", "nude", "explicit", "sex", "rape"],
+    "profanity": ["abuse", "bastard", "scamster", "corrupt_dog"]
+  },
+  "mr": {
+    "hate": ["दंगल", "जाळपोळ", "मारा", "हल्ला", "शिवी"],
+    "violence": ["बॉम्ब", "हत्या", "बंदूक", "तलवार", "खून"],
+    "sexual": ["अश्लील", "बलात्कार"],
+    "profanity": ["हरामखोर", "कुत्रा", "भ्रष्ट"]
+  },
+  "hi": {
+    "hate": ["दंगा", "मारपीट", "हमला", "गाली"],
+    "violence": ["बम", "हत्या", "बंदूक", "तलवार", "कत्ल"],
+    "sexual": ["अश्लील", "बलात्कार"],
+    "profanity": ["हरामी", "कुत्ता", "भ्रष्ट"]
+  }
+}
