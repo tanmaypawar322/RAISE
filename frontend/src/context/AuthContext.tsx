@@ -163,18 +163,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setToken(newToken);
     setUser(newUser);
     setSessionCookie(newToken);
-    // Clean any legacy localStorage keys to ensure memory-only storage
     if (typeof window !== 'undefined') {
-      localStorage.removeItem('raise_token');
-      localStorage.removeItem('raise_user');
+      try {
+        localStorage.setItem('raise_token', newToken);
+        localStorage.setItem('raise_user', JSON.stringify(newUser));
+      } catch {}
     }
   };
 
   const refreshSession = useCallback(async (): Promise<string | null> => {
     try {
+      const currentToken = typeof window !== 'undefined' ? localStorage.getItem('raise_token') : null;
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/auth/refresh`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(currentToken ? { Authorization: `Bearer ${currentToken}` } : {}),
+        },
         credentials: 'include',
       });
       const data = await res.json();
@@ -182,11 +187,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setToken(data.token);
         setUser(data.user);
         setSessionCookie(data.token);
+        if (typeof window !== 'undefined') {
+          try {
+            localStorage.setItem('raise_token', data.token);
+            localStorage.setItem('raise_user', JSON.stringify(data.user));
+          } catch {}
+        }
         return data.token;
       } else {
-        setToken(null);
-        setUser(null);
-        clearSessionCookie();
+        if (res.status === 401 && data.message?.includes('revoked')) {
+          setToken(null);
+          setUser(null);
+          clearSessionCookie();
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem('raise_token');
+            localStorage.removeItem('raise_user');
+          }
+        }
         return null;
       }
     } catch {
@@ -194,20 +211,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  // Initialize session on mount via refresh cookie
+  // Initialize session on mount: synchronously restore from localStorage, then verify with backend
   useEffect(() => {
     let isMounted = true;
     const initAuth = async () => {
-      try {
-        // Clean legacy localStorage keys
-        if (typeof window !== 'undefined') {
-          localStorage.removeItem('raise_token');
-          localStorage.removeItem('raise_user');
-        }
+      let savedToken: string | null = null;
+      let savedUser: UserProfile | null = null;
+      if (typeof window !== 'undefined') {
+        try {
+          savedToken = localStorage.getItem('raise_token');
+          const rawUser = localStorage.getItem('raise_user');
+          if (rawUser) {
+            savedUser = JSON.parse(rawUser);
+          }
+        } catch {}
+      }
 
+      if (savedToken && savedUser && isMounted) {
+        setToken(savedToken);
+        setUser(savedUser);
+        setSessionCookie(savedToken);
+        setIsInitializing(false);
+      }
+
+      try {
         const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/auth/refresh`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            ...(savedToken ? { Authorization: `Bearer ${savedToken}` } : {}),
+          },
           credentials: 'include',
         });
         const data = await res.json();
@@ -215,11 +248,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setToken(data.token);
           setUser(data.user);
           setSessionCookie(data.token);
+          if (typeof window !== 'undefined') {
+            try {
+              localStorage.setItem('raise_token', data.token);
+              localStorage.setItem('raise_user', JSON.stringify(data.user));
+            } catch {}
+          }
         } else if (isMounted && (!res.ok || !data.success)) {
-          clearSessionCookie();
+          if (res.status === 401 && data.message?.includes('revoked')) {
+            setToken(null);
+            setUser(null);
+            clearSessionCookie();
+            if (typeof window !== 'undefined') {
+              localStorage.removeItem('raise_token');
+              localStorage.removeItem('raise_user');
+            }
+          }
         }
       } catch {
-        // Unauthenticated visitor
+        // Network hiccup - keep existing localStorage session active
       } finally {
         if (isMounted) setIsInitializing(false);
       }

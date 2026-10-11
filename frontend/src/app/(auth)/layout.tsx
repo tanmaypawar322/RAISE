@@ -75,7 +75,7 @@ function AuthLayoutContent({ children }: AuthLayoutProps) {
                   RAISE
                 </span>
                 <span className="text-[10px] bg-white/20 text-white font-extrabold px-2 py-0.5 rounded-full border border-white/30 tracking-wider">
-                  PILOT
+                  CIVIC PLATFORM
                 </span>
               </div>
               <p className="text-xs text-orange-100/90 font-medium tracking-tight">
@@ -166,7 +166,7 @@ function AuthLayoutContent({ children }: AuthLayoutProps) {
             <span>{t('learnMoreAboutRaise')}</span>
             <ExternalLink className="w-3.5 h-3.5" />
           </a>
-          <span className="text-[10px] text-orange-200 font-mono">v1.0 Pilot</span>
+          <span className="text-[10px] text-orange-200 font-mono">v1.0 Production</span>
         </div>
       </aside>
 

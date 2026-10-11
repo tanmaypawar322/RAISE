@@ -113,16 +113,21 @@ export default function CitizenDashboardPage() {
 
   // Handle URL query parameters for direct tab navigation
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search);
-      const tabParam = params.get('tab');
-      if (tabParam === 'profile') setActiveTab('profile');
-      else if (tabParam === 'representatives' || tabParam === 'reps') setActiveTab('my_representatives');
-      else if (tabParam === 'townhalls') setActiveTab('townhall_activity');
-      else if (tabParam === 'notifications') setActiveTab('notifications');
-      else if (tabParam === 'supported') setActiveTab('supported_issues');
-      else if (tabParam === 'grievances' || tabParam === 'my_issues') setActiveTab('my_grievances');
-    }
+    const handleUrlTab = () => {
+      if (typeof window !== 'undefined') {
+        const params = new URLSearchParams(window.location.search);
+        const tabParam = params.get('tab');
+        if (tabParam === 'profile') setActiveTab('profile');
+        else if (tabParam === 'my_representatives' || tabParam === 'representatives' || tabParam === 'reps') setActiveTab('my_representatives');
+        else if (tabParam === 'townhall_activity' || tabParam === 'townhalls') setActiveTab('townhall_activity');
+        else if (tabParam === 'notifications') setActiveTab('notifications');
+        else if (tabParam === 'supported_issues' || tabParam === 'supported') setActiveTab('supported_issues');
+        else if (tabParam === 'my_grievances' || tabParam === 'grievances' || tabParam === 'my_issues') setActiveTab('my_grievances');
+      }
+    };
+    handleUrlTab();
+    window.addEventListener('popstate', handleUrlTab);
+    return () => window.removeEventListener('popstate', handleUrlTab);
   }, []);
 
   useEffect(() => {
@@ -534,77 +539,8 @@ export default function CitizenDashboardPage() {
           })}
         </div>
 
-        {/* Desktop 2-Column SaaS Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
-          {/* Left Persistent Sidebar */}
-          <aside className="hidden lg:block lg:col-span-1 space-y-4 sticky top-20">
-            <nav className="bg-white rounded-2xl border border-gray-200 p-2 shadow-xs space-y-1">
-              <div className="px-3 py-2 border-b border-gray-100 mb-1">
-                <span className="text-[10px] font-black uppercase tracking-wider text-gray-400">
-                  Citizen Workspace
-                </span>
-              </div>
-
-              {sidebarItems.map((item) => {
-                const Icon = item.icon;
-                const isSelected = activeTab === item.id;
-                return (
-                  <button
-                    key={item.id}
-                    onClick={() => setActiveTab(item.id)}
-                    className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold transition text-left cursor-pointer ${
-                      isSelected
-                        ? 'bg-orange-600 text-white shadow-xs'
-                        : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2.5 truncate">
-                      <Icon className={`w-4 h-4 shrink-0 ${isSelected ? 'text-white' : 'text-gray-500'}`} />
-                      <span className="truncate">{item.label}</span>
-                    </div>
-
-                    {item.count !== undefined ? (
-                      <span
-                        className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                          isSelected ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-600'
-                        }`}
-                      >
-                        {item.count}
-                      </span>
-                    ) : item.badge ? (
-                      <span
-                        className={`text-[9px] font-bold px-1.5 py-0.5 rounded-md ${
-                          isSelected ? 'bg-white/20 text-white' : 'bg-orange-50 text-orange-700'
-                        }`}
-                      >
-                        {item.badge}
-                      </span>
-                    ) : null}
-                  </button>
-                );
-              })}
-            </nav>
-
-            {/* Civic Status Card */}
-            <div className="bg-gradient-to-br from-orange-50 to-amber-50 rounded-2xl border border-orange-200 p-4 text-xs space-y-2">
-              <div className="flex items-center gap-1.5 text-orange-900 font-bold">
-                <Sparkles className="w-4 h-4 text-orange-600" />
-                <span>{language === 'mr' ? 'नागरी सहभाग दर्जा' : 'Civic Engagement Tier'}</span>
-              </div>
-              <p className="text-[11px] text-orange-800 leading-relaxed">
-                {language === 'mr'
-                  ? 'तुमचा प्रभाग १२ मध्ये सक्रिय सहभाग आहे. सर्व तक्रारी ७२ तासांच्या वैधानिक SLA मध्ये ट्रॅक केल्या जातात.'
-                  : 'Active civic participant in Ward 12. All issues backed or reported are tracked with statutory SLA monitoring.'}
-              </p>
-              <div className="pt-2 border-t border-orange-200 flex items-center justify-between text-[11px] font-bold text-orange-950">
-                <span>{t('raiseCountText')}</span>
-                <span>{myIssues.reduce((acc, it) => acc + (it.raiseCount || 0), 0) + supportedIssues.length} Backers</span>
-              </div>
-            </div>
-          </aside>
-
-          {/* Right Content Area */}
-          <section className="lg:col-span-3 space-y-6">
+        {/* Main Workspace Content Area */}
+        <section className="w-full space-y-6">
             {/* TAB 1: MY GRIEVANCES */}
             {activeTab === 'my_grievances' && (
               <div className="space-y-4">
@@ -1530,7 +1466,6 @@ export default function CitizenDashboardPage() {
               </div>
             )}
           </section>
-        </div>
       </main>
 
       {/* Raise Issue Modal */}

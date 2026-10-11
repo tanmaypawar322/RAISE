@@ -85,19 +85,24 @@ export default function AdminPanelPage() {
 
   // Check URL query parameters for tab navigation
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search);
-      const tabParam = params.get('tab');
-      if (tabParam === 'claims') setActiveTab('claims');
-      else if (tabParam === 'moderation') setActiveTab('moderation');
-      else if (tabParam === 'finance') setActiveTab('finance');
-      else if (tabParam === 'billing') setActiveTab('billing');
-      else if (tabParam === 'freeze_windows' || tabParam === 'mcc') setActiveTab('freeze_windows');
-      else if (tabParam === 'rep_updates') setActiveTab('rep_updates');
-      else if (tabParam === 'outreach' || tabParam === 'jurisdictions') setActiveTab('outreach');
-      else if (tabParam === 'security' || tabParam === '2fa') setActiveTab('security');
-      else if (tabParam === 'overview' || tabParam === 'metrics' || tabParam === 'escalation') setActiveTab('overview');
-    }
+    const handleUrlTab = () => {
+      if (typeof window !== 'undefined') {
+        const params = new URLSearchParams(window.location.search);
+        const tabParam = params.get('tab');
+        if (tabParam === 'claims') setActiveTab('claims');
+        else if (tabParam === 'moderation') setActiveTab('moderation');
+        else if (tabParam === 'finance') setActiveTab('finance');
+        else if (tabParam === 'billing') setActiveTab('billing');
+        else if (tabParam === 'freeze_windows' || tabParam === 'mcc') setActiveTab('freeze_windows');
+        else if (tabParam === 'rep_updates') setActiveTab('rep_updates');
+        else if (tabParam === 'outreach' || tabParam === 'jurisdictions') setActiveTab('outreach');
+        else if (tabParam === 'security' || tabParam === '2fa') setActiveTab('security');
+        else if (tabParam === 'overview' || tabParam === 'metrics' || tabParam === 'escalation') setActiveTab('overview');
+      }
+    };
+    handleUrlTab();
+    window.addEventListener('popstate', handleUrlTab);
+    return () => window.removeEventListener('popstate', handleUrlTab);
   }, []);
 
   // Pilot Metrics State (Phase 7)
@@ -323,7 +328,7 @@ export default function AdminPanelPage() {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `raise-pilot-metrics-${new Date().toISOString().split('T')[0]}.csv`;
+      a.download = `raise-operations-metrics-${new Date().toISOString().split('T')[0]}.csv`;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -836,8 +841,8 @@ export default function AdminPanelPage() {
             <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
             <span className="font-medium">{t('unverifiedEmailBanner')}</span>
           </div>
-          <span className="text-[10px] bg-amber-200/70 text-amber-950 font-bold px-2 py-0.5 rounded-full shrink-0 uppercase tracking-wider self-start sm:self-auto">
-            Pilot Testing Mode
+          <span className="text-[10px] bg-purple-200/70 text-purple-950 font-bold px-2 py-0.5 rounded-full shrink-0 uppercase tracking-wider self-start sm:self-auto">
+            Production Oversight Mode
           </span>
         </div>
 
@@ -870,74 +875,8 @@ export default function AdminPanelPage() {
           })}
         </div>
 
-        {/* 2-Column Desktop SaaS Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
-          {/* Left Persistent Sidebar */}
-          <aside className="hidden lg:block lg:col-span-1 space-y-4 sticky top-20">
-            <nav className="bg-white rounded-2xl border border-gray-200 p-2 shadow-xs space-y-1">
-              <div className="px-3 py-2 border-b border-gray-100 mb-1">
-                <span className="text-[10px] font-black uppercase tracking-wider text-gray-400">
-                  Governance Consoles
-                </span>
-              </div>
-              {adminSidebarItems.map((item) => {
-                const Icon = item.icon;
-                const isSelected = activeTab === item.id;
-                return (
-                  <button
-                    key={item.id}
-                    onClick={() => setActiveTab(item.id)}
-                    className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold transition text-left cursor-pointer ${
-                      isSelected
-                        ? 'bg-purple-900 text-white shadow-xs'
-                        : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2.5 truncate">
-                      <Icon className={`w-4 h-4 shrink-0 ${isSelected ? 'text-white' : 'text-gray-500'}`} />
-                      <span className="truncate">{item.label}</span>
-                    </div>
-
-                    {item.count !== undefined ? (
-                      <span
-                        className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                          isSelected ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-600'
-                        }`}
-                      >
-                        {item.count}
-                      </span>
-                    ) : item.badge ? (
-                      <span
-                        className={`text-[9px] font-bold px-1.5 py-0.5 rounded-md ${
-                          isSelected ? 'bg-white/20 text-white' : 'bg-purple-50 text-purple-700'
-                        }`}
-                      >
-                        {item.badge}
-                      </span>
-                    ) : null}
-                  </button>
-                );
-              })}
-            </nav>
-
-            {/* Quick Policy Card */}
-            <div className="bg-gradient-to-br from-purple-950 to-indigo-950 rounded-2xl p-4 text-white text-xs space-y-2.5 shadow-xs">
-              <div className="flex items-center gap-1.5 text-purple-200 font-bold">
-                <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                <span>Statutory Governance</span>
-              </div>
-              <p className="text-[11px] text-purple-200/90 leading-relaxed">
-                Section 8 non-profit platform rules enforce zero political advertisements, statutory audit ledgers, and Model Code of Conduct neutrality.
-              </p>
-              <div className="pt-2 border-t border-purple-800/80 flex items-center justify-between text-[11px] font-bold">
-                <span className="text-purple-300">MCC Status</span>
-                <span className="text-amber-300">Ready for Sweep</span>
-              </div>
-            </div>
-          </aside>
-
-          {/* Right Main Content */}
-          <section className="lg:col-span-3 space-y-6">
+        {/* Main Workspace Content Area */}
+        <section className="w-full space-y-6">
 
         {/* TAB 1: OFFICIAL CLAIMS QUEUE */}
         {activeTab === 'claims' && (
@@ -1346,7 +1285,7 @@ export default function AdminPanelPage() {
               <div className="p-4 bg-blue-50 rounded-xl border border-blue-200">
                 <span className="text-[11px] font-bold text-blue-800 block">Net Operating Reserves</span>
                 <span className="text-2xl font-black text-blue-950 mt-1 block">₹ 12,32,400</span>
-                <span className="text-[10px] text-blue-700">Dedicated to Ward 12 Pilot</span>
+                <span className="text-[10px] text-blue-700">Dedicated to Municipal Operations</span>
               </div>
             </div>
           </div>
@@ -1459,7 +1398,7 @@ export default function AdminPanelPage() {
               <div>
                 <h3 className="font-bold text-sm text-gray-900">{t('jurisdictionsRoutingTab')}</h3>
                 <p className="text-xs text-gray-500">
-                  Pilot Ward 12 (Nigdi - Pradhikaran), category auto-routing & SLA escalation ladder
+                  Ward 12 (Nigdi - Pradhikaran), category auto-routing & SLA escalation ladder
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-2">
@@ -1506,7 +1445,7 @@ export default function AdminPanelPage() {
                     <h4 className="font-bold text-sm text-gray-900">{t('wardBreakdownTitle')}</h4>
                   </div>
                   <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wide bg-slate-100 px-2 py-0.5 rounded-full">
-                    Pilot Zones
+                    Municipal Zones
                   </span>
                 </div>
 
@@ -1564,7 +1503,7 @@ export default function AdminPanelPage() {
                     </tbody>
                     <tfoot>
                       <tr className="border-t-2 border-gray-200 font-bold bg-gray-50 text-gray-900">
-                        <td className="py-2.5 px-3">Total (Pilot)</td>
+                        <td className="py-2.5 px-3">Total Operations</td>
                         <td className="py-2.5 px-3 text-center font-extrabold">114</td>
                         <td className="py-2.5 px-3 text-center text-amber-700">40</td>
                         <td className="py-2.5 px-3 text-center text-emerald-700">68</td>
@@ -1650,7 +1589,7 @@ export default function AdminPanelPage() {
                     </tbody>
                     <tfoot>
                       <tr className="border-t-2 border-gray-200 font-bold bg-gray-50 text-gray-900">
-                        <td className="py-2.5 px-3">Total (Pilot)</td>
+                        <td className="py-2.5 px-3">Total Operations</td>
                         <td className="py-2.5 px-3 text-center font-extrabold">114</td>
                         <td className="py-2.5 px-3 text-center text-amber-700">40</td>
                         <td className="py-2.5 px-3 text-center text-emerald-700">68</td>
@@ -1679,7 +1618,7 @@ export default function AdminPanelPage() {
                     <h4 className="font-bold text-sm text-gray-900">{t('attachedOfficesTitle')}</h4>
                   </div>
                   <span className="text-xs bg-purple-50 text-purple-700 font-bold px-2.5 py-0.5 rounded-full border border-purple-200">
-                    {officesList.length > 0 ? `${officesList.length} Offices Loaded` : 'Pilot Offices'}
+                    {officesList.length > 0 ? `${officesList.length} Offices Loaded` : 'Municipal Offices'}
                   </span>
                 </div>
 
@@ -1801,7 +1740,7 @@ export default function AdminPanelPage() {
         )}
 
         {/* ============================================================ */}
-        {/* TAB: SYSTEM OVERVIEW, PILOT METRICS & ESCALATION WATCH */}
+        {/* TAB: SYSTEM OVERVIEW, OPERATIONS METRICS & ESCALATION WATCH */}
         {/* ============================================================ */}
         {activeTab === 'overview' && (
           <div className="space-y-6">
@@ -1809,17 +1748,17 @@ export default function AdminPanelPage() {
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                 <div>
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="text-[10px] uppercase font-black px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-200">
-                      Pilot Readiness • Ward 12 Nigdi
+                    <span className="text-[10px] uppercase font-black px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-900 border border-emerald-200">
+                      Production Oversight • Civic Telemetry
                     </span>
-                    <span className="text-[10px] font-semibold text-slate-500">Live Telemetry</span>
+                    <span className="text-[10px] font-semibold text-slate-500">Live Operations</span>
                   </div>
                   <h2 className="text-xl sm:text-2xl font-black text-gray-900 flex items-center gap-2">
                     <TrendingUp className="w-6 h-6 text-orange-600" />
-                    <span>Pilot Operations & Standup Metrics</span>
+                    <span>Municipal Operations & Service Metrics</span>
                   </h2>
                   <p className="text-xs text-gray-500 mt-1">
-                    Real-time operational dashboard for daily morning standup review during the single-ward pilot.
+                    Real-time operational dashboard for municipal governance review and service level monitoring.
                   </p>
                 </div>
 
@@ -1848,7 +1787,7 @@ export default function AdminPanelPage() {
               {metricsLoading && !pilotMetrics ? (
                 <div className="py-12 text-center text-slate-500 animate-pulse">
                   <div className="w-8 h-8 border-4 border-purple-900 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-                  <span className="text-xs font-semibold">Calculating pilot telemetry...</span>
+                  <span className="text-xs font-semibold">Calculating operational telemetry...</span>
                 </div>
               ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5 mb-8">
@@ -1954,13 +1893,13 @@ export default function AdminPanelPage() {
               {/* Standup Operational Guide */}
               <div className="p-5 rounded-2xl bg-purple-50/70 border border-purple-200 text-xs text-purple-950 space-y-2">
                 <span className="font-extrabold text-sm block text-purple-900">
-                  Ward 12 Pilot Daily Standup Protocol (10:00 AM IST)
+                  Municipal Daily Standup Protocol (10:00 AM IST)
                 </span>
                 <p className="text-purple-900/90 leading-relaxed">
-                  During the live Ward 12 pilot, the civic team reviews: (1) any overdue issues approaching statutory SLA breach, (2) disputed resolutions needing on-ground field inspection, and (3) clusters of reports in adjacent Nigdi sectors indicating systemic water supply or road failures.
+                  During daily civic operations, the team reviews: (1) any overdue issues approaching statutory SLA breach, (2) disputed resolutions needing on-ground field inspection, and (3) clusters of reports in adjacent sectors indicating systemic water supply or road failures.
                 </p>
                 <div className="flex flex-wrap gap-4 pt-2 text-[11px] font-semibold text-purple-800">
-                  <span>&bull; Field Office: PCMC Ward 12 Civic Center</span>
+                  <span>&bull; Zonal Office: PCMC Civic Center</span>
                   <span>&bull; Target SLA: 48h Ack / 72h Resolution</span>
                   <span>&bull; Dispute Period: 7 Days</span>
                 </div>
@@ -2052,7 +1991,6 @@ export default function AdminPanelPage() {
           </div>
         )}
           </section>
-        </div>
       </main>
 
       {/* MODAL: 2FA SETUP */}

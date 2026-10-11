@@ -145,16 +145,25 @@ export default function OfficePortalPage() {
         setInviteToken(inv);
         setAuthTab('invite');
       }
-      const tabParam = params.get('tab');
-      if (tabParam === 'resolution') setActiveTab('resolution');
-      else if (tabParam === 'analysis') setActiveTab('analysis');
-      else if (tabParam === 'directives') setActiveTab('directives');
-      else if (tabParam === 'representative' || tabParam === 'reps') setActiveTab('representative');
-      else if (tabParam === 'reports') setActiveTab('reports');
-      else if (tabParam === 'scorecard') setActiveTab('scorecard');
-      else if (tabParam === 'billing' || tabParam === 'seats') setActiveTab('billing');
-      else if (tabParam === 'queue') setActiveTab('queue');
     }
+
+    const handleUrlTab = () => {
+      if (typeof window !== 'undefined') {
+        const params = new URLSearchParams(window.location.search);
+        const tabParam = params.get('tab');
+        if (tabParam === 'resolution') setActiveTab('resolution');
+        else if (tabParam === 'analysis') setActiveTab('analysis');
+        else if (tabParam === 'directives') setActiveTab('directives');
+        else if (tabParam === 'representative' || tabParam === 'reps') setActiveTab('representative');
+        else if (tabParam === 'reports') setActiveTab('reports');
+        else if (tabParam === 'scorecard') setActiveTab('scorecard');
+        else if (tabParam === 'billing' || tabParam === 'seats') setActiveTab('billing');
+        else if (tabParam === 'queue') setActiveTab('queue');
+      }
+    };
+    handleUrlTab();
+    window.addEventListener('popstate', handleUrlTab);
+    return () => window.removeEventListener('popstate', handleUrlTab);
   }, []);
 
   // Fetch offices directory for claim selection
@@ -1169,73 +1178,8 @@ export default function OfficePortalPage() {
           })}
         </div>
 
-        {/* 2-Column Desktop SaaS Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
-          {/* Left Persistent Sidebar */}
-          <aside className="hidden lg:block lg:col-span-1 space-y-4 sticky top-20">
-            <nav className="bg-white rounded-2xl border border-gray-200 p-2 shadow-xs space-y-1">
-              <div className="px-3 py-2 border-b border-gray-100 mb-1">
-                <span className="text-[10px] font-black uppercase tracking-wider text-gray-400">
-                  Official Workflows
-                </span>
-              </div>
-              {officialSidebarItems.map((item) => {
-                const Icon = item.icon;
-                const isSelected = activeTab === item.id;
-                return (
-                  <button
-                    key={item.id}
-                    onClick={() => setActiveTab(item.id)}
-                    className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold transition text-left cursor-pointer ${
-                      isSelected
-                        ? 'bg-blue-900 text-white shadow-xs'
-                        : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2.5 truncate">
-                      <Icon className={`w-4 h-4 shrink-0 ${isSelected ? 'text-white' : 'text-gray-500'}`} />
-                      <span className="truncate">{item.label}</span>
-                    </div>
-
-                    {item.count !== undefined ? (
-                      <span
-                        className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                          isSelected ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-600'
-                        }`}
-                      >
-                        {item.count}
-                      </span>
-                    ) : item.badge ? (
-                      <span
-                        className={`text-[9px] font-bold px-1.5 py-0.5 rounded-md ${
-                          isSelected ? 'bg-white/20 text-white' : 'bg-blue-50 text-blue-700'
-                        }`}
-                      >
-                        {item.badge}
-                      </span>
-                    ) : null}
-                  </button>
-                );
-              })}
-            </nav>
-
-            {/* Department Quick Card */}
-            <div className="bg-gradient-to-br from-blue-900 to-indigo-950 rounded-2xl p-4 text-white text-xs space-y-2 shadow-xs">
-              <span className="text-[10px] uppercase font-bold text-blue-300 block">
-                Statutory Redressal Desk
-              </span>
-              <p className="text-[11px] text-blue-100/90 leading-relaxed">
-                All closures must meet statutory geo-tagging validation (150m rule) or provide audited exception justifications.
-              </p>
-              <div className="pt-2 border-t border-blue-800/80 flex items-center justify-between text-[11px] font-bold">
-                <span>Response SLA</span>
-                <span className="text-emerald-400">94.2% On-Time</span>
-              </div>
-            </div>
-          </aside>
-
-          {/* Right Main Content */}
-          <section className="lg:col-span-3 space-y-6">
+        {/* Main Workspace Content Area */}
+        <section className="w-full space-y-6">
 
         {/* TAB 1: ISSUES ACTION QUEUE */}
         {activeTab === 'queue' && (
@@ -1930,7 +1874,6 @@ export default function OfficePortalPage() {
           </div>
         )}
           </section>
-        </div>
       </main>
 
       {/* MODAL: Update Status */}

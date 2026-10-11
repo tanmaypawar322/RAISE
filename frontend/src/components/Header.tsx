@@ -1,18 +1,26 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
+import { useDisplay, ThemeMode, FontSize } from '../context/DisplayContext';
 import {
   Menu,
-  Sparkles,
   Plus,
   LogOut,
   User as UserIcon,
-  ShieldAlert,
-  Briefcase,
+  Sun,
+  Moon,
+  Laptop,
+  Languages,
+  ChevronDown,
+  Type,
+  Check,
+  Building,
+  Shield,
+  UserCheck,
 } from 'lucide-react';
 import { Language } from '../lib/translations';
 import { AppTab } from './BottomNav';
@@ -42,6 +50,33 @@ export function Header({
   const router = useRouter();
   const { language, setLanguage, t } = useLanguage();
   const { user, openAuthModal, logout } = useAuth();
+  const { theme, setTheme, fontSize, setFontSize, isDark } = useDisplay();
+
+  // Dropdown menus state
+  const [isLangOpen, setIsLangOpen] = useState(false);
+  const [isDisplayOpen, setIsDisplayOpen] = useState(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+
+  const langRef = useRef<HTMLDivElement>(null);
+  const displayRef = useRef<HTMLDivElement>(null);
+  const userRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdowns on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (langRef.current && !langRef.current.contains(e.target as Node)) {
+        setIsLangOpen(false);
+      }
+      if (displayRef.current && !displayRef.current.contains(e.target as Node)) {
+        setIsDisplayOpen(false);
+      }
+      if (userRef.current && !userRef.current.contains(e.target as Node)) {
+        setIsUserMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const handleTabClick = (tab: AppTab) => {
     if (tab === 'home') {
@@ -64,14 +99,30 @@ export function Header({
     }
   };
 
-  const languages: { code: Language; label: string }[] = [
-    { code: 'mr', label: 'मराठी' },
-    { code: 'hi', label: 'हिंदी' },
-    { code: 'en', label: 'EN' },
+  const languagesList: { code: Language; label: string; nativeName: string }[] = [
+    { code: 'mr', label: 'MR', nativeName: 'मराठी (Marathi)' },
+    { code: 'hi', label: 'HI', nativeName: 'हिंदी (Hindi)' },
+    { code: 'en', label: 'EN', nativeName: 'English (English)' },
   ];
 
+  const currentLang = languagesList.find((l) => l.code === language) || languagesList[0];
+
+  const getRoleBadge = (role?: string) => {
+    switch (role) {
+      case 'admin':
+        return { label: 'Administrator', color: 'bg-purple-100 text-purple-800 dark:bg-purple-900/60 dark:text-purple-200' };
+      case 'official':
+      case 'agency':
+        return { label: 'Verified Official', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/60 dark:text-blue-200' };
+      default:
+        return { label: 'Citizen', color: 'bg-orange-100 text-orange-800 dark:bg-orange-900/60 dark:text-orange-200' };
+    }
+  };
+
+  const roleBadge = getRoleBadge(user?.role);
+
   return (
-    <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-gray-200">
+    <header className="sticky top-0 z-30 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border-b border-gray-200 dark:border-gray-800 transition-colors">
       <div className="px-4 sm:px-6 py-2.5 flex items-center justify-between gap-3">
         {/* Left: Sidebar Toggle & Contextual Brand / Title */}
         <div className="flex items-center gap-3 min-w-0">
@@ -79,7 +130,7 @@ export function Header({
             <button
               type="button"
               onClick={onToggleSidebar}
-              className="p-2 -ml-1 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-xl transition cursor-pointer shrink-0"
+              className="p-2 -ml-1 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition cursor-pointer shrink-0"
               title="Toggle Navigation Sidebar"
               aria-label="Toggle navigation"
             >
@@ -90,11 +141,11 @@ export function Header({
           {/* Contextual Title or Wordmark */}
           {title ? (
             <div className="truncate">
-              <h1 className="text-sm sm:text-base font-black text-gray-900 truncate leading-tight">
+              <h1 className="text-sm sm:text-base font-black text-gray-900 dark:text-white truncate leading-tight">
                 {title}
               </h1>
               {subtitle && (
-                <p className="text-[11px] text-gray-500 truncate hidden sm:block">
+                <p className="text-[11px] text-gray-500 dark:text-gray-400 truncate hidden sm:block">
                   {subtitle}
                 </p>
               )}
@@ -108,11 +159,8 @@ export function Header({
                 R
               </div>
               <div className="flex items-center gap-1.5 leading-none">
-                <span className="font-extrabold text-base text-gray-900 tracking-tight">
+                <span className="font-extrabold text-base text-gray-900 dark:text-white tracking-tight">
                   {t('appTitle')}
-                </span>
-                <span className="text-[9px] bg-orange-100 text-orange-800 font-bold px-1.5 py-0.2 rounded uppercase">
-                  Pilot
                 </span>
               </div>
             </Link>
@@ -121,27 +169,162 @@ export function Header({
 
         {/* Right Action Items */}
         <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
-          {/* Pilot Ward Indicator Pill */}
-          <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-orange-50 border border-orange-200 text-orange-800 text-[11px] font-bold">
-            <span className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse"></span>
-            <span>Ward 12 (Nigdi)</span>
+          
+          {/* Display & Accessibility Dropdown (Theme & Font Size) */}
+          <div className="relative" ref={displayRef}>
+            <button
+              type="button"
+              onClick={() => {
+                setIsDisplayOpen((prev) => !prev);
+                setIsLangOpen(false);
+                setIsUserMenuOpen(false);
+              }}
+              className="flex items-center gap-1.5 p-2 rounded-xl text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 transition cursor-pointer border border-gray-200 dark:border-gray-700"
+              title="Display & Accessibility Options (Theme, Font Size)"
+              aria-label="Display settings"
+            >
+              {isDark ? <Moon className="w-4 h-4 text-purple-400" /> : <Sun className="w-4 h-4 text-amber-500" />}
+              <span className="text-[11px] font-bold hidden md:inline">
+                {fontSize === 'normal' ? 'A' : fontSize === 'large' ? 'A+' : 'A++'}
+              </span>
+              <ChevronDown className="w-3 h-3 text-gray-400" />
+            </button>
+
+            {isDisplayOpen && (
+              <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 py-3 px-3 z-50 text-xs animate-in fade-in zoom-in-95 duration-100">
+                {/* Theme Selector */}
+                <div className="mb-3">
+                  <div className="text-[10px] font-black uppercase tracking-wider text-gray-400 dark:text-gray-400 mb-1.5 px-1">
+                    Theme
+                  </div>
+                  <div className="grid grid-cols-3 gap-1.5 p-1 bg-gray-100 dark:bg-gray-900 rounded-xl">
+                    <button
+                      type="button"
+                      onClick={() => setTheme('light')}
+                      className={`flex flex-col items-center justify-center py-1.5 px-2 rounded-lg font-bold transition text-[11px] ${
+                        theme === 'light'
+                          ? 'bg-white dark:bg-gray-800 text-orange-600 shadow-xs'
+                          : 'text-gray-600 dark:text-gray-300 hover:text-gray-900'
+                      }`}
+                    >
+                      <Sun className="w-3.5 h-3.5 mb-1" />
+                      <span>Light</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setTheme('dark')}
+                      className={`flex flex-col items-center justify-center py-1.5 px-2 rounded-lg font-bold transition text-[11px] ${
+                        theme === 'dark'
+                          ? 'bg-white dark:bg-gray-800 text-orange-600 shadow-xs'
+                          : 'text-gray-600 dark:text-gray-300 hover:text-gray-900'
+                      }`}
+                    >
+                      <Moon className="w-3.5 h-3.5 mb-1" />
+                      <span>Dark</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setTheme('system')}
+                      className={`flex flex-col items-center justify-center py-1.5 px-2 rounded-lg font-bold transition text-[11px] ${
+                        theme === 'system'
+                          ? 'bg-white dark:bg-gray-800 text-orange-600 shadow-xs'
+                          : 'text-gray-600 dark:text-gray-300 hover:text-gray-900'
+                      }`}
+                    >
+                      <Laptop className="w-3.5 h-3.5 mb-1" />
+                      <span>System</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Font Size Selector */}
+                <div className="pt-2 border-t border-gray-100 dark:border-gray-700">
+                  <div className="text-[10px] font-black uppercase tracking-wider text-gray-400 dark:text-gray-400 mb-1.5 px-1">
+                    Font Size
+                  </div>
+                  <div className="grid grid-cols-3 gap-1.5 p-1 bg-gray-100 dark:bg-gray-900 rounded-xl">
+                    <button
+                      type="button"
+                      onClick={() => setFontSize('normal')}
+                      className={`py-1.5 px-2 rounded-lg font-bold transition text-[11px] text-center ${
+                        fontSize === 'normal'
+                          ? 'bg-white dark:bg-gray-800 text-orange-600 shadow-xs'
+                          : 'text-gray-600 dark:text-gray-300 hover:text-gray-900'
+                      }`}
+                    >
+                      Normal
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFontSize('large')}
+                      className={`py-1.5 px-2 rounded-lg font-bold transition text-[11px] text-center ${
+                        fontSize === 'large'
+                          ? 'bg-white dark:bg-gray-800 text-orange-600 shadow-xs'
+                          : 'text-gray-600 dark:text-gray-300 hover:text-gray-900'
+                      }`}
+                    >
+                      Large (+10%)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFontSize('xlarge')}
+                      className={`py-1.5 px-2 rounded-lg font-bold transition text-[11px] text-center ${
+                        fontSize === 'xlarge'
+                          ? 'bg-white dark:bg-gray-800 text-orange-600 shadow-xs'
+                          : 'text-gray-600 dark:text-gray-300 hover:text-gray-900'
+                      }`}
+                    >
+                      XL (+20%)
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* Language Switcher */}
-          <div className="flex items-center bg-gray-100 rounded-xl p-0.5 text-xs font-bold">
-            {languages.map((l) => (
-              <button
-                key={l.code}
-                onClick={() => setLanguage(l.code)}
-                className={`px-2 py-1 rounded-lg transition cursor-pointer ${
-                  language === l.code
-                    ? 'bg-white text-orange-600 shadow-xs font-extrabold'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                {l.label}
-              </button>
-            ))}
+          {/* Language Dropdown */}
+          <div className="relative" ref={langRef}>
+            <button
+              type="button"
+              onClick={() => {
+                setIsLangOpen((prev) => !prev);
+                setIsDisplayOpen(false);
+                setIsUserMenuOpen(false);
+              }}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition cursor-pointer border border-gray-200 dark:border-gray-700 text-xs font-bold"
+              title="Select Platform Language"
+              aria-label="Language selector"
+            >
+              <Languages className="w-3.5 h-3.5 text-gray-500 dark:text-gray-400" />
+              <span>{currentLang.label}</span>
+              <ChevronDown className="w-3 h-3 text-gray-400" />
+            </button>
+
+            {isLangOpen && (
+              <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 py-1.5 z-50 text-xs animate-in fade-in zoom-in-95 duration-100">
+                <div className="px-3 py-1 text-[10px] font-black uppercase tracking-wider text-gray-400">
+                  Select Language
+                </div>
+                {languagesList.map((l) => (
+                  <button
+                    key={l.code}
+                    type="button"
+                    onClick={() => {
+                      setLanguage(l.code);
+                      setIsLangOpen(false);
+                    }}
+                    className={`w-full flex items-center justify-between px-3 py-2 text-left transition font-bold ${
+                      language === l.code
+                        ? 'bg-orange-50 text-orange-600 dark:bg-orange-950/40 dark:text-orange-400 font-extrabold'
+                        : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700'
+                    }`}
+                  >
+                    <span>{l.nativeName}</span>
+                    {language === l.code && <Check className="w-3.5 h-3.5 text-orange-600" />}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Notification Bell */}
@@ -167,34 +350,90 @@ export function Header({
             </Link>
           )}
 
-          {/* User Profile Avatar or Sign In */}
+          {/* User Profile Avatar with Dropdown */}
           {user ? (
-            <div className="flex items-center gap-1.5 bg-gray-50 border border-gray-200 rounded-xl px-2 py-1 text-xs">
+            <div className="relative" ref={userRef}>
               <button
-                onClick={() => handleTabClick('profile')}
-                className="flex items-center gap-1.5 text-left cursor-pointer"
-                title={`Signed in as ${user.name} (${user.role})`}
+                type="button"
+                onClick={() => {
+                  setIsUserMenuOpen((prev) => !prev);
+                  setIsLangOpen(false);
+                  setIsDisplayOpen(false);
+                }}
+                className="flex items-center gap-1.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-2 py-1 text-xs cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition"
               >
-                <div className="w-6 h-6 rounded-full bg-orange-100 text-orange-700 font-bold flex items-center justify-center text-[11px] shrink-0">
+                <div className="w-6 h-6 rounded-full bg-orange-100 dark:bg-orange-950 text-orange-700 dark:text-orange-300 font-bold flex items-center justify-center text-[11px] shrink-0">
                   {user.name ? user.name[0].toUpperCase() : 'U'}
                 </div>
-                <div className="hidden xl:block max-w-[90px] truncate">
-                  <span className="font-bold text-gray-900 block truncate text-[11px] leading-tight">
+                <div className="hidden xl:block max-w-[90px] truncate text-left">
+                  <span className="font-bold text-gray-900 dark:text-white block truncate text-[11px] leading-tight">
                     {user.name}
                   </span>
-                  <span className="text-[9px] uppercase font-bold text-orange-600 block">
+                  <span className="text-[9px] uppercase font-bold text-orange-600 dark:text-orange-400 block">
                     {user.role}
                   </span>
                 </div>
+                <ChevronDown className="w-3 h-3 text-gray-400" />
               </button>
 
-              <button
-                onClick={logout}
-                title="Sign out"
-                className="text-gray-400 hover:text-red-600 p-1 transition cursor-pointer"
-              >
-                <LogOut className="w-3.5 h-3.5" />
-              </button>
+              {isUserMenuOpen && (
+                <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 py-2 z-50 text-xs animate-in fade-in zoom-in-95 duration-100">
+                  <div className="px-3 py-2 border-b border-gray-100 dark:border-gray-700">
+                    <p className="font-bold text-gray-900 dark:text-white truncate">{user.name}</p>
+                    <p className="text-[11px] text-gray-500 dark:text-gray-400 truncate">{user.email || user.phoneMasked}</p>
+                    <span className={`inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase ${roleBadge.color}`}>
+                      {roleBadge.label}
+                    </span>
+                  </div>
+
+                  <div className="py-1">
+                    {user.role === 'citizen' && (
+                      <Link
+                        href="/dashboard"
+                        onClick={() => setIsUserMenuOpen(false)}
+                        className="flex items-center gap-2 px-3 py-2 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 font-bold"
+                      >
+                        <UserIcon className="w-3.5 h-3.5 text-orange-500" />
+                        <span>Citizen Dashboard</span>
+                      </Link>
+                    )}
+                    {(user.role === 'official' || user.role === 'agency') && (
+                      <Link
+                        href="/office-portal"
+                        onClick={() => setIsUserMenuOpen(false)}
+                        className="flex items-center gap-2 px-3 py-2 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 font-bold"
+                      >
+                        <Building className="w-3.5 h-3.5 text-blue-500" />
+                        <span>Official Portal</span>
+                      </Link>
+                    )}
+                    {user.role === 'admin' && (
+                      <Link
+                        href="/admin"
+                        onClick={() => setIsUserMenuOpen(false)}
+                        className="flex items-center gap-2 px-3 py-2 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 font-bold"
+                      >
+                        <Shield className="w-3.5 h-3.5 text-purple-500" />
+                        <span>Administrator Console</span>
+                      </Link>
+                    )}
+                  </div>
+
+                  <div className="pt-1 border-t border-gray-100 dark:border-gray-700">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsUserMenuOpen(false);
+                        logout();
+                      }}
+                      className="w-full flex items-center gap-2 px-3 py-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 font-bold text-left transition"
+                    >
+                      <LogOut className="w-3.5 h-3.5" />
+                      <span>{t('signOutBtn')}</span>
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           ) : (
             <button
@@ -202,7 +441,7 @@ export function Header({
                 if (onSignInClick) onSignInClick();
                 else openAuthModal();
               }}
-              className="flex items-center gap-1 px-3 py-1.5 bg-gray-900 hover:bg-black text-white text-xs font-bold rounded-xl shadow-xs transition cursor-pointer"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-900 hover:bg-black text-white text-xs font-bold rounded-xl shadow-xs transition cursor-pointer"
             >
               <UserIcon className="w-3.5 h-3.5" />
               <span>{t('signIn')}</span>

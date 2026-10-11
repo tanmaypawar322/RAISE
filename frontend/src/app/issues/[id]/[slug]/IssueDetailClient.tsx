@@ -6,6 +6,7 @@ import { useLanguage } from '../../../../context/LanguageContext';
 import { useAuth } from '../../../../context/AuthContext';
 import { slugifyTitle } from '../../../../lib/slug';
 import { ShareModal } from '../../../../components/ShareModal';
+import { AppShell } from '../../../../components/AppShell';
 import {
   ArrowLeft,
   MapPin,
@@ -87,26 +88,28 @@ export default function IssueDetailClient({
 
   if (!issue) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-        <div className="max-w-md w-full bg-white rounded-2xl shadow-sm border border-slate-200 p-8 text-center">
-          <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-400">
-            <AlertTriangle className="w-8 h-8 text-slate-400" />
+      <AppShell>
+        <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+          <div className="max-w-md w-full bg-white rounded-2xl shadow-sm border border-slate-200 p-8 text-center">
+            <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-400">
+              <AlertTriangle className="w-8 h-8 text-slate-400" />
+            </div>
+            <h2 className="text-xl font-bold text-slate-900 mb-2">
+              {t('neutralNotFoundTitle')}
+            </h2>
+            <p className="text-sm text-slate-600 mb-6">
+              {t('neutralNotFoundDesc')}
+            </p>
+            <Link
+              href="/"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 text-white font-semibold text-sm hover:bg-blue-700 transition"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>{t('backToFeed')}</span>
+            </Link>
           </div>
-          <h2 className="text-xl font-bold text-slate-900 mb-2">
-            {t('neutralNotFoundTitle')}
-          </h2>
-          <p className="text-sm text-slate-600 mb-6">
-            {t('neutralNotFoundDesc')}
-          </p>
-          <Link
-            href="/"
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 text-white font-semibold text-sm hover:bg-blue-700 transition"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span>{t('backToFeed')}</span>
-          </Link>
         </div>
-      </div>
+      </AppShell>
     );
   }
 
@@ -399,7 +402,11 @@ export default function IssueDetailClient({
   const isSlaBreached = issue.slaDeadline && new Date(issue.slaDeadline).getTime() < Date.now();
 
   return (
-    <div className="min-h-screen bg-slate-50 py-8 px-4 sm:px-6 lg:px-8">
+    <AppShell
+      title={issue?.title ? (issue.title.length > 45 ? `${issue.title.slice(0, 42)}...` : issue.title) : undefined}
+      subtitle="Grievance Dossier"
+    >
+      <div className="min-h-screen bg-slate-50 py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-4xl mx-auto space-y-6">
         {/* Navigation Breadcrumb */}
         <div className="flex items-center justify-between">
@@ -1066,5 +1073,6 @@ export default function IssueDetailClient({
         issue={issue}
       />
     </div>
+    </AppShell>
   );
 }

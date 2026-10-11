@@ -3,7 +3,7 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { Header } from '../../../components/Header';
+import { AppShell } from '../../../components/AppShell';
 import { useLanguage } from '../../../context/LanguageContext';
 import { useAuth } from '../../../context/AuthContext';
 import {
@@ -242,20 +242,18 @@ function RepresentativeRecordContent() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 text-slate-900 pb-20">
-        <Header />
+      <AppShell title="Representative Record" subtitle="Public Representative Profile">
         <main className="max-w-4xl mx-auto px-4 py-12 text-center">
           <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
           <p className="text-sm font-semibold text-slate-500">Loading public representative record...</p>
         </main>
-      </div>
+      </AppShell>
     );
   }
 
   if (error || !data) {
     return (
-      <div className="min-h-screen bg-slate-50 text-slate-900 pb-20">
-        <Header />
+      <AppShell title="Representative Record" subtitle="Public Representative Profile">
         <main className="max-w-md mx-auto px-4 py-16 text-center">
           <AlertTriangle className="w-12 h-12 text-amber-500 mx-auto mb-4" />
           <h2 className="text-lg font-bold text-slate-900 mb-2">Record Not Found</h2>
@@ -268,7 +266,7 @@ function RepresentativeRecordContent() {
             <span>Return to Grievances Feed</span>
           </Link>
         </main>
-      </div>
+      </AppShell>
     );
   }
 
@@ -279,8 +277,7 @@ function RepresentativeRecordContent() {
   // Unclaimed profile view
   if (!isClaimed || profile.status === 'unclaimed') {
     return (
-      <div className="min-h-screen bg-slate-50 text-slate-900 pb-20">
-        <Header />
+      <AppShell title={profile?.displayName || 'Representative Record'} subtitle="Public Representative Profile">
         <main className="max-w-3xl mx-auto px-4 py-8 space-y-6">
           <Link
             href="/"
@@ -351,15 +348,13 @@ function RepresentativeRecordContent() {
             </div>
           </div>
         </main>
-      </div>
+      </AppShell>
     );
   }
 
   // Claimed & Verified Profile View
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 pb-20">
-      <Header />
-
+    <AppShell title={profile?.displayName || 'Representative Record'} subtitle="Verified Public Profile">
       <main className="max-w-4xl mx-auto px-4 py-8 space-y-6">
         {/* Navigation & Actions */}
         <div className="flex items-center justify-between">
@@ -1035,7 +1030,7 @@ function RepresentativeRecordContent() {
           </div>
         </div>
       )}
-    </div>
+    </AppShell>
   );
 }
 

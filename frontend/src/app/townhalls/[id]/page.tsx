@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
+import { AppShell } from '../../../components/AppShell';
 import { useLanguage } from '../../../context/LanguageContext';
 import { useAuth } from '../../../context/AuthContext';
 import {
@@ -214,28 +215,33 @@ function TownhallDetailContent() {
 
   if (loading) {
     return (
-      <div className="max-w-4xl mx-auto px-4 py-16 text-center text-gray-500">
-        <Vote className="w-8 h-8 animate-spin mx-auto mb-2 text-blue-600" />
-        <p className="text-sm">Loading deliberation...</p>
-      </div>
+      <AppShell title="Democratic Deliberation" subtitle="Townhall Dossier">
+        <div className="max-w-4xl mx-auto px-4 py-16 text-center text-gray-500">
+          <Vote className="w-8 h-8 animate-spin mx-auto mb-2 text-blue-600" />
+          <p className="text-sm">Loading deliberation...</p>
+        </div>
+      </AppShell>
     );
   }
 
   if (!topic) {
     return (
-      <div className="max-w-4xl mx-auto px-4 py-16 text-center">
-        <h2 className="text-xl font-bold text-gray-900">Topic not found</h2>
-        <Link href="/townhalls" className="text-blue-600 text-sm font-bold mt-3 inline-block">
-          ← Back to Townhalls
-        </Link>
-      </div>
+      <AppShell title="Democratic Deliberation" subtitle="Townhall Dossier">
+        <div className="max-w-4xl mx-auto px-4 py-16 text-center">
+          <h2 className="text-xl font-bold text-gray-900">Topic not found</h2>
+          <Link href="/townhalls" className="text-blue-600 text-sm font-bold mt-3 inline-block">
+            ← Back to Townhalls
+          </Link>
+        </div>
+      </AppShell>
     );
   }
 
   const isOfficial = user && (user.role === 'official' || user.role === 'admin');
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
+    <AppShell title={topic?.title || 'Democratic Deliberation'} subtitle="Civic Townhall & E-Gram Sabha">
+      <div className="max-w-4xl mx-auto px-4 py-8">
       {/* Back button */}
       <Link
         href="/townhalls"
@@ -501,7 +507,8 @@ function TownhallDetailContent() {
           </div>
         )}
       </section>
-    </div>
+      </div>
+    </AppShell>
   );
 }
 

@@ -289,6 +289,7 @@ export function AppSidebar({
             )}
 
             {/* CITIZEN DASHBOARD ACCORDION */}
+            {user && (user.role === 'citizen' || user.role === 'admin') && (
             <div className="rounded-xl overflow-hidden">
               <button
                 type="button"
@@ -390,8 +391,10 @@ export function AppSidebar({
                 </div>
               )}
             </div>
+            )}
 
             {/* OFFICIAL PORTAL ACCORDION */}
+            {user && (user.role === 'official' || user.role === 'agency' || user.role === 'admin') && (
             <div className="rounded-xl overflow-hidden">
               <button
                 type="button"
@@ -493,8 +496,10 @@ export function AppSidebar({
                 </div>
               )}
             </div>
+            )}
 
             {/* ADMINISTRATOR CONSOLE ACCORDION */}
+            {user && user.role === 'admin' && (
             <div className="rounded-xl overflow-hidden">
               <button
                 type="button"
@@ -632,6 +637,40 @@ export function AppSidebar({
                 </div>
               )}
             </div>
+            )}
+
+            {/* UNREGISTERED / GUEST WORKSPACE PROMPT */}
+            {!user && (
+              <div className="pt-1">
+                {!isCollapsed ? (
+                  <div className="p-3 bg-orange-50/70 rounded-2xl border border-orange-200/80 text-center space-y-2">
+                    <p className="text-[11px] font-bold text-gray-700">Sign in to view your dashboard</p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (isMobileOpen) onCloseMobile();
+                        openAuthModal();
+                      }}
+                      className="w-full py-1.5 px-2 bg-orange-600 hover:bg-orange-700 text-white rounded-xl text-xs font-bold transition shadow-xs cursor-pointer"
+                    >
+                      {t('signIn')}
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (isMobileOpen) onCloseMobile();
+                      openAuthModal();
+                    }}
+                    className="w-full flex justify-center p-2 text-orange-600 hover:bg-orange-50 rounded-xl transition"
+                    title={t('signIn')}
+                  >
+                    <User className="w-5 h-5" />
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         </div>
 

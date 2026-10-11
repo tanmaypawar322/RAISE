@@ -3,6 +3,7 @@
 import React, { useEffect } from 'react';
 import { LanguageProvider } from '../context/LanguageContext';
 import { AuthProvider } from '../context/AuthContext';
+import { DisplayProvider } from '../context/DisplayContext';
 import { AuthModal } from '../components/AuthModal';
 
 export function Providers({ children }: { children: React.ReactNode }) {
@@ -16,10 +17,12 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <LanguageProvider>
-      <AuthProvider>
-        {children}
-        <AuthModal />
-      </AuthProvider>
+      <DisplayProvider>
+        <AuthProvider>
+          {children}
+          <AuthModal />
+        </AuthProvider>
+      </DisplayProvider>
     </LanguageProvider>
   );
 }
