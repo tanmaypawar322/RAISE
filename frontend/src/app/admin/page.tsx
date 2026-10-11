@@ -52,6 +52,17 @@ const PILOT_CATEGORY_METRICS: Array<{ id: string; key: 'roads' | 'water' | 'sani
   { id: 'other', key: 'other', total: 2, open: 1, resolved: 1, overdue: 0 },
 ];
 
+export type AdminTab =
+  | 'overview'
+  | 'claims'
+  | 'moderation'
+  | 'finance'
+  | 'billing'
+  | 'freeze_windows'
+  | 'rep_updates'
+  | 'outreach'
+  | 'security';
+
 export default function AdminPanelPage() {
   const {
     user,
@@ -66,10 +77,27 @@ export default function AdminPanelPage() {
   } = useAuth();
   const { language, t } = useLanguage();
 
-  const [activeTab, setActiveTab] = useState<'claims' | 'moderation' | 'escalation' | 'security' | 'jurisdictions' | 'metrics'>('claims');
+  const [activeTab, setActiveTab] = useState<AdminTab>('overview');
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [unclaimedProfiles, setUnclaimedProfiles] = useState<any[]>([]);
   const [selectedLinkProfileMap, setSelectedLinkProfileMap] = useState<Record<string, string>>({});
+
+  // Check URL query parameters for tab navigation
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const tabParam = params.get('tab');
+      if (tabParam === 'claims') setActiveTab('claims');
+      else if (tabParam === 'moderation') setActiveTab('moderation');
+      else if (tabParam === 'finance') setActiveTab('finance');
+      else if (tabParam === 'billing') setActiveTab('billing');
+      else if (tabParam === 'freeze_windows' || tabParam === 'mcc') setActiveTab('freeze_windows');
+      else if (tabParam === 'rep_updates') setActiveTab('rep_updates');
+      else if (tabParam === 'outreach' || tabParam === 'jurisdictions') setActiveTab('outreach');
+      else if (tabParam === 'security' || tabParam === '2fa') setActiveTab('security');
+      else if (tabParam === 'overview' || tabParam === 'metrics' || tabParam === 'escalation') setActiveTab('overview');
+    }
+  }, []);
 
   // Pilot Metrics State (Phase 7)
   const [pilotMetrics, setPilotMetrics] = useState<any | null>(null);
@@ -381,9 +409,9 @@ export default function AdminPanelPage() {
     if (user && user.role === 'admin' && token) {
       fetchClaims();
       fetchStats();
-      if (activeTab === 'jurisdictions') {
+      if (activeTab === 'outreach') {
         fetchJurisdictions();
-      } else if (activeTab === 'metrics') {
+      } else if (activeTab === 'overview') {
         fetchPilotMetrics();
       }
     }
@@ -683,6 +711,59 @@ export default function AdminPanelPage() {
     );
   }
 
+  const adminSidebarItems: { id: AdminTab; label: string; icon: any; count?: number; badge?: string }[] = [
+    {
+      id: 'overview',
+      label: t('tabSystemOverview'),
+      icon: BarChart3,
+      badge: 'Ward 12 Live',
+    },
+    {
+      id: 'claims',
+      label: t('tabClaimsQueue'),
+      icon: Building,
+      count: claimsList.filter((c) => c.status === 'pending').length,
+    },
+    {
+      id: 'moderation',
+      label: t('tabModerationFlags'),
+      icon: AlertTriangle,
+      count: flaggedReports.length,
+    },
+    {
+      id: 'finance',
+      label: t('tabFinanceLedger'),
+      icon: Wallet,
+      badge: '100% Public',
+    },
+    {
+      id: 'billing',
+      label: t('tabBillingPlans'),
+      icon: CreditCard,
+    },
+    {
+      id: 'freeze_windows',
+      label: t('tabFreezeWindows'),
+      icon: Scale,
+      badge: 'MCC Active',
+    },
+    {
+      id: 'rep_updates',
+      label: t('tabRepUpdatesMod'),
+      icon: FileText,
+    },
+    {
+      id: 'outreach',
+      label: t('tabOutreachJur'),
+      icon: MapPin,
+    },
+    {
+      id: 'security',
+      label: t('twoFactorAuth'),
+      icon: KeyRound,
+    },
+  ];
+
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col pb-20">
       <Header />
@@ -759,136 +840,103 @@ export default function AdminPanelPage() {
           </span>
         </div>
 
-        {/* Tab Controls */}
-        <div className="flex items-center gap-2 border-b border-gray-200 pb-3 mb-6">
-          <button
-            onClick={() => setActiveTab('claims')}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition ${
-              activeTab === 'claims'
-                ? 'bg-purple-900 text-white shadow-xs'
-                : 'text-gray-600 bg-white border border-gray-200 hover:bg-gray-100'
-            }`}
-          >
-            <Building className="w-3.5 h-3.5" />
-            <span>{t('claimsReviewTitle')} ({claimsList.filter(c => c.status === 'pending').length})</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('moderation')}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition ${
-              activeTab === 'moderation'
-                ? 'bg-purple-900 text-white shadow-xs'
-                : 'text-gray-600 bg-white border border-gray-200 hover:bg-gray-100'
-            }`}
-          >
-            <AlertTriangle className="w-3.5 h-3.5" />
-            <span>{t('moderationQueue')} ({flaggedReports.length})</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('escalation')}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition ${
-              activeTab === 'escalation'
-                ? 'bg-purple-900 text-white shadow-xs'
-                : 'text-gray-600 bg-white border border-gray-200 hover:bg-gray-100'
-            }`}
-          >
-            <Flame className="w-3.5 h-3.5 text-orange-400" />
-            <span>{t('escalationWatch')} ({escalations.length})</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('security')}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition ${
-              activeTab === 'security'
-                ? 'bg-purple-900 text-white shadow-xs'
-                : 'text-gray-600 bg-white border border-gray-200 hover:bg-gray-100'
-            }`}
-          >
-            <KeyRound className="w-3.5 h-3.5" />
-            <span>{t('twoFactorAuth')}</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('jurisdictions')}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition ${
-              activeTab === 'jurisdictions'
-                ? 'bg-purple-900 text-white shadow-xs'
-                : 'text-gray-600 bg-white border border-gray-200 hover:bg-gray-100'
-            }`}
-          >
-            <MapPin className="w-3.5 h-3.5" />
-            <span>{t('jurisdictionsRoutingTab')}</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('metrics')}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition ${
-              activeTab === 'metrics'
-                ? 'bg-purple-900 text-white shadow-xs'
-                : 'text-gray-600 bg-white border border-gray-200 hover:bg-gray-100'
-            }`}
-          >
-            <BarChart3 className="w-3.5 h-3.5 text-amber-400" />
-            <span>Pilot Metrics & Standup</span>
-          </button>
-
-          <Link
-            href="/admin/outreach"
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition text-purple-700 bg-purple-50 border border-purple-200 hover:bg-purple-100"
-          >
-            <Users className="w-3.5 h-3.5" />
-            <span>Outreach Queue</span>
-          </Link>
-
-          <Link
-            href="/admin/corrections"
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition text-purple-700 bg-purple-50 border border-purple-200 hover:bg-purple-100"
-          >
-            <Scale className="w-3.5 h-3.5" />
-            <span>Dispute Audits</span>
-          </Link>
-
-          <Link
-            href="/admin/rep-updates"
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition text-purple-700 bg-purple-50 border border-purple-200 hover:bg-purple-100"
-          >
-            <FileText className="w-3.5 h-3.5" />
-            <span>Rep Updates</span>
-          </Link>
-
-          <Link
-            href="/admin/freeze-windows"
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition text-purple-700 bg-purple-50 border border-purple-200 hover:bg-purple-100"
-          >
-            <ShieldAlert className="w-3.5 h-3.5" />
-            <span>Election Freeze</span>
-          </Link>
-
-          <Link
-            href="/admin/billing"
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition text-purple-700 bg-purple-50 border border-purple-200 hover:bg-purple-100"
-          >
-            <CreditCard className="w-3.5 h-3.5" />
-            <span>Billing & Plans</span>
-          </Link>
-
-          <Link
-            href="/admin/finance"
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition text-purple-700 bg-purple-50 border border-purple-200 hover:bg-purple-100"
-          >
-            <Wallet className="w-3.5 h-3.5" />
-            <span>Finance & Ledger</span>
-          </Link>
-
-          <Link
-            href="/office-portal/analysis"
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition text-purple-700 bg-purple-50 border border-purple-200 hover:bg-purple-100"
-          >
-            <BarChart3 className="w-3.5 h-3.5" />
-            <span>Executive Analysis</span>
-          </Link>
+        {/* Mobile Horizontal Tabs Scroller */}
+        <div className="lg:hidden flex items-center gap-1.5 overflow-x-auto pb-3 mb-4 scrollbar-none">
+          {adminSidebarItems.map((item) => {
+            const Icon = item.icon;
+            const isSelected = activeTab === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => setActiveTab(item.id)}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition cursor-pointer shrink-0 border ${
+                  isSelected
+                    ? 'bg-purple-900 text-white border-purple-900 shadow-xs'
+                    : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-100'
+                }`}
+              >
+                <Icon className="w-3.5 h-3.5" />
+                <span>{item.label}</span>
+                {item.count !== undefined && (
+                  <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                    isSelected ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-700'
+                  }`}>
+                    {item.count}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
+
+        {/* 2-Column Desktop SaaS Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
+          {/* Left Persistent Sidebar */}
+          <aside className="hidden lg:block lg:col-span-1 space-y-4 sticky top-20">
+            <nav className="bg-white rounded-2xl border border-gray-200 p-2 shadow-xs space-y-1">
+              <div className="px-3 py-2 border-b border-gray-100 mb-1">
+                <span className="text-[10px] font-black uppercase tracking-wider text-gray-400">
+                  Governance Consoles
+                </span>
+              </div>
+              {adminSidebarItems.map((item) => {
+                const Icon = item.icon;
+                const isSelected = activeTab === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => setActiveTab(item.id)}
+                    className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold transition text-left cursor-pointer ${
+                      isSelected
+                        ? 'bg-purple-900 text-white shadow-xs'
+                        : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5 truncate">
+                      <Icon className={`w-4 h-4 shrink-0 ${isSelected ? 'text-white' : 'text-gray-500'}`} />
+                      <span className="truncate">{item.label}</span>
+                    </div>
+
+                    {item.count !== undefined ? (
+                      <span
+                        className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                          isSelected ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-600'
+                        }`}
+                      >
+                        {item.count}
+                      </span>
+                    ) : item.badge ? (
+                      <span
+                        className={`text-[9px] font-bold px-1.5 py-0.5 rounded-md ${
+                          isSelected ? 'bg-white/20 text-white' : 'bg-purple-50 text-purple-700'
+                        }`}
+                      >
+                        {item.badge}
+                      </span>
+                    ) : null}
+                  </button>
+                );
+              })}
+            </nav>
+
+            {/* Quick Policy Card */}
+            <div className="bg-gradient-to-br from-purple-950 to-indigo-950 rounded-2xl p-4 text-white text-xs space-y-2.5 shadow-xs">
+              <div className="flex items-center gap-1.5 text-purple-200 font-bold">
+                <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                <span>Statutory Governance</span>
+              </div>
+              <p className="text-[11px] text-purple-200/90 leading-relaxed">
+                Section 8 non-profit platform rules enforce zero political advertisements, statutory audit ledgers, and Model Code of Conduct neutrality.
+              </p>
+              <div className="pt-2 border-t border-purple-800/80 flex items-center justify-between text-[11px] font-bold">
+                <span className="text-purple-300">MCC Status</span>
+                <span className="text-amber-300">Ready for Sweep</span>
+              </div>
+            </div>
+          </aside>
+
+          {/* Right Main Content */}
+          <section className="lg:col-span-3 space-y-6">
 
         {/* TAB 1: OFFICIAL CLAIMS QUEUE */}
         {activeTab === 'claims' && (
@@ -1191,42 +1239,6 @@ export default function AdminPanelPage() {
           </div>
         )}
 
-        {/* TAB 3: ESCALATION WATCH */}
-        {activeTab === 'escalation' && (
-          <div className="space-y-6">
-            {escalations.map((esc) => (
-              <div key={esc._id} className="bg-white rounded-2xl border border-gray-200 p-6 shadow-xs">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
-                  <div>
-                    <span className="text-xs font-bold text-orange-600 bg-orange-50 px-2.5 py-0.5 rounded-full">
-                      Overdue ({esc.daysPast} days unacknowledged)
-                    </span>
-                    <h3 className="font-bold text-base text-gray-900 mt-1.5">{esc.issueTitle}</h3>
-                    <p className="text-xs text-gray-500 mt-0.5">{esc.officeName} &bull; {esc.locality}</p>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => handleCopy(`cp_${esc._id}`, esc.cpgramsDraft)}
-                      className="flex items-center gap-1 px-3 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 rounded-xl text-xs font-bold transition"
-                    >
-                      <Copy className="w-3.5 h-3.5" />
-                      <span>{copiedId === `cp_${esc._id}` ? 'Copied!' : t('generateCpgrams')}</span>
-                    </button>
-
-                    <button
-                      onClick={() => handleCopy(`rti_${esc._id}`, esc.rtiDraft)}
-                      className="flex items-center gap-1 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-xl text-xs font-bold transition"
-                    >
-                      <Copy className="w-3.5 h-3.5" />
-                      <span>{copiedId === `rti_${esc._id}` ? 'Copied!' : t('generateRti')}</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
 
         {/* TAB 4: SECURITY & 2FA MANAGEMENT */}
         {activeTab === 'security' && (
@@ -1295,8 +1307,151 @@ export default function AdminPanelPage() {
           </div>
         )}
 
+        {/* TAB: FINANCE & PUBLIC LEDGER */}
+        {activeTab === 'finance' && (
+          <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-xs space-y-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-gray-100">
+              <div>
+                <span className="text-[10px] font-black uppercase text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
+                  100% Public Audit
+                </span>
+                <h2 className="text-lg font-black text-gray-900 mt-1">
+                  {t('tabFinanceLedger')}
+                </h2>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  Real-time double-entry public transparency ledger for platform operational expenditures and public citizen patronage.
+                </p>
+              </div>
+              <Link
+                href="/admin/finance"
+                className="inline-flex items-center gap-1.5 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl shadow-xs transition"
+              >
+                <span>Open Financial Ledger Console</span>
+                <ExternalLink className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-200">
+                <span className="text-[11px] font-bold text-emerald-800 block">Total Public Contributions</span>
+                <span className="text-2xl font-black text-emerald-950 mt-1 block">₹ 28,54,200</span>
+                <span className="text-[10px] text-emerald-700">From 142 citizen patrons</span>
+              </div>
+              <div className="p-4 bg-amber-50 rounded-xl border border-amber-200">
+                <span className="text-[11px] font-bold text-amber-800 block">Operating Server & SMS Costs</span>
+                <span className="text-2xl font-black text-amber-950 mt-1 block">₹ 16,21,800</span>
+                <span className="text-[10px] text-amber-700">Zero advertiser capital</span>
+              </div>
+              <div className="p-4 bg-blue-50 rounded-xl border border-blue-200">
+                <span className="text-[11px] font-bold text-blue-800 block">Net Operating Reserves</span>
+                <span className="text-2xl font-black text-blue-950 mt-1 block">₹ 12,32,400</span>
+                <span className="text-[10px] text-blue-700">Dedicated to Ward 12 Pilot</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* TAB: BILLING & PLANS */}
+        {activeTab === 'billing' && (
+          <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-xs space-y-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-gray-100">
+              <div>
+                <span className="text-[10px] font-black uppercase text-teal-700 bg-teal-50 px-2 py-0.5 rounded-full border border-teal-200">
+                  Subscription Plans Management
+                </span>
+                <h2 className="text-lg font-black text-gray-900 mt-1">
+                  {t('tabBillingPlans')}
+                </h2>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  Enterprise seat quotas, municipal tiers, and Section 8 non-profit revenue compliance.
+                </p>
+              </div>
+              <Link
+                href="/admin/billing"
+                className="inline-flex items-center gap-1.5 px-4 py-2 bg-teal-700 hover:bg-teal-800 text-white text-xs font-bold rounded-xl shadow-xs transition"
+              >
+                <span>Open Full Billing Console</span>
+                <ExternalLink className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+
+            <div className="p-4 bg-gray-50 rounded-xl border border-gray-200 text-xs space-y-2">
+              <span className="font-bold text-gray-900 block">Plan Quota Overview:</span>
+              <p className="text-gray-600 leading-relaxed">
+                Office Basic (Free for all statutory public authorities with 5 nodal team seats) &bull; Office Pro (₹4,999/mo for large municipal divisions with 25 seats & priority analytics).
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* TAB: ELECTION FREEZE WINDOWS (MCC) */}
+        {activeTab === 'freeze_windows' && (
+          <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-xs space-y-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-gray-100">
+              <div>
+                <span className="text-[10px] font-black uppercase text-rose-700 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-200">
+                  Model Code of Conduct (MCC)
+                </span>
+                <h2 className="text-lg font-black text-gray-900 mt-1">
+                  {t('tabFreezeWindows')}
+                </h2>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  Statutory blackout periods during State Assembly (Vidhan Sabha) and Parliamentary (Lok Sabha) elections.
+                </p>
+              </div>
+              <Link
+                href="/admin/freeze-windows"
+                className="inline-flex items-center gap-1.5 px-4 py-2 bg-rose-700 hover:bg-rose-800 text-white text-xs font-bold rounded-xl shadow-xs transition"
+              >
+                <span>Open MCC Freeze Console</span>
+                <ExternalLink className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+
+            <div className="p-4 bg-rose-50 rounded-xl border border-rose-200 text-xs space-y-2">
+              <span className="font-bold text-rose-950 block">Election Commission Neutrality Lock:</span>
+              <p className="text-rose-900 leading-relaxed">
+                When active, political representative achievements and promotional announcements are frozen to prevent undue electoral influence across Pimpri-Chinchwad jurisdictions.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* TAB: REPRESENTATIVE UPDATES MODERATION */}
+        {activeTab === 'rep_updates' && (
+          <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-xs space-y-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-gray-100">
+              <div>
+                <span className="text-[10px] font-black uppercase text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200">
+                  Legislative Updates Queue
+                </span>
+                <h2 className="text-lg font-black text-gray-900 mt-1">
+                  {t('tabRepUpdatesMod')}
+                </h2>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  Verify official statements and ward development announcements submitted by elected representatives.
+                </p>
+              </div>
+              <Link
+                href="/admin/rep-updates"
+                className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white text-xs font-bold rounded-xl shadow-xs transition"
+              >
+                <span>Open Rep Updates Queue</span>
+                <ExternalLink className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+
+            <div className="p-4 bg-blue-50 rounded-xl border border-blue-200 text-xs space-y-2">
+              <span className="font-bold text-blue-950 block">Audit Standard:</span>
+              <p className="text-blue-900 leading-relaxed">
+                Updates must pertain to verified constituency works, legislative questions, or public fund allocations with documented sanction orders.
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* TAB 5: JURISDICTIONS & ROUTING */}
-        {activeTab === 'jurisdictions' && (
+        {activeTab === 'outreach' && (
           <div className="space-y-6">
             {/* Top Toolbar: Run Escalations & Download CSV */}
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-4 bg-white rounded-2xl border border-gray-200 shadow-xs">
@@ -1645,9 +1800,9 @@ export default function AdminPanelPage() {
         )}
 
         {/* ============================================================ */}
-        {/* TAB 6: PILOT METRICS & STANDUP (PHASE 7) */}
+        {/* TAB: SYSTEM OVERVIEW, PILOT METRICS & ESCALATION WATCH */}
         {/* ============================================================ */}
-        {activeTab === 'metrics' && (
+        {activeTab === 'overview' && (
           <div className="space-y-6">
             <div className="bg-white rounded-3xl p-6 sm:p-8 border border-gray-200 shadow-xs">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
@@ -1810,8 +1965,93 @@ export default function AdminPanelPage() {
                 </div>
               </div>
             </div>
+
+            {/* Overdue Grievance Escalation Watch Desk */}
+            <div className="bg-white rounded-3xl p-6 sm:p-8 border border-gray-200 shadow-xs space-y-5">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-gray-100">
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-[10px] uppercase font-black px-2.5 py-0.5 rounded-full bg-orange-100 text-orange-900 border border-orange-200">
+                      Statutory SLA Watch
+                    </span>
+                    <span className="text-[10px] font-semibold text-slate-500">Tier 1 &amp; Tier 2 Escalations</span>
+                  </div>
+                  <h3 className="text-xl font-black text-gray-900 flex items-center gap-2">
+                    <Flame className="w-6 h-6 text-orange-600" />
+                    <span>{t('escalationWatch')}</span>
+                  </h3>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Civic issues breaching resolution timelines. Trigger automated escalation ladder or copy statutory CPGRAMS / RTI Section 6(1) notices.
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={handleRunEscalations}
+                    disabled={escalationRunning}
+                    className="flex items-center gap-1.5 px-3.5 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-xl text-xs font-bold transition disabled:opacity-50 cursor-pointer shadow-xs"
+                  >
+                    <Flame className="w-3.5 h-3.5" />
+                    <span>{escalationRunning ? t('runningEscalation') : t('runEscalationBtn')}</span>
+                  </button>
+                </div>
+              </div>
+
+              {escalationToast && (
+                <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-900 font-semibold flex items-center justify-between">
+                  <span>{escalationToast}</span>
+                  <button onClick={() => setEscalationToast(null)} className="text-emerald-700 hover:text-emerald-900 text-xs px-2 cursor-pointer">✕</button>
+                </div>
+              )}
+
+              <div className="space-y-4">
+                {escalations.map((esc) => (
+                  <div key={esc._id} className="p-4 bg-orange-50/50 rounded-2xl border border-orange-200/70 space-y-3">
+                    <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1.5">
+                          <span className="text-[10px] font-black uppercase bg-orange-200/80 text-orange-950 px-2 py-0.5 rounded">
+                            Overdue ({esc.daysPast} days unacknowledged)
+                          </span>
+                          <span className="text-[11px] font-bold text-orange-800">
+                            {esc.raiseCount} Citizen Backers
+                          </span>
+                        </div>
+                        <h4 className="font-bold text-sm text-gray-900">{esc.issueTitle}</h4>
+                        <p className="text-xs text-gray-600 mt-0.5">
+                          {esc.officeName} &bull; <span className="font-medium">{esc.locality}</span>
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => handleCopy(`cp_${esc._id}`, esc.cpgramsDraft)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-100 hover:bg-purple-200 text-purple-800 border border-purple-200 rounded-xl text-xs font-bold transition cursor-pointer shadow-2xs"
+                        >
+                          <Copy className="w-3.5 h-3.5" />
+                          <span>{copiedId === `cp_${esc._id}` ? 'Copied!' : t('generateCpgrams')}</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleCopy(`rti_${esc._id}`, esc.rtiDraft)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-100 hover:bg-indigo-200 text-indigo-800 border border-indigo-200 rounded-xl text-xs font-bold transition cursor-pointer shadow-2xs"
+                        >
+                          <Copy className="w-3.5 h-3.5" />
+                          <span>{copiedId === `rti_${esc._id}` ? 'Copied!' : t('generateRti')}</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         )}
+          </section>
+        </div>
       </main>
 
       {/* MODAL: 2FA SETUP */}

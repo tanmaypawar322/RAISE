@@ -32,7 +32,20 @@ import {
   ExternalLink,
   AlertCircle,
   ArrowUpRight,
+  Users,
+  MapPin,
+  Sparkles,
 } from 'lucide-react';
+
+export type OfficeTab =
+  | 'queue'
+  | 'resolution'
+  | 'analysis'
+  | 'directives'
+  | 'representative'
+  | 'reports'
+  | 'scorecard'
+  | 'billing';
 
 export default function OfficePortalPage() {
   const {
@@ -48,7 +61,7 @@ export default function OfficePortalPage() {
   } = useAuth();
   const { t, language } = useLanguage();
 
-  const [activeTab, setActiveTab] = useState<'queue' | 'reports' | 'scorecard' | 'billing'>('queue');
+  const [activeTab, setActiveTab] = useState<OfficeTab>('queue');
   const [officeScorecard, setOfficeScorecard] = useState<any | null>(null);
   const [billingData, setBillingData] = useState<any | null>(null);
   const [billingLoading, setBillingLoading] = useState(false);
@@ -131,6 +144,15 @@ export default function OfficePortalPage() {
         setInviteToken(inv);
         setAuthTab('invite');
       }
+      const tabParam = params.get('tab');
+      if (tabParam === 'resolution') setActiveTab('resolution');
+      else if (tabParam === 'analysis') setActiveTab('analysis');
+      else if (tabParam === 'directives') setActiveTab('directives');
+      else if (tabParam === 'representative' || tabParam === 'reps') setActiveTab('representative');
+      else if (tabParam === 'reports') setActiveTab('reports');
+      else if (tabParam === 'scorecard') setActiveTab('scorecard');
+      else if (tabParam === 'billing' || tabParam === 'seats') setActiveTab('billing');
+      else if (tabParam === 'queue') setActiveTab('queue');
     }
   }, []);
 
@@ -965,6 +987,53 @@ export default function OfficePortalPage() {
   const isPending = user.status === 'pending';
   const isContractor = user.role === 'agency';
 
+  const officialSidebarItems: { id: OfficeTab; label: string; icon: any; count?: number; badge?: string }[] = [
+    {
+      id: 'queue',
+      label: t('tabAssignedQueue'),
+      icon: Clock,
+      count: assignedIssues.length,
+    },
+    {
+      id: 'resolution',
+      label: t('tabResolutionDesk'),
+      icon: CheckCircle2,
+      badge: '150m GPS',
+    },
+    {
+      id: 'analysis',
+      label: t('tabDeptAnalytics'),
+      icon: BarChart3,
+    },
+    {
+      id: 'directives',
+      label: t('tabBindingDirectives'),
+      icon: FileText,
+    },
+    {
+      id: 'representative',
+      label: t('tabRepInquiries'),
+      icon: Users,
+      badge: '72h SLA',
+    },
+    {
+      id: 'reports',
+      label: t('tabMonthlyReports'),
+      icon: FileSpreadsheet,
+      count: reportsList.length,
+    },
+    {
+      id: 'scorecard',
+      label: 'Public Scorecard',
+      icon: Building2,
+    },
+    {
+      id: 'billing',
+      label: t('tabTeamSeats'),
+      icon: CreditCard,
+    },
+  ];
+
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col pb-20">
       <Header />
@@ -1070,56 +1139,102 @@ export default function OfficePortalPage() {
           </div>
         </section>
 
-        {/* Tab Controls */}
-        <div className="flex items-center gap-2 border-b border-gray-200 pb-3 mb-6">
-          <button
-            onClick={() => setActiveTab('queue')}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition ${
-              activeTab === 'queue'
-                ? 'bg-blue-900 text-white shadow-xs'
-                : 'text-gray-600 bg-white border border-gray-200 hover:bg-gray-100'
-            }`}
-          >
-            <Clock className="w-3.5 h-3.5" />
-            <span>{t('assignedIssues')} ({assignedIssues.length})</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('reports')}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition ${
-              activeTab === 'reports'
-                ? 'bg-blue-900 text-white shadow-xs'
-                : 'text-gray-600 bg-white border border-gray-200 hover:bg-gray-100'
-            }`}
-          >
-            <FileSpreadsheet className="w-3.5 h-3.5" />
-            <span>{t('officialWorkReport')}</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('scorecard')}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition ${
-              activeTab === 'scorecard'
-                ? 'bg-blue-900 text-white shadow-xs'
-                : 'text-gray-600 bg-white border border-gray-200 hover:bg-gray-100'
-            }`}
-          >
-            <Building2 className="w-3.5 h-3.5" />
-            <span>Public Scorecard</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('billing')}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition ${
-              activeTab === 'billing'
-                ? 'bg-blue-900 text-white shadow-xs'
-                : 'text-gray-600 bg-white border border-gray-200 hover:bg-gray-100'
-            }`}
-          >
-            <CreditCard className="w-3.5 h-3.5" />
-            <span>{t('billingTab') || 'Billing & Plan'}</span>
-          </button>
+        {/* Mobile Horizontal Tabs Scroller */}
+        <div className="lg:hidden flex items-center gap-1.5 overflow-x-auto pb-3 mb-4 scrollbar-none">
+          {officialSidebarItems.map((item) => {
+            const Icon = item.icon;
+            const isSelected = activeTab === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => setActiveTab(item.id)}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition cursor-pointer shrink-0 border ${
+                  isSelected
+                    ? 'bg-blue-900 text-white border-blue-900 shadow-xs'
+                    : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-100'
+                }`}
+              >
+                <Icon className="w-3.5 h-3.5" />
+                <span>{item.label}</span>
+                {item.count !== undefined && (
+                  <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                    isSelected ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-700'
+                  }`}>
+                    {item.count}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
+
+        {/* 2-Column Desktop SaaS Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
+          {/* Left Persistent Sidebar */}
+          <aside className="hidden lg:block lg:col-span-1 space-y-4 sticky top-20">
+            <nav className="bg-white rounded-2xl border border-gray-200 p-2 shadow-xs space-y-1">
+              <div className="px-3 py-2 border-b border-gray-100 mb-1">
+                <span className="text-[10px] font-black uppercase tracking-wider text-gray-400">
+                  Official Workflows
+                </span>
+              </div>
+              {officialSidebarItems.map((item) => {
+                const Icon = item.icon;
+                const isSelected = activeTab === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => setActiveTab(item.id)}
+                    className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold transition text-left cursor-pointer ${
+                      isSelected
+                        ? 'bg-blue-900 text-white shadow-xs'
+                        : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5 truncate">
+                      <Icon className={`w-4 h-4 shrink-0 ${isSelected ? 'text-white' : 'text-gray-500'}`} />
+                      <span className="truncate">{item.label}</span>
+                    </div>
+
+                    {item.count !== undefined ? (
+                      <span
+                        className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                          isSelected ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-600'
+                        }`}
+                      >
+                        {item.count}
+                      </span>
+                    ) : item.badge ? (
+                      <span
+                        className={`text-[9px] font-bold px-1.5 py-0.5 rounded-md ${
+                          isSelected ? 'bg-white/20 text-white' : 'bg-blue-50 text-blue-700'
+                        }`}
+                      >
+                        {item.badge}
+                      </span>
+                    ) : null}
+                  </button>
+                );
+              })}
+            </nav>
+
+            {/* Department Quick Card */}
+            <div className="bg-gradient-to-br from-blue-900 to-indigo-950 rounded-2xl p-4 text-white text-xs space-y-2 shadow-xs">
+              <span className="text-[10px] uppercase font-bold text-blue-300 block">
+                Statutory Redressal Desk
+              </span>
+              <p className="text-[11px] text-blue-100/90 leading-relaxed">
+                All closures must meet statutory geo-tagging validation (150m rule) or provide audited exception justifications.
+              </p>
+              <div className="pt-2 border-t border-blue-800/80 flex items-center justify-between text-[11px] font-bold">
+                <span>Response SLA</span>
+                <span className="text-emerald-400">94.2% On-Time</span>
+              </div>
+            </div>
+          </aside>
+
+          {/* Right Main Content */}
+          <section className="lg:col-span-3 space-y-6">
 
         {/* TAB 1: ISSUES ACTION QUEUE */}
         {activeTab === 'queue' && (
@@ -1180,6 +1295,245 @@ export default function OfficePortalPage() {
                 </div>
               </div>
             ))}
+          </div>
+        )}
+
+        {/* TAB: RESOLUTION DESK */}
+        {activeTab === 'resolution' && (
+          <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-xs space-y-5">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-[10px] font-black uppercase tracking-wider text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                  Geo-Tag Verification (150m Rule)
+                </span>
+                <span className="text-[10px] text-gray-400">Statutory Redressal Desk</span>
+              </div>
+              <h2 className="text-lg font-black text-gray-900">
+                {t('tabResolutionDesk')}
+              </h2>
+              <p className="text-xs text-gray-500 mt-0.5">
+                Upload completion photos with geo-coordinates within 150m of the site, or select an official exception justification.
+              </p>
+            </div>
+
+            {assignedIssues.length === 0 ? (
+              <div className="p-8 text-center text-xs text-gray-500 bg-gray-50 rounded-2xl border border-gray-200">
+                No active assigned issues in the queue currently requiring resolution proof.
+              </div>
+            ) : (
+              <form onSubmit={handleUpdateStatusSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">
+                    Select Assigned Grievance to Resolve:
+                  </label>
+                  <select
+                    value={selectedIssue?._id || ''}
+                    onChange={(e) => {
+                      const found = assignedIssues.find((it) => it._id === e.target.value);
+                      setSelectedIssue(found || null);
+                      setStatusUpdate('resolved');
+                    }}
+                    className="w-full px-3 py-2.5 bg-gray-50 border border-gray-300 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-blue-600 focus:outline-none cursor-pointer"
+                    required
+                  >
+                    <option value="">-- Choose Grievance --</option>
+                    {assignedIssues.map((issue) => (
+                      <option key={issue._id} value={issue._id}>
+                        [{issue.category?.toUpperCase()}] {issue.title} ({issue.location?.ward || 'Ward 12'})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {selectedIssue && (
+                  <div className="p-4 bg-blue-50/60 rounded-xl border border-blue-200 text-xs space-y-2">
+                    <span className="font-bold text-blue-950 block">Selected Issue Overview:</span>
+                    <p className="text-blue-900 font-semibold">{selectedIssue.title}</p>
+                    <p className="text-[11px] text-blue-800/80">{selectedIssue.description}</p>
+                    <div className="flex items-center gap-3 text-[11px] text-blue-900 pt-1">
+                      <span>Location: {selectedIssue.location?.ward || 'Ward 12'}</span>
+                      <span>&bull;</span>
+                      <span>Backers: {selectedIssue.raiseCount} citizens</span>
+                    </div>
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">
+                    After-Work Photo URL (GPS Timestamped):
+                  </label>
+                  <input
+                    type="url"
+                    value={afterPhotoUrl}
+                    onChange={(e) => setAfterPhotoUrl(e.target.value)}
+                    placeholder="https://images.example.com/proof.jpg"
+                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-xl text-xs focus:ring-2 focus:ring-blue-600 focus:outline-none"
+                  />
+                  <p className="text-[11px] text-gray-400 mt-1">
+                    Must be taken on-site within 150m proximity of the reported location.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">
+                    Or Statutory Exception Justification (if photo cannot be taken within 150m):
+                  </label>
+                  <select
+                    value={exceptionReason}
+                    onChange={(e) => setExceptionReason(e.target.value)}
+                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-xl text-xs focus:ring-2 focus:ring-blue-600 focus:outline-none cursor-pointer"
+                  >
+                    <option value="">None (Standard On-Site Photo Attached)</option>
+                    <option value="underground_infrastructure">Underground drainage / pipeline work (Sub-surface non-visible)</option>
+                    <option value="boundary_ambiguity">Administrative ward boundary reconciliation</option>
+                    <option value="emergency_night_work">Emergency nocturnal heavy machinery deployment</option>
+                    <option value="statutory_policy_order">Administrative policy determination / Section 68 directive</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">
+                    Official Closure / Completion Note (Publicly visible to citizens):
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={officialNote}
+                    onChange={(e) => setOfficialNote(e.target.value)}
+                    placeholder="Describe the completed civil works, contractor details, and quality inspection notes..."
+                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-xl text-xs focus:ring-2 focus:ring-blue-600 focus:outline-none"
+                    required
+                  />
+                </div>
+
+                {statusError && (
+                  <div className="p-3 bg-red-100 border border-red-300 rounded-xl text-xs text-red-800 font-medium">
+                    {statusError}
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={!selectedIssue}
+                  className="w-full py-2.5 bg-emerald-700 hover:bg-emerald-800 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition shadow-xs cursor-pointer flex items-center justify-center gap-1.5"
+                >
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>Submit Verified Proof & Resolve Grievance</span>
+                </button>
+              </form>
+            )}
+          </div>
+        )}
+
+        {/* TAB: DEPARTMENT ANALYTICS */}
+        {activeTab === 'analysis' && (
+          <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-xs space-y-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-gray-100">
+              <div>
+                <span className="text-[10px] font-black uppercase text-purple-700 bg-purple-50 px-2 py-0.5 rounded-full border border-purple-200">
+                  Analytics & Trends Desk
+                </span>
+                <h2 className="text-lg font-black text-gray-900 mt-1">
+                  {t('tabDeptAnalytics')}
+                </h2>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  Cross-ward grievance volumes, resolution velocity, and recurring infrastructure hotspots.
+                </p>
+              </div>
+              <Link
+                href="/office-portal/analysis"
+                className="inline-flex items-center gap-1.5 px-4 py-2 bg-purple-700 hover:bg-purple-800 text-white text-xs font-bold rounded-xl shadow-xs transition"
+              >
+                <span>Open Full Analytics Console</span>
+                <ExternalLink className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="p-4 bg-purple-50 rounded-xl border border-purple-200">
+                <span className="text-[11px] font-bold text-purple-800 block">Average Redressal Velocity</span>
+                <span className="text-2xl font-black text-purple-950 mt-1 block">36.4 Hours</span>
+                <span className="text-[10px] text-purple-700">Well within 72h statutory target</span>
+              </div>
+              <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-200">
+                <span className="text-[11px] font-bold text-emerald-800 block">SLA Compliance Rate</span>
+                <span className="text-2xl font-black text-emerald-950 mt-1 block">94.2%</span>
+                <span className="text-[10px] text-emerald-700">Ranked #2 in PCMC jurisdiction</span>
+              </div>
+              <div className="p-4 bg-blue-50 rounded-xl border border-blue-200">
+                <span className="text-[11px] font-bold text-blue-800 block">Citizen Confirmation</span>
+                <span className="text-2xl font-black text-blue-950 mt-1 block">88.7%</span>
+                <span className="text-[10px] text-blue-700">Dispute rate lower than 5%</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* TAB: BINDING DIRECTIVES */}
+        {activeTab === 'directives' && (
+          <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-xs space-y-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-gray-100">
+              <div>
+                <span className="text-[10px] font-black uppercase text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200">
+                  Administrative Mandates
+                </span>
+                <h2 className="text-lg font-black text-gray-900 mt-1">
+                  {t('tabBindingDirectives')}
+                </h2>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  Statutory administrative directives issued under Section 68 / 72 by Municipal Commissioner & District Magistrate.
+                </p>
+              </div>
+              <Link
+                href="/office-portal/directives"
+                className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white text-xs font-bold rounded-xl shadow-xs transition"
+              >
+                <span>Open Directives Console</span>
+                <ExternalLink className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+
+            <div className="p-4 bg-amber-50 rounded-xl border border-amber-200 text-xs space-y-2">
+              <span className="font-bold text-amber-950 block">Active Statutory Mandate: PCMC Pothole-Free Monsoon 2026</span>
+              <p className="text-amber-900 leading-relaxed">
+                All arterial roads in Ward 10, Ward 12, and Ward 18 must have complete cold-mix and mastic asphalt patching within 48 hours of citizen reporting.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* TAB: REPRESENTATIVE INQUIRIES */}
+        {activeTab === 'representative' && (
+          <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-xs space-y-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-gray-100">
+              <div>
+                <span className="text-[10px] font-black uppercase text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-200">
+                  Legislative Inquiries (72h SLA)
+                </span>
+                <h2 className="text-lg font-black text-gray-900 mt-1">
+                  {t('tabRepInquiries')}
+                </h2>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  Formal inquiries from Ward Councillors, MLAs, and MPs requiring statutory replies within 72 hours.
+                </p>
+              </div>
+              <Link
+                href="/office-portal/representative"
+                className="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-900 hover:bg-indigo-800 text-white text-xs font-bold rounded-xl shadow-xs transition"
+              >
+                <span>Open Inquiries Desk</span>
+                <ExternalLink className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+
+            <div className="p-4 bg-blue-50 rounded-xl border border-blue-200 text-xs space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-blue-950">Inquiry #W12-089 &bull; Adv. Sachin Chinchwade (Ward Councillor)</span>
+                <span className="text-[10px] font-bold bg-amber-100 text-amber-900 px-2 py-0.5 rounded-full">42h Left</span>
+              </div>
+              <p className="text-blue-900">
+                Status inquiry regarding storm water drainage widening outside Nigdi East Bus Stand before upcoming rains.
+              </p>
+            </div>
           </div>
         )}
 
@@ -1574,6 +1928,8 @@ export default function OfficePortalPage() {
             </div>
           </div>
         )}
+          </section>
+        </div>
       </main>
 
       {/* MODAL: Update Status */}
