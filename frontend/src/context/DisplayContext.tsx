@@ -5,10 +5,10 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 export type ThemeMode = 'light' | 'dark' | 'system';
 export type FontSize = 'normal' | 'large' | 'xlarge';
 
-export const FONT_SIZE_LABELS: Record<FontSize, { label: string; labelMr: string; labelHi: string }> = {
-  normal: { label: 'Standard (Comfortable)', labelMr: 'प्रमाणित (वाचनीय)', labelHi: 'मानक (सहज)' },
-  large: { label: 'Large (+10%)', labelMr: 'मोठे (+१०%)', labelHi: 'बड़ा (+१०%)' },
-  xlarge: { label: 'Extra Large (+20%)', labelMr: 'अधिक मोठे (+२०%)', labelHi: 'बहुत बड़ा (+२०%)' },
+export const FONT_SIZE_LABELS: Record<FontSize, { label: string; labelMr: string; labelHi: string; desc: string; descMr: string; descHi: string }> = {
+  normal: { label: 'Standard', labelMr: 'प्रमाणित', labelHi: 'मानक', desc: 'Standard comfortable text', descMr: 'प्रमाणित वाचन आकार', descHi: 'मानक वाचन आकार' },
+  large: { label: 'Large', labelMr: 'मोठे', labelHi: 'बड़ा', desc: 'Enhanced text clarity', descMr: 'अधिक स्पष्ट आकार', descHi: 'अधिक स्पष्ट आकार' },
+  xlarge: { label: 'Extra Large', labelMr: 'अधिक मोठे', labelHi: 'बहुत बड़ा', desc: 'Maximum readability', descMr: 'कमाल वाचन सुलभता', descHi: 'अधिकतम वाचन सुलभता' },
 };
 
 interface DisplayContextType {

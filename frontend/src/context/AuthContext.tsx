@@ -149,7 +149,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const setSessionCookie = (sessionToken: string) => {
     if (typeof document !== 'undefined') {
       const isSecure = typeof window !== 'undefined' && window.location.protocol === 'https:';
-      document.cookie = `raise_token=${encodeURIComponent(sessionToken)}; path=/; max-age=604800; SameSite=Lax; ${isSecure ? 'Secure;' : ''}`;
+      document.cookie = `raise_token=${sessionToken}; path=/; max-age=604800; SameSite=Lax; ${isSecure ? 'Secure;' : ''}`;
     }
   };
 

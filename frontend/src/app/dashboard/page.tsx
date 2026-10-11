@@ -581,7 +581,7 @@ export default function CitizenDashboardPage() {
                     }`}
                   >
                     <FileText className="w-3.5 h-3.5 text-amber-600" />
-                    <span>Reported by Me ({myIssues.length})</span>
+                    <span>{t('reportedByMeCount')} ({myIssues.length})</span>
                   </button>
                   <button
                     onClick={() => setGrievanceSubTab('backed')}
@@ -592,7 +592,7 @@ export default function CitizenDashboardPage() {
                     }`}
                   >
                     <ThumbsUp className="w-3.5 h-3.5 text-blue-600" />
-                    <span>Issues I Backed ({supportedIssues.length})</span>
+                    <span>{t('backedByMeCount')} ({supportedIssues.length})</span>
                   </button>
                 </div>
 
@@ -606,7 +606,7 @@ export default function CitizenDashboardPage() {
                       type="text"
                       value={grievanceSearch}
                       onChange={(e) => setGrievanceSearch(e.target.value)}
-                      placeholder="Search my grievances by keyword, ward, or office..."
+                      placeholder={t('searchMyGrievancesPlaceholder')}
                       className="w-full pl-9 pr-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs focus:ring-2 focus:ring-orange-500 focus:outline-none"
                     />
                   </div>
@@ -959,14 +959,14 @@ export default function CitizenDashboardPage() {
                   <div>
                     <h2 className="text-base font-bold text-gray-900">{t('tabTownhallActivity')}</h2>
                     <p className="text-xs text-gray-500 mt-0.5">
-                      डिजिटल ग्रामसभा व सामूहिक निर्णय प्रक्रियेमधील तुमचा सहभाग आणि मतदान नोंदी
+                      {t('townhallSubtitle')}
                     </p>
                   </div>
                   <Link
                     href="/townhalls"
                     className="text-xs font-bold text-orange-600 hover:underline flex items-center gap-1"
                   >
-                    <span>सर्व ग्रामसभा पहा</span>
+                    <span>{t('viewAllTownhalls')}</span>
                     <ExternalLink className="w-3.5 h-3.5" />
                   </Link>
                 </div>
@@ -976,24 +976,24 @@ export default function CitizenDashboardPage() {
                   <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-xs space-y-3">
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 px-2.5 py-0.5 rounded-full">
-                        मतदान सुरू (Active Motion)
+                        {t('activeMotionBadge')}
                       </span>
-                      <span className="text-xs text-gray-400 font-medium">मुदत: ४ दिवस शिल्लक</span>
+                      <span className="text-xs text-gray-400 font-medium">{t('motionDaysLeft')}</span>
                     </div>
                     <h3 className="font-extrabold text-base text-gray-900">
-                      प्रभाग १२ रस्ते डांबरीकरण व पावसाळी निचरा कृती आराखडा २०२६-२७
+                      {t('motion1Title')}
                     </h3>
                     <p className="text-xs text-gray-600 leading-relaxed">
-                      प्राधिकरण परिसरातील अंतर्गत रस्त्यांचे १००% खड्डेमुक्त डांबरीकरण आणि पावसाळ्यात पाणी साचू नये म्हणून स्टॉर्म वॉटर ड्रेनेज क्षमता वाढवणे.
+                      {t('motion1Desc')}
                     </p>
                     <div className="p-3 bg-gray-50 rounded-xl flex items-center justify-between text-xs">
                       <div className="flex items-center gap-3">
-                        <span className="font-bold text-emerald-700">सहमत: १४२ नागरिक</span>
+                        <span className="font-bold text-emerald-700">{t('citizensAgree')}</span>
                         <span className="text-gray-300">&bull;</span>
-                        <span className="font-bold text-rose-700">असहमत: १८ नागरिक</span>
+                        <span className="font-bold text-rose-700">{t('citizensDisagree')}</span>
                       </div>
                       <span className="font-black text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-md text-[11px]">
-                        तुमचे मत: सहमत ✓
+                        {t('yourVoteAgreed')}
                       </span>
                     </div>
                   </div>
@@ -1002,20 +1002,20 @@ export default function CitizenDashboardPage() {
                   <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-xs space-y-3">
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-bold bg-blue-50 text-blue-800 border border-blue-200 px-2.5 py-0.5 rounded-full">
-                        मंजूर ठराव (Resolution Passed)
+                        {t('resolutionPassedBadge')}
                       </span>
-                      <span className="text-xs text-gray-400 font-medium">PCMC विद्युत विभागास आदेशित</span>
+                      <span className="text-xs text-gray-400 font-medium">{t('directedToPcmcElectricity')}</span>
                     </div>
                     <h3 className="font-extrabold text-base text-gray-900">
-                      सार्वजनिक उद्यानांमध्ये सौरऊर्जा दिवे व सुरक्षितता सीसीटीव्ही बसवणे
+                      {t('motion2Title')}
                     </h3>
                     <p className="text-xs text-gray-600 leading-relaxed">
-                      निगडी प्राधिकरण भागातील ४ प्रमुख उद्यानांमध्ये महिला व ज्येष्ठ नागरिकांच्या सुरक्षिततेसाठी सौरऊर्जा पथदिवे व सीसीटीव्ही यंत्रणा मंजूर करण्यात आली.
+                      {t('motion2Desc')}
                     </p>
                     <div className="p-3 bg-gray-50 rounded-xl flex items-center justify-between text-xs">
-                      <span className="font-bold text-gray-700">८९% नागरिकांच्या बहुमताने मंजूर</span>
+                      <span className="font-bold text-gray-700">{t('passedByMajority')}</span>
                       <span className="font-bold text-orange-600 bg-orange-50 px-2 py-0.5 rounded-md text-[11px]">
-                        १ सुधारणा मांडली (Amendment)
+                        {t('amendmentProposed')}
                       </span>
                     </div>
                   </div>

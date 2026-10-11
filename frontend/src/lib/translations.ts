@@ -660,6 +660,46 @@ export const translations = {
     workspaces: 'कार्यक्षेत्र व दालने',
     helpAndSupport: 'मदत व तक्रार निवारण',
     section8Governance: 'कलम ८ कायदेशीर मानके',
+
+    // Townhall Activities & Deliberations
+    townhallSubtitle: 'डिजिटल ग्रामसभा व सामूहिक निर्णय प्रक्रियेमधील तुमचा सहभाग आणि मतदान नोंदी',
+    viewAllTownhalls: 'सर्व ग्रामसभा पहा',
+    activeMotionBadge: 'मतदान सुरू (Active Motion)',
+    motionDaysLeft: 'मुदत: ४ दिवस शिल्लक',
+    motion1Title: 'प्रभाग १२ रस्ते डांबरीकरण व पावसाळी निचरा कृती आराखडा २०२६-२७',
+    motion1Desc: 'प्राधिकरण परिसरातील अंतर्गत रस्त्यांचे १००% खड्डेमुक्त डांबरीकरण आणि पावसाळ्यात पाणी साचू नये म्हणून स्टॉर्म वॉटर ड्रेनेज क्षमता वाढवणे.',
+    citizensAgree: 'सहमत: १४२ नागरिक',
+    citizensDisagree: 'असहमत: १८ नागरिक',
+    yourVoteAgreed: 'तुमचे मत: सहमत ✓',
+    resolutionPassedBadge: 'मंजूर ठराव (Resolution Passed)',
+    directedToPcmcElectricity: 'PCMC विद्युत विभागास आदेशित',
+    motion2Title: 'सार्वजनिक उद्यानांमध्ये सौरऊर्जा दिवे व सुरक्षितता सीसीटीव्ही बसवणे',
+    motion2Desc: 'निगडी प्राधिकरण भागातील ४ प्रमुख उद्यानांमध्ये महिला व ज्येष्ठ नागरिकांच्या सुरक्षिततेसाठी सौरऊर्जा पथदिवे व सीसीटीव्ही यंत्रणा मंजूर करण्यात आली.',
+    passedByMajority: '८९% नागरिकांच्या बहुमताने मंजूर',
+    amendmentProposed: '१ सुधारणा मांडली (Amendment)',
+
+    // Dashboard Grievance Sub-Tabs & Placeholders
+    reportedByMeCount: 'मी नोंदवलेले',
+    backedByMeCount: 'मी पाठिंबा दिलेले',
+    searchMyGrievancesPlaceholder: 'शब्द, प्रभाग किंवा कार्यालयानुसार माझ्या तक्रारी शोधा...',
+
+    // Theme & Display
+    themeAppearance: 'रंगसंगती (Theme)',
+    themeLight: 'प्रकाश (Light)',
+    themeDark: 'गडद (Dark)',
+    themeSystem: 'प्रणालीनुसार (System)',
+
+    // Public Landing Page (Signed-out gate)
+    howItWorksTitle: 'जबाबदार प्रशासनाचे ५ मुख्य स्तंभ',
+    landingHeroHeading: 'प्रत्येक नागरिकाचा आवाज. प्रत्येक प्रशासनाचे कर्तव्य.',
+    landingHeroSubtext: 'स्थानिक प्रभाग ते मंत्रालय समन्वयापर्यंत — मध्यस्थांशिवाय अधिकृत नागरी समस्या निवारण, डिजिटल ग्रामसभा आणि कायदेशीर उत्तरदायित्व मंच.',
+    signInAsCitizenBtn: 'नागरिक म्हणून साइन इन करा',
+    signInAsOfficialBtn: 'प्रशासकीय कार्यालयीन प्रवेश',
+    registerCitizenBtn: 'नवीन नागरिक खाते नोंदवा',
+    viewMethodologyBtn: 'कार्यपद्धती व कायदेशीर मानके',
+    publicAuditBanner: '१००% सार्वजनिक तपासणी • शून्य जाहिराती',
+    statutorySlaBanner: '४८ तास नागरी सेवा हमी कायदा • ७२ तास विधिमंडळ घड्याळ',
+    dpdpShieldBanner: 'DPDP कायदा २०२३ पूर्णतः अनुपालन • पूर्ण गोपनीयता',
   },
 
   hi: {
@@ -1316,6 +1356,46 @@ export const translations = {
     workspaces: 'कार्यक्षेत्र और पोर्टल',
     helpAndSupport: 'सहायता और शिकायत निवारण',
     section8Governance: 'धारा ८ कानूनी मानक',
+
+    // Townhall Activities & Deliberations
+    townhallSubtitle: 'डिजिटल ग्रामसभा और सामूहिक निर्णय प्रक्रिया में आपकी भागीदारी और मतदान रिकॉर्ड',
+    viewAllTownhalls: 'सभी ग्रामसभाएं देखें',
+    activeMotionBadge: 'मतदान जारी (Active Motion)',
+    motionDaysLeft: 'अवधि: 4 दिन शेष',
+    motion1Title: 'वार्ड 12 सड़क डामरीकरण और मानसूनी जल निकासी कार्य योजना 2026-27',
+    motion1Desc: 'प्राधिकरण क्षेत्र में आंतरिक सड़कों का 100% गड्ढा-मुक्त डामरीकरण और जलभराव रोकने के लिए वर्षा जल निकासी क्षमता में वृद्धि।',
+    citizensAgree: 'सहमत: 142 नागरिक',
+    citizensDisagree: 'असहमत: 18 नागरिक',
+    yourVoteAgreed: 'आपका मत: सहमत ✓',
+    resolutionPassedBadge: 'पारित प्रस्ताव (Resolution Passed)',
+    directedToPcmcElectricity: 'PCMC विद्युत विभाग को निर्देशित',
+    motion2Title: 'सार्वजनिक उद्यानों में सौर ऊर्जा लाइट और सुरक्षा सीसीटीवी की स्थापना',
+    motion2Desc: 'निगडी प्राधिकरण क्षेत्र के 4 प्रमुख पार्कों में महिलाओं और वरिष्ठ नागरिकों की सुरक्षा के लिए सौर स्ट्रीट लाइट और सीसीटीवी प्रणाली को मंजूरी दी गई।',
+    passedByMajority: '89% नागरिकों के बहुमत से स्वीकृत',
+    amendmentProposed: '1 संशोधन प्रस्तावित (Amendment)',
+
+    // Dashboard Grievance Sub-Tabs & Placeholders
+    reportedByMeCount: 'मेरे द्वारा दर्ज',
+    backedByMeCount: 'मेरे द्वारा समर्थित',
+    searchMyGrievancesPlaceholder: 'कीवर्ड, वार्ड या कार्यालय द्वारा मेरी समस्याएं खोजें...',
+
+    // Theme & Display
+    themeAppearance: 'थीम (Theme)',
+    themeLight: 'हलका (Light)',
+    themeDark: 'गहरा (Dark)',
+    themeSystem: 'सिस्टम अनुसार (System)',
+
+    // Public Landing Page (Signed-out gate)
+    howItWorksTitle: 'जवाबदेह शासन के ५ प्रमुख स्तंभ',
+    landingHeroHeading: 'हर नागरिक की आवाज। हर प्रशासन का कर्तव्य।',
+    landingHeroSubtext: 'स्थानीय वार्ड से मंत्रालय समन्वय तक — बिना बिचौलियों के आधिकारिक नागरिक शिकायत निवारण, डिजिटल ग्रामसभा और कानूनी जवाबदेही मंच।',
+    signInAsCitizenBtn: 'नागरिक के रूप में साइन इन करें',
+    signInAsOfficialBtn: 'प्रशासनिक कार्यालय पोर्टल',
+    registerCitizenBtn: 'नया नागरिक खाता बनाएं',
+    viewMethodologyBtn: 'कार्यप्रणाली एवं कानूनी मानक',
+    publicAuditBanner: '100% सार्वजनिक ऑडिट • शून्य विज्ञापन',
+    statutorySlaBanner: '48 घंटे नागरिक सेवा गारंटी कानून • 72 घंटे विधानमंडल क्लॉक',
+    dpdpShieldBanner: 'DPDP अधिनियम 2023 पूर्ण अनुपालन • पूर्ण गोपनीयता',
   },
 
   en: {
@@ -1972,6 +2052,46 @@ export const translations = {
     workspaces: 'Workspaces & Portals',
     helpAndSupport: 'Help & Grievance Redressal',
     section8Governance: 'Section 8 Governance',
+
+    // Townhall Activities & Deliberations
+    townhallSubtitle: 'Digital Gram Sabha & collective decision-making participation and voting records',
+    viewAllTownhalls: 'View All Townhalls',
+    activeMotionBadge: 'Active Motion',
+    motionDaysLeft: '4 days remaining',
+    motion1Title: 'Ward 12 Road Resurfacing & Monsoon Drainage Action Plan 2026-27',
+    motion1Desc: '100% pothole-free asphalt resurfacing of internal roads in Pradhikaran and stormwater drainage capacity expansion to prevent waterlogging.',
+    citizensAgree: '142 Citizens Agree',
+    citizensDisagree: '18 Citizens Disagree',
+    yourVoteAgreed: 'Your Vote: Agreed ✓',
+    resolutionPassedBadge: 'Resolution Passed',
+    directedToPcmcElectricity: 'Directed to PCMC Electricity Department',
+    motion2Title: 'Installation of Solar Lighting & Security CCTV in Public Parks',
+    motion2Desc: 'Solar streetlights and CCTV systems approved across 4 major gardens in Nigdi Pradhikaran for safety of women and senior citizens.',
+    passedByMajority: 'Approved by 89% citizen majority',
+    amendmentProposed: '1 Amendment Proposed',
+
+    // Dashboard Grievance Sub-Tabs & Placeholders
+    reportedByMeCount: 'Reported by Me',
+    backedByMeCount: 'Backed by Me',
+    searchMyGrievancesPlaceholder: 'Search my grievances by keyword, ward, or office...',
+
+    // Theme & Display
+    themeAppearance: 'Appearance',
+    themeLight: 'Light',
+    themeDark: 'Dark',
+    themeSystem: 'System Default',
+
+    // Public Landing Page (Signed-out gate)
+    howItWorksTitle: '5 Pillars of Accountable Governance',
+    landingHeroHeading: "Every Citizen's Voice. Every Authority's Duty.",
+    landingHeroSubtext: 'From neighborhood wards to state coordination — statutory civic grievance redressal, digital Gram Sabhas, and municipal accountability without middlemen.',
+    signInAsCitizenBtn: 'Sign In as Citizen',
+    signInAsOfficialBtn: 'Executive Office Portal',
+    registerCitizenBtn: 'Create Citizen Account',
+    viewMethodologyBtn: 'Methodology & Standards',
+    publicAuditBanner: '100% Public Audit • Zero Ads',
+    statutorySlaBanner: '48h Public Service Guarantee • 72h Legislative Clock',
+    dpdpShieldBanner: 'DPDP Act 2023 Compliant • Strict Privacy Shield',
   },
 };
 

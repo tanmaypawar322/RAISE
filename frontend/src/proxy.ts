@@ -91,7 +91,15 @@ export async function proxy(request: NextRequest) {
     process.env.NEXT_PUBLIC_PUBLIC_ISSUE_PAGES === 'true';
 
   // Extract access token cookie
-  const token = request.cookies.get('raise_token')?.value || request.cookies.get('accessToken')?.value;
+  const rawCookie = request.cookies.get('raise_token')?.value || request.cookies.get('accessToken')?.value;
+  let token: string | undefined = undefined;
+  if (rawCookie) {
+    try {
+      token = decodeURIComponent(rawCookie);
+    } catch {
+      token = rawCookie;
+    }
+  }
 
   let validatedUser: AuthMeResponse['user'] | null = null;
   let isTokenStale = false;
@@ -100,7 +108,7 @@ export async function proxy(request: NextRequest) {
     const apiUrl =
       process.env.INTERNAL_API_URL ||
       process.env.NEXT_PUBLIC_API_URL ||
-      'http://localhost:5000/api';
+      'http://127.0.0.1:5000/api';
 
     try {
       const verifyRes = await fetch(`${apiUrl}/auth/me`, {
@@ -109,7 +117,7 @@ export async function proxy(request: NextRequest) {
           Authorization: `Bearer ${token}`,
           Accept: 'application/json',
         },
-        signal: AbortSignal.timeout(3000),
+        signal: AbortSignal.timeout(5000),
       });
 
       if (verifyRes.ok) {
@@ -119,26 +127,37 @@ export async function proxy(request: NextRequest) {
         } else {
           isTokenStale = true;
         }
-      } else {
+      } else if (verifyRes.status === 401) {
         isTokenStale = true;
+      } else {
+        // Non-401 failure (server 500, gateway timeout, etc.) - attempt safe JWT fallback
+        try {
+          const parts = token.split('.');
+          if (parts.length === 3) {
+            const payload = Buffer.from(parts[1], 'base64').toString('utf-8');
+            const decoded = JSON.parse(payload);
+            if (decoded && decoded.exp && decoded.exp * 1000 > Date.now()) {
+              validatedUser = {
+                userId: decoded.userId || decoded.id,
+                role: decoded.role || 'citizen',
+                displayName: decoded.displayName || 'User',
+                status: decoded.status || 'active',
+              };
+            }
+          }
+        } catch {}
       }
     } catch {
-      // Backend unreachable or offline during dev/test
-      // Fallback: decode JWT safely to inspect basic token structure if offline
+      // Backend unreachable or network delay during dev/test
+      // Fallback: decode JWT safely using Buffer to inspect basic token structure
       try {
-        const base64Url = token.split('.')[1];
-        if (base64Url) {
-          const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-          const jsonPayload = decodeURIComponent(
-            atob(base64)
-              .split('')
-              .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
-              .join('')
-          );
-          const decoded = JSON.parse(jsonPayload);
-          if (decoded.exp && decoded.exp * 1000 > Date.now()) {
+        const parts = token.split('.');
+        if (parts.length === 3) {
+          const payload = Buffer.from(parts[1], 'base64').toString('utf-8');
+          const decoded = JSON.parse(payload);
+          if (decoded && decoded.exp && decoded.exp * 1000 > Date.now()) {
             validatedUser = {
-              userId: decoded.userId,
+              userId: decoded.userId || decoded.id,
               role: decoded.role || 'citizen',
               displayName: decoded.displayName || 'User',
               status: decoded.status || 'active',

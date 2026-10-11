@@ -53,10 +53,12 @@ export function Header({
   const { theme, setTheme, toggleTheme, fontSize, setFontSize, isDark } = useDisplay();
 
   // Dropdown menus state
+  const [isThemeOpen, setIsThemeOpen] = useState(false);
   const [isLangOpen, setIsLangOpen] = useState(false);
   const [isFontSizeOpen, setIsFontSizeOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
 
+  const themeRef = useRef<HTMLDivElement>(null);
   const langRef = useRef<HTMLDivElement>(null);
   const fontSizeRef = useRef<HTMLDivElement>(null);
   const userRef = useRef<HTMLDivElement>(null);
@@ -64,6 +66,9 @@ export function Header({
   // Close dropdowns on outside click
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
+      if (themeRef.current && !themeRef.current.contains(e.target as Node)) {
+        setIsThemeOpen(false);
+      }
       if (langRef.current && !langRef.current.contains(e.target as Node)) {
         setIsLangOpen(false);
       }
@@ -170,23 +175,111 @@ export function Header({
         {/* Right Action Items */}
         <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
           
-          {/* 1-Click Theme Toggle Button */}
-          <button
-            type="button"
-            onClick={toggleTheme}
-            className="p-2 rounded-xl text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 transition cursor-pointer border border-gray-200 dark:border-gray-700"
-            title={isDark ? 'Switch to Light Theme' : 'Switch to Dark Theme'}
-            aria-label="Toggle Theme"
-          >
-            {isDark ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-700" />}
-          </button>
+          {/* Theme Selector Dropdown */}
+          <div className="relative" ref={themeRef}>
+            <button
+              type="button"
+              onClick={() => {
+                setIsThemeOpen((prev) => !prev);
+                setIsFontSizeOpen(false);
+                setIsLangOpen(false);
+                setIsUserMenuOpen(false);
+              }}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition cursor-pointer border border-gray-200 dark:border-gray-700 text-xs font-bold"
+              title={language === 'mr' ? 'थीम निवडा' : language === 'hi' ? 'थीम चुनें' : 'Select Theme'}
+              aria-label="Theme selector"
+            >
+              {theme === 'dark' ? (
+                <Moon className="w-3.5 h-3.5 text-blue-400" />
+              ) : theme === 'system' ? (
+                <Laptop className="w-3.5 h-3.5 text-slate-500" />
+              ) : (
+                <Sun className="w-3.5 h-3.5 text-amber-500" />
+              )}
+              <span className="capitalize text-[11px] font-semibold hidden md:inline">
+                {theme === 'dark'
+                  ? (language === 'mr' ? 'गडद' : language === 'hi' ? 'गहरा' : 'Dark')
+                  : theme === 'system'
+                  ? (language === 'mr' ? 'सिस्टम' : language === 'hi' ? 'सिस्टम' : 'System')
+                  : (language === 'mr' ? 'प्रकाश' : language === 'hi' ? 'हलका' : 'Light')}
+              </span>
+              <ChevronDown className="w-3 h-3 text-gray-400" />
+            </button>
 
-          {/* Dedicated Text Size Menu (No px numbers) */}
+            {isThemeOpen && (
+              <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 py-1.5 px-1.5 z-50 text-xs animate-in fade-in zoom-in-95 duration-100">
+                <div className="px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-gray-400">
+                  {language === 'mr' ? 'रंगसंगती (Theme)' : language === 'hi' ? 'थीम (Theme)' : 'Appearance'}
+                </div>
+                <div className="space-y-0.5 mt-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTheme('light');
+                      setIsThemeOpen(false);
+                    }}
+                    className={`w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-left font-bold transition cursor-pointer ${
+                      theme === 'light'
+                        ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400'
+                        : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <Sun className="w-3.5 h-3.5 text-amber-500" />
+                      <span>{language === 'mr' ? 'प्रकाश (Light)' : language === 'hi' ? 'हलका (Light)' : 'Light'}</span>
+                    </div>
+                    {theme === 'light' && <Check className="w-3.5 h-3.5 text-amber-600" />}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTheme('dark');
+                      setIsThemeOpen(false);
+                    }}
+                    className={`w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-left font-bold transition cursor-pointer ${
+                      theme === 'dark'
+                        ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400'
+                        : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <Moon className="w-3.5 h-3.5 text-blue-400" />
+                      <span>{language === 'mr' ? 'गडद (Dark)' : language === 'hi' ? 'गहरा (Dark)' : 'Dark'}</span>
+                    </div>
+                    {theme === 'dark' && <Check className="w-3.5 h-3.5 text-amber-600" />}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTheme('system');
+                      setIsThemeOpen(false);
+                    }}
+                    className={`w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-left font-bold transition cursor-pointer ${
+                      theme === 'system'
+                        ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400'
+                        : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <Laptop className="w-3.5 h-3.5 text-slate-500" />
+                      <span>{language === 'mr' ? 'प्रणालीनुसार (System)' : language === 'hi' ? 'सिस्टम अनुसार (System)' : 'System Default'}</span>
+                    </div>
+                    {theme === 'system' && <Check className="w-3.5 h-3.5 text-amber-600" />}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Dedicated Text Size Menu (No px or percentage numbers) */}
           <div className="relative" ref={fontSizeRef}>
             <button
               type="button"
               onClick={() => {
                 setIsFontSizeOpen((prev) => !prev);
+                setIsThemeOpen(false);
                 setIsLangOpen(false);
                 setIsUserMenuOpen(false);
               }}
@@ -196,7 +289,11 @@ export function Header({
             >
               <span className="font-black text-sm tracking-tighter">Aa</span>
               <span className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 hidden md:inline">
-                {fontSize === 'normal' ? 'Standard' : fontSize === 'large' ? 'Large' : 'XL'}
+                {language === 'mr'
+                  ? FONT_SIZE_LABELS[fontSize].labelMr
+                  : language === 'hi'
+                  ? FONT_SIZE_LABELS[fontSize].labelHi
+                  : FONT_SIZE_LABELS[fontSize].label}
               </span>
               <ChevronDown className="w-3 h-3 text-gray-400" />
             </button>
@@ -204,65 +301,37 @@ export function Header({
             {isFontSizeOpen && (
               <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 py-2 px-2 z-50 text-xs animate-in fade-in zoom-in-95 duration-100">
                 <div className="px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-gray-400">
-                  Text Readability
+                  {language === 'mr' ? 'वाचन सुलभता' : language === 'hi' ? 'टेक्स्ट का आकार' : 'Text Readability'}
                 </div>
                 <div className="space-y-1 mt-1">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setFontSize('normal');
-                      setIsFontSizeOpen(false);
-                    }}
-                    className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-left font-bold transition ${
-                      fontSize === 'normal'
-                        ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 font-extrabold'
-                        : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700'
-                    }`}
-                  >
-                    <div className="flex flex-col">
-                      <span className="text-xs">{FONT_SIZE_LABELS.normal.label}</span>
-                      <span className="text-[10px] text-gray-400 font-normal">Optimal baseline size</span>
-                    </div>
-                    {fontSize === 'normal' && <Check className="w-4 h-4 text-amber-600" />}
-                  </button>
+                  {(['normal', 'large', 'xlarge'] as FontSize[]).map((sz) => {
+                    const labelObj = FONT_SIZE_LABELS[sz];
+                    const activeLabel = language === 'mr' ? labelObj.labelMr : language === 'hi' ? labelObj.labelHi : labelObj.label;
+                    const activeDesc = language === 'mr' ? labelObj.descMr : language === 'hi' ? labelObj.descHi : labelObj.desc;
+                    const isSelected = fontSize === sz;
 
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setFontSize('large');
-                      setIsFontSizeOpen(false);
-                    }}
-                    className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-left font-bold transition ${
-                      fontSize === 'large'
-                        ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 font-extrabold'
-                        : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700'
-                    }`}
-                  >
-                    <div className="flex flex-col">
-                      <span className="text-xs">{FONT_SIZE_LABELS.large.label}</span>
-                      <span className="text-[10px] text-gray-400 font-normal">Enhanced text clarity</span>
-                    </div>
-                    {fontSize === 'large' && <Check className="w-4 h-4 text-amber-600" />}
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setFontSize('xlarge');
-                      setIsFontSizeOpen(false);
-                    }}
-                    className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-left font-bold transition ${
-                      fontSize === 'xlarge'
-                        ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 font-extrabold'
-                        : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700'
-                    }`}
-                  >
-                    <div className="flex flex-col">
-                      <span className="text-xs">{FONT_SIZE_LABELS.xlarge.label}</span>
-                      <span className="text-[10px] text-gray-400 font-normal">Maximum readability</span>
-                    </div>
-                    {fontSize === 'xlarge' && <Check className="w-4 h-4 text-amber-600" />}
-                  </button>
+                    return (
+                      <button
+                        key={sz}
+                        type="button"
+                        onClick={() => {
+                          setFontSize(sz);
+                          setIsFontSizeOpen(false);
+                        }}
+                        className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-left font-bold transition cursor-pointer ${
+                          isSelected
+                            ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 font-extrabold'
+                            : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700'
+                        }`}
+                      >
+                        <div className="flex flex-col">
+                          <span className="text-xs">{activeLabel}</span>
+                          <span className="text-[10px] text-gray-400 font-normal">{activeDesc}</span>
+                        </div>
+                        {isSelected && <Check className="w-4 h-4 text-amber-600" />}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             )}
