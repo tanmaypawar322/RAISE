@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
-import { useDisplay, ThemeMode, FontSize } from '../context/DisplayContext';
+import { useDisplay, ThemeMode, FontSize, FONT_SIZE_LABELS } from '../context/DisplayContext';
 import {
   Menu,
   Plus,
@@ -50,15 +50,15 @@ export function Header({
   const router = useRouter();
   const { language, setLanguage, t } = useLanguage();
   const { user, openAuthModal, logout } = useAuth();
-  const { theme, setTheme, fontSize, setFontSize, isDark } = useDisplay();
+  const { theme, setTheme, toggleTheme, fontSize, setFontSize, isDark } = useDisplay();
 
   // Dropdown menus state
   const [isLangOpen, setIsLangOpen] = useState(false);
-  const [isDisplayOpen, setIsDisplayOpen] = useState(false);
+  const [isFontSizeOpen, setIsFontSizeOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
 
   const langRef = useRef<HTMLDivElement>(null);
-  const displayRef = useRef<HTMLDivElement>(null);
+  const fontSizeRef = useRef<HTMLDivElement>(null);
   const userRef = useRef<HTMLDivElement>(null);
 
   // Close dropdowns on outside click
@@ -67,8 +67,8 @@ export function Header({
       if (langRef.current && !langRef.current.contains(e.target as Node)) {
         setIsLangOpen(false);
       }
-      if (displayRef.current && !displayRef.current.contains(e.target as Node)) {
-        setIsDisplayOpen(false);
+      if (fontSizeRef.current && !fontSizeRef.current.contains(e.target as Node)) {
+        setIsFontSizeOpen(false);
       }
       if (userRef.current && !userRef.current.contains(e.target as Node)) {
         setIsUserMenuOpen(false);
@@ -170,113 +170,99 @@ export function Header({
         {/* Right Action Items */}
         <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
           
-          {/* Display & Accessibility Dropdown (Theme & Font Size) */}
-          <div className="relative" ref={displayRef}>
+          {/* 1-Click Theme Toggle Button */}
+          <button
+            type="button"
+            onClick={toggleTheme}
+            className="p-2 rounded-xl text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 transition cursor-pointer border border-gray-200 dark:border-gray-700"
+            title={isDark ? 'Switch to Light Theme' : 'Switch to Dark Theme'}
+            aria-label="Toggle Theme"
+          >
+            {isDark ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-700" />}
+          </button>
+
+          {/* Dedicated Text Size Menu (No px numbers) */}
+          <div className="relative" ref={fontSizeRef}>
             <button
               type="button"
               onClick={() => {
-                setIsDisplayOpen((prev) => !prev);
+                setIsFontSizeOpen((prev) => !prev);
                 setIsLangOpen(false);
                 setIsUserMenuOpen(false);
               }}
-              className="flex items-center gap-1.5 p-2 rounded-xl text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 transition cursor-pointer border border-gray-200 dark:border-gray-700"
-              title="Display & Accessibility Options (Theme, Font Size)"
-              aria-label="Display settings"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition cursor-pointer border border-gray-200 dark:border-gray-700 text-xs font-bold"
+              title="Text Readability & Font Size"
+              aria-label="Text readability selector"
             >
-              {isDark ? <Moon className="w-4 h-4 text-purple-400" /> : <Sun className="w-4 h-4 text-amber-500" />}
-              <span className="text-[11px] font-bold hidden md:inline">
-                {fontSize === 'normal' ? 'A' : fontSize === 'large' ? 'A+' : 'A++'}
+              <span className="font-black text-sm tracking-tighter">Aa</span>
+              <span className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 hidden md:inline">
+                {fontSize === 'normal' ? 'Standard' : fontSize === 'large' ? 'Large' : 'XL'}
               </span>
               <ChevronDown className="w-3 h-3 text-gray-400" />
             </button>
 
-            {isDisplayOpen && (
-              <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 py-3 px-3 z-50 text-xs animate-in fade-in zoom-in-95 duration-100">
-                {/* Theme Selector */}
-                <div className="mb-3">
-                  <div className="text-[10px] font-black uppercase tracking-wider text-gray-400 dark:text-gray-400 mb-1.5 px-1">
-                    Theme
-                  </div>
-                  <div className="grid grid-cols-3 gap-1.5 p-1 bg-gray-100 dark:bg-gray-900 rounded-xl">
-                    <button
-                      type="button"
-                      onClick={() => setTheme('light')}
-                      className={`flex flex-col items-center justify-center py-1.5 px-2 rounded-lg font-bold transition text-[11px] ${
-                        theme === 'light'
-                          ? 'bg-white dark:bg-gray-800 text-orange-600 shadow-xs'
-                          : 'text-gray-600 dark:text-gray-300 hover:text-gray-900'
-                      }`}
-                    >
-                      <Sun className="w-3.5 h-3.5 mb-1" />
-                      <span>Light</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setTheme('dark')}
-                      className={`flex flex-col items-center justify-center py-1.5 px-2 rounded-lg font-bold transition text-[11px] ${
-                        theme === 'dark'
-                          ? 'bg-white dark:bg-gray-800 text-orange-600 shadow-xs'
-                          : 'text-gray-600 dark:text-gray-300 hover:text-gray-900'
-                      }`}
-                    >
-                      <Moon className="w-3.5 h-3.5 mb-1" />
-                      <span>Dark</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setTheme('system')}
-                      className={`flex flex-col items-center justify-center py-1.5 px-2 rounded-lg font-bold transition text-[11px] ${
-                        theme === 'system'
-                          ? 'bg-white dark:bg-gray-800 text-orange-600 shadow-xs'
-                          : 'text-gray-600 dark:text-gray-300 hover:text-gray-900'
-                      }`}
-                    >
-                      <Laptop className="w-3.5 h-3.5 mb-1" />
-                      <span>System</span>
-                    </button>
-                  </div>
+            {isFontSizeOpen && (
+              <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 py-2 px-2 z-50 text-xs animate-in fade-in zoom-in-95 duration-100">
+                <div className="px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-gray-400">
+                  Text Readability
                 </div>
+                <div className="space-y-1 mt-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFontSize('normal');
+                      setIsFontSizeOpen(false);
+                    }}
+                    className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-left font-bold transition ${
+                      fontSize === 'normal'
+                        ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 font-extrabold'
+                        : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700'
+                    }`}
+                  >
+                    <div className="flex flex-col">
+                      <span className="text-xs">{FONT_SIZE_LABELS.normal.label}</span>
+                      <span className="text-[10px] text-gray-400 font-normal">Optimal baseline size</span>
+                    </div>
+                    {fontSize === 'normal' && <Check className="w-4 h-4 text-amber-600" />}
+                  </button>
 
-                {/* Font Size Selector */}
-                <div className="pt-2 border-t border-gray-100 dark:border-gray-700">
-                  <div className="text-[10px] font-black uppercase tracking-wider text-gray-400 dark:text-gray-400 mb-1.5 px-1">
-                    Font Size
-                  </div>
-                  <div className="grid grid-cols-3 gap-1.5 p-1 bg-gray-100 dark:bg-gray-900 rounded-xl">
-                    <button
-                      type="button"
-                      onClick={() => setFontSize('normal')}
-                      className={`py-1.5 px-2 rounded-lg font-bold transition text-[11px] text-center ${
-                        fontSize === 'normal'
-                          ? 'bg-white dark:bg-gray-800 text-orange-600 shadow-xs'
-                          : 'text-gray-600 dark:text-gray-300 hover:text-gray-900'
-                      }`}
-                    >
-                      Normal
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setFontSize('large')}
-                      className={`py-1.5 px-2 rounded-lg font-bold transition text-[11px] text-center ${
-                        fontSize === 'large'
-                          ? 'bg-white dark:bg-gray-800 text-orange-600 shadow-xs'
-                          : 'text-gray-600 dark:text-gray-300 hover:text-gray-900'
-                      }`}
-                    >
-                      Large (+10%)
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setFontSize('xlarge')}
-                      className={`py-1.5 px-2 rounded-lg font-bold transition text-[11px] text-center ${
-                        fontSize === 'xlarge'
-                          ? 'bg-white dark:bg-gray-800 text-orange-600 shadow-xs'
-                          : 'text-gray-600 dark:text-gray-300 hover:text-gray-900'
-                      }`}
-                    >
-                      XL (+20%)
-                    </button>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFontSize('large');
+                      setIsFontSizeOpen(false);
+                    }}
+                    className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-left font-bold transition ${
+                      fontSize === 'large'
+                        ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 font-extrabold'
+                        : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700'
+                    }`}
+                  >
+                    <div className="flex flex-col">
+                      <span className="text-xs">{FONT_SIZE_LABELS.large.label}</span>
+                      <span className="text-[10px] text-gray-400 font-normal">Enhanced text clarity</span>
+                    </div>
+                    {fontSize === 'large' && <Check className="w-4 h-4 text-amber-600" />}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFontSize('xlarge');
+                      setIsFontSizeOpen(false);
+                    }}
+                    className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-left font-bold transition ${
+                      fontSize === 'xlarge'
+                        ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 font-extrabold'
+                        : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700'
+                    }`}
+                  >
+                    <div className="flex flex-col">
+                      <span className="text-xs">{FONT_SIZE_LABELS.xlarge.label}</span>
+                      <span className="text-[10px] text-gray-400 font-normal">Maximum readability</span>
+                    </div>
+                    {fontSize === 'xlarge' && <Check className="w-4 h-4 text-amber-600" />}
+                  </button>
                 </div>
               </div>
             )}
@@ -288,7 +274,7 @@ export function Header({
               type="button"
               onClick={() => {
                 setIsLangOpen((prev) => !prev);
-                setIsDisplayOpen(false);
+                setIsFontSizeOpen(false);
                 setIsUserMenuOpen(false);
               }}
               className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition cursor-pointer border border-gray-200 dark:border-gray-700 text-xs font-bold"
@@ -358,7 +344,7 @@ export function Header({
                 onClick={() => {
                   setIsUserMenuOpen((prev) => !prev);
                   setIsLangOpen(false);
-                  setIsDisplayOpen(false);
+                  setIsFontSizeOpen(false);
                 }}
                 className="flex items-center gap-1.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-2 py-1 text-xs cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition"
               >

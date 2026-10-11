@@ -5,9 +5,16 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 export type ThemeMode = 'light' | 'dark' | 'system';
 export type FontSize = 'normal' | 'large' | 'xlarge';
 
+export const FONT_SIZE_LABELS: Record<FontSize, { label: string; labelMr: string; labelHi: string }> = {
+  normal: { label: 'Standard (Comfortable)', labelMr: 'प्रमाणित (वाचनीय)', labelHi: 'मानक (सहज)' },
+  large: { label: 'Large (+10%)', labelMr: 'मोठे (+१०%)', labelHi: 'बड़ा (+१०%)' },
+  xlarge: { label: 'Extra Large (+20%)', labelMr: 'अधिक मोठे (+२०%)', labelHi: 'बहुत बड़ा (+२०%)' },
+};
+
 interface DisplayContextType {
   theme: ThemeMode;
   setTheme: (theme: ThemeMode) => void;
+  toggleTheme: () => void;
   fontSize: FontSize;
   setFontSize: (size: FontSize) => void;
   isDark: boolean;
@@ -69,14 +76,14 @@ export function DisplayProvider({ children }: { children: React.ReactNode }) {
     const root = document.documentElement;
     switch (size) {
       case 'large':
-        root.style.fontSize = '17.6px'; // 110%
+        root.style.fontSize = '18.1px'; // +10%
         break;
       case 'xlarge':
-        root.style.fontSize = '19.2px'; // 120%
+        root.style.fontSize = '19.8px'; // +20%
         break;
       case 'normal':
       default:
-        root.style.fontSize = '16px';
+        root.style.fontSize = '16.5px'; // Comfortable baseline
         break;
     }
   };
@@ -89,6 +96,11 @@ export function DisplayProvider({ children }: { children: React.ReactNode }) {
     applyTheme(newTheme);
   };
 
+  const toggleTheme = () => {
+    const nextTheme: ThemeMode = isDark ? 'light' : 'dark';
+    setTheme(nextTheme);
+  };
+
   const setFontSize = (newSize: FontSize) => {
     setFontSizeState(newSize);
     if (typeof window !== 'undefined') {
@@ -98,7 +110,7 @@ export function DisplayProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <DisplayContext.Provider value={{ theme, setTheme, fontSize, setFontSize, isDark }}>
+    <DisplayContext.Provider value={{ theme, setTheme, toggleTheme, fontSize, setFontSize, isDark }}>
       {children}
     </DisplayContext.Provider>
   );

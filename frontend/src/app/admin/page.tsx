@@ -589,9 +589,9 @@ export default function AdminPanelPage() {
   // If verifying session
   if (isInitializing) {
     return (
-      <div className="min-h-screen bg-gray-900 flex flex-col items-center justify-center text-white">
-        <div className="w-10 h-10 border-4 border-purple-400 border-t-transparent rounded-full animate-spin mb-4" />
-        <p className="text-sm font-semibold text-purple-200">{t('sessionInitializing')}</p>
+      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-white">
+        <div className="w-10 h-10 border-4 border-amber-500 border-t-transparent rounded-full animate-spin mb-4" />
+        <p className="text-sm font-semibold text-slate-300">{t('sessionInitializing')}</p>
       </div>
     );
   }
@@ -600,16 +600,16 @@ export default function AdminPanelPage() {
   if (!user || user.role !== 'admin') {
     return (
       <AppShell activeTab="admin">
-        <div className="min-h-[calc(100vh-60px)] bg-gradient-to-b from-gray-900 via-purple-950 to-gray-900 flex flex-col text-white py-12 px-4">
-          <div className="max-w-md mx-auto my-auto p-6 sm:p-8 bg-white/10 backdrop-blur-md rounded-3xl border border-purple-500/30 text-center shadow-2xl">
-          <div className="w-14 h-14 rounded-2xl bg-purple-600/30 border border-purple-400/40 flex items-center justify-center mx-auto mb-3 shadow-lg shadow-purple-600/20">
-            <ShieldAlert className="w-7 h-7 text-purple-300" />
+        <div className="min-h-[calc(100vh-60px)] bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 flex flex-col text-white py-12 px-4">
+          <div className="max-w-md mx-auto my-auto p-6 sm:p-8 bg-slate-900/80 backdrop-blur-md rounded-3xl border border-slate-800 text-center shadow-2xl">
+          <div className="w-14 h-14 rounded-2xl bg-slate-800 border border-slate-700 flex items-center justify-center mx-auto mb-3 shadow-lg shadow-black/20">
+            <ShieldAlert className="w-7 h-7 text-amber-400" />
           </div>
-          <span className="text-[10px] uppercase tracking-wider font-extrabold bg-purple-800/80 text-purple-200 px-2.5 py-0.5 rounded-full border border-purple-400/30">
+          <span className="text-[10px] uppercase tracking-wider font-extrabold bg-slate-800 text-amber-300 px-2.5 py-0.5 rounded-full border border-slate-700">
             {t('adminPortalBadge')}
           </span>
           <h2 className="text-xl font-black text-white mt-2 mb-1">{t('adminPanel')}</h2>
-          <p className="text-xs text-purple-200/80 mb-5 leading-relaxed">
+          <p className="text-xs text-slate-300 mb-5 leading-relaxed">
             {t('adminLoginDesc')}
           </p>
 
@@ -628,7 +628,7 @@ export default function AdminPanelPage() {
           {!require2FaChallenge ? (
             <form onSubmit={handleAdminLogin} className="space-y-3 text-left">
               <div>
-                <label className="block text-[11px] font-bold text-purple-200 mb-1">
+                <label className="block text-[11px] font-bold text-slate-200 mb-1">
                   {t('email')}
                 </label>
                 <input
@@ -636,13 +636,13 @@ export default function AdminPanelPage() {
                   value={adminEmail}
                   onChange={(e) => setAdminEmail(e.target.value)}
                   placeholder="admin@raise.org"
-                  className="w-full px-3 py-2 bg-black/40 border border-purple-400/40 rounded-xl text-xs text-white placeholder-purple-300/40 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                  className="w-full px-3 py-2 bg-black/40 border border-slate-700 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold text-purple-200 mb-1">
+                <label className="block text-[11px] font-bold text-slate-200 mb-1">
                   {t('password')}
                 </label>
                 <input
@@ -650,17 +650,17 @@ export default function AdminPanelPage() {
                   value={adminPassword}
                   onChange={(e) => setAdminPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full px-3 py-2 bg-black/40 border border-purple-400/40 rounded-xl text-xs text-white placeholder-purple-300/40 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                  className="w-full px-3 py-2 bg-black/40 border border-slate-700 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500"
                   required
                 />
               </div>
 
-              <label className="flex items-center gap-2 cursor-pointer text-[11px] text-purple-200 select-none">
+              <label className="flex items-center gap-2 cursor-pointer text-[11px] text-slate-200 select-none">
                 <input
                   type="checkbox"
                   checked={isPublicComputer}
                   onChange={(e) => setIsPublicComputer(e.target.checked)}
-                  className="rounded text-purple-600 focus:ring-purple-500 w-3.5 h-3.5 cursor-pointer"
+                  className="rounded text-amber-600 focus:ring-amber-500 w-3.5 h-3.5 cursor-pointer"
                 />
                 <span>{t('publicComputerLabel')}</span>
               </label>
@@ -668,21 +668,21 @@ export default function AdminPanelPage() {
               <button
                 type="submit"
                 disabled={adminLoading}
-                className="w-full py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold transition shadow-lg shadow-purple-600/30 cursor-pointer disabled:opacity-50"
+                className="w-full py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold transition shadow-lg shadow-amber-600/30 cursor-pointer disabled:opacity-50"
               >
                 {adminLoading ? t('pleaseWait') : `${t('signIn')} (${t('adminRole')})`}
               </button>
             </form>
           ) : (
             <form onSubmit={handle2FaLoginSubmit} className="space-y-4 text-left">
-              <div className="p-3 bg-purple-500/20 rounded-2xl border border-purple-400/30 text-xs text-purple-200">
-                <KeyRound className="w-5 h-5 text-purple-300 mb-1" />
+              <div className="p-3 bg-slate-800/80 rounded-2xl border border-slate-700 text-xs text-slate-200">
+                <KeyRound className="w-5 h-5 text-amber-400 mb-1" />
                 <span className="font-bold block text-white">{t('twoFactorAuth')}</span>
                 <span>{t('enter2FaCode')}</span>
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold text-purple-200 mb-1">
+                <label className="block text-[11px] font-bold text-slate-200 mb-1">
                   {t('enter2FaCode')}
                 </label>
                 <input
@@ -691,23 +691,23 @@ export default function AdminPanelPage() {
                   value={totpCode}
                   onChange={(e) => setTotpCode(e.target.value)}
                   placeholder="123456 or XXXX-XXXX"
-                  className="w-full text-center tracking-widest px-3 py-2.5 bg-black/40 border border-purple-400/40 rounded-xl text-sm font-mono text-white focus:outline-none focus:ring-2 focus:ring-purple-400"
+                  className="w-full text-center tracking-widest px-3 py-2.5 bg-black/40 border border-slate-700 rounded-xl text-sm font-mono text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
                   required
                 />
-                <span className="text-[10px] text-purple-300/70 block mt-1">{t('orBackupCode')}</span>
+                <span className="text-[10px] text-slate-400 block mt-1">{t('orBackupCode')}</span>
               </div>
 
               <button
                 type="submit"
                 disabled={adminLoading}
-                className="w-full py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold transition shadow-lg cursor-pointer disabled:opacity-50"
+                className="w-full py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold transition shadow-lg cursor-pointer disabled:opacity-50"
               >
                 {adminLoading ? t('pleaseWait') : t('verifyLogin')}
               </button>
             </form>
           )}
 
-          <div className="mt-4 pt-3 border-t border-purple-400/20 flex items-center justify-end text-xs text-purple-300/80">
+          <div className="mt-4 pt-3 border-t border-slate-800 flex items-center justify-end text-xs text-slate-400">
             <Link href="/" className="hover:text-white underline text-[11px]">
               &larr; Return to Home
             </Link>
@@ -776,15 +776,15 @@ export default function AdminPanelPage() {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full flex-1">
         {/* Admin Header Banner */}
-        <section className="bg-gradient-to-r from-purple-950 via-purple-900 to-indigo-950 rounded-3xl p-6 text-white shadow-md mb-6">
+        <section className="bg-gradient-to-r from-slate-950 via-slate-900 to-indigo-950 rounded-3xl p-6 text-white shadow-md mb-6 border border-slate-800">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-              <div className="inline-flex items-center gap-1.5 bg-purple-800/60 text-purple-200 text-[11px] font-bold px-3 py-1 rounded-full mb-2 border border-purple-400/30">
-                <ShieldAlert className="w-3.5 h-3.5 text-purple-300" />
+              <div className="inline-flex items-center gap-1.5 bg-slate-800 text-amber-300 text-[11px] font-bold px-3 py-1 rounded-full mb-2 border border-slate-700">
+                <ShieldAlert className="w-3.5 h-3.5 text-amber-400" />
                 <span>{t('adminGovernanceBadge')}</span>
               </div>
               <h1 className="text-xl sm:text-2xl font-black">{t('adminConsoleTitle')}</h1>
-              <p className="text-xs text-purple-200 mt-1">
+              <p className="text-xs text-slate-300 mt-1">
                 {t('administratorLabel')}: <strong className="text-white">{user.name}</strong> ({user.email}) &bull; Section 8 Non-Profit Governance
               </p>
             </div>
@@ -815,22 +815,22 @@ export default function AdminPanelPage() {
           </div>
 
           {/* Platform KPIs */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-6 pt-5 border-t border-purple-800/60 text-left">
-            <div className="bg-purple-900/40 p-3.5 rounded-2xl border border-purple-800/50">
-              <span className="text-[11px] text-purple-300 block">{t('activeCitizens')}</span>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-6 pt-5 border-t border-slate-800 text-left">
+            <div className="bg-slate-900/80 p-3.5 rounded-2xl border border-slate-800">
+              <span className="text-[11px] text-slate-400 block">{t('activeCitizens')}</span>
               <span className="text-xl font-black text-white mt-0.5 block">{stats.activeCitizens}</span>
             </div>
-            <div className="bg-purple-900/40 p-3.5 rounded-2xl border border-purple-800/50">
-              <span className="text-[11px] text-purple-300 block">{t('pendingVerifications')}</span>
+            <div className="bg-slate-900/80 p-3.5 rounded-2xl border border-slate-800">
+              <span className="text-[11px] text-slate-400 block">{t('pendingVerifications')}</span>
               <span className="text-xl font-black text-amber-400 mt-0.5 block">{claimsList.filter(c => c.status === 'pending').length}</span>
             </div>
-            <div className="bg-purple-900/40 p-3.5 rounded-2xl border border-purple-800/50">
-              <span className="text-[11px] text-purple-300 block">{t('moderationComplaints')}</span>
+            <div className="bg-slate-900/80 p-3.5 rounded-2xl border border-slate-800">
+              <span className="text-[11px] text-slate-400 block">{t('moderationComplaints')}</span>
               <span className="text-xl font-black text-red-400 mt-0.5 block">{stats.flaggedReports}</span>
             </div>
-            <div className="bg-purple-900/40 p-3.5 rounded-2xl border border-purple-800/50">
-              <span className="text-[11px] text-purple-300 block">{t('overdueEscalations')}</span>
-              <span className="text-xl font-black text-orange-400 mt-0.5 block">{stats.overdueEscalations}</span>
+            <div className="bg-slate-900/80 p-3.5 rounded-2xl border border-slate-800">
+              <span className="text-[11px] text-slate-400 block">{t('overdueEscalations')}</span>
+              <span className="text-xl font-black text-amber-500 mt-0.5 block">{stats.overdueEscalations}</span>
             </div>
           </div>
         </section>
@@ -841,7 +841,7 @@ export default function AdminPanelPage() {
             <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
             <span className="font-medium">{t('unverifiedEmailBanner')}</span>
           </div>
-          <span className="text-[10px] bg-purple-200/70 text-purple-950 font-bold px-2 py-0.5 rounded-full shrink-0 uppercase tracking-wider self-start sm:self-auto">
+          <span className="text-[10px] bg-slate-200 text-slate-800 font-bold px-2 py-0.5 rounded-full shrink-0 uppercase tracking-wider self-start sm:self-auto">
             Production Oversight Mode
           </span>
         </div>
@@ -857,7 +857,7 @@ export default function AdminPanelPage() {
                 onClick={() => setActiveTab(item.id)}
                 className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition cursor-pointer shrink-0 border ${
                   isSelected
-                    ? 'bg-purple-900 text-white border-purple-900 shadow-xs'
+                    ? 'bg-slate-900 text-white border-slate-900 shadow-xs'
                     : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-100'
                 }`}
               >
@@ -900,7 +900,7 @@ export default function AdminPanelPage() {
                         </span>
 
                         {claim.accountType === 'representative' || claim.accountType === 'representative_staff' ? (
-                          <span className="text-[10px] font-extrabold px-2 py-0.5 rounded uppercase bg-purple-100 text-purple-900 border border-purple-200">
+                          <span className="text-[10px] font-extrabold px-2 py-0.5 rounded uppercase bg-amber-100 text-amber-900 border border-amber-200">
                             {claim.accountType === 'representative' ? 'Elected Representative' : 'Representative Staff'} ({claim.representativeRole?.toUpperCase() || 'REP'})
                           </span>
                         ) : (
@@ -932,12 +932,12 @@ export default function AdminPanelPage() {
 
                       <p className="text-xs text-gray-600 mt-0.5">
                         {t('designationLabel')}: <strong className="text-gray-900">{claim.designation}</strong> &bull;{' '}
-                        {t('officialEmail')}: <code className="text-purple-700 font-mono">{claim.workEmail}</code> &bull;{' '}
+                        {t('officialEmail')}: <code className="text-slate-800 font-mono">{claim.workEmail}</code> &bull;{' '}
                         Phone: <span className="font-mono">{claim.userId?.phoneMasked || 'Verified OTP'}</span>
                       </p>
 
                       {claim.jurisdictionId && (
-                        <p className="text-xs text-purple-900 font-medium mt-1">
+                        <p className="text-xs text-slate-800 font-medium mt-1">
                           Constituency: <strong>{claim.jurisdictionId.code ? `[${claim.jurisdictionId.code}] ` : ''}{claim.jurisdictionId.name}</strong> ({claim.jurisdictionId.level})
                         </p>
                       )}
@@ -1102,7 +1102,7 @@ export default function AdminPanelPage() {
             {/* Phase 2: Issue Merge & Deduplication Tool */}
             <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-xs space-y-4">
               <div className="flex items-center gap-2">
-                <GitMerge className="w-4 h-4 text-purple-700" />
+                <GitMerge className="w-4 h-4 text-slate-800" />
                 <h4 className="font-bold text-sm text-gray-900">{t('mergeIssuesTitle')}</h4>
               </div>
               <p className="text-xs text-gray-500">
@@ -1149,7 +1149,7 @@ export default function AdminPanelPage() {
                 <div className="flex justify-end pt-1">
                   <button
                     type="submit"
-                    className="flex items-center gap-1.5 px-4 py-2 bg-purple-700 hover:bg-purple-800 text-white rounded-xl text-xs font-bold transition shadow-xs cursor-pointer"
+                    className="flex items-center gap-1.5 px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition shadow-xs cursor-pointer"
                   >
                     <GitMerge className="w-3.5 h-3.5" />
                     <span>{t('mergeIssuesBtn')}</span>
@@ -1184,7 +1184,7 @@ export default function AdminPanelPage() {
         {activeTab === 'security' && (
           <div className="max-w-xl mx-auto bg-white rounded-3xl border border-gray-200 p-6 shadow-xs space-y-6">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-2xl bg-purple-100 flex items-center justify-center text-purple-700 shrink-0">
+              <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-800 shrink-0">
                 <KeyRound className="w-6 h-6" />
               </div>
               <div>
@@ -1237,7 +1237,7 @@ export default function AdminPanelPage() {
                   type="button"
                   onClick={handleStart2FaSetup}
                   disabled={setup2FaLoading}
-                  className="w-full py-3 bg-purple-700 hover:bg-purple-800 text-white rounded-xl text-xs font-bold transition shadow-xs flex items-center justify-center gap-2 cursor-pointer"
+                  className="w-full py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition shadow-xs flex items-center justify-center gap-2 cursor-pointer"
                 >
                   <KeyRound className="w-4 h-4" />
                   <span>{t('setup2FaBtn')}</span>
@@ -1527,7 +1527,7 @@ export default function AdminPanelPage() {
               <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-xs space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <Layers className="w-4 h-4 text-purple-700" />
+                    <Layers className="w-4 h-4 text-slate-800" />
                     <h4 className="font-bold text-sm text-gray-900">{t('categoryBreakdownTitle')}</h4>
                   </div>
                   <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wide bg-slate-100 px-2 py-0.5 rounded-full">
@@ -1549,7 +1549,7 @@ export default function AdminPanelPage() {
                     </thead>
                     <tbody className="divide-y divide-gray-100">
                       {PILOT_CATEGORY_METRICS.map((c) => (
-                        <tr key={c.id} className="hover:bg-purple-50/40 transition">
+                        <tr key={c.id} className="hover:bg-slate-50 transition">
                           <td className="py-2 px-3 font-semibold text-gray-900">
                             {t(c.key)}
                           </td>
@@ -1578,7 +1578,7 @@ export default function AdminPanelPage() {
                           <td className="py-2 px-3 text-right">
                             <Link
                               href={`/?category=${c.id}`}
-                              className="inline-flex items-center gap-1 text-[11px] font-bold text-purple-700 hover:text-purple-800 hover:underline"
+                              className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-700 hover:text-amber-800 hover:underline"
                             >
                               <span>Filter</span>
                               <ExternalLink className="w-3 h-3" />
@@ -1614,10 +1614,10 @@ export default function AdminPanelPage() {
             <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-xs space-y-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <Building className="w-4 h-4 text-purple-700" />
+                    <Building className="w-4 h-4 text-slate-800" />
                     <h4 className="font-bold text-sm text-gray-900">{t('attachedOfficesTitle')}</h4>
                   </div>
-                  <span className="text-xs bg-purple-50 text-purple-700 font-bold px-2.5 py-0.5 rounded-full border border-purple-200">
+                  <span className="text-xs bg-slate-100 text-slate-800 font-bold px-2.5 py-0.5 rounded-full border border-slate-200">
                     {officesList.length > 0 ? `${officesList.length} Offices Loaded` : 'Municipal Offices'}
                   </span>
                 </div>
@@ -1690,7 +1690,7 @@ export default function AdminPanelPage() {
                                 ? 'bg-emerald-100 text-emerald-800'
                                 : office.level === 'zone'
                                 ? 'bg-blue-100 text-blue-800'
-                                : 'bg-purple-100 text-purple-800'
+                                : 'bg-indigo-100 text-indigo-900'
                             }`}
                           >
                             {office.level || 'ward'}
@@ -1775,7 +1775,7 @@ export default function AdminPanelPage() {
                   <button
                     onClick={handleDownloadCsv}
                     disabled={downloadingCsv}
-                    className="flex items-center gap-1.5 px-4 py-2 bg-purple-900 hover:bg-purple-800 text-white rounded-xl text-xs font-bold transition shadow-xs disabled:opacity-50 cursor-pointer"
+                    className="flex items-center gap-1.5 px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition shadow-xs disabled:opacity-50 cursor-pointer"
                   >
                     <Download className="w-3.5 h-3.5 text-amber-400" />
                     <span>{downloadingCsv ? 'Exporting...' : 'Download Standup CSV Report'}</span>
@@ -1786,7 +1786,7 @@ export default function AdminPanelPage() {
               {/* KPI Cards Grid */}
               {metricsLoading && !pilotMetrics ? (
                 <div className="py-12 text-center text-slate-500 animate-pulse">
-                  <div className="w-8 h-8 border-4 border-purple-900 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+                  <div className="w-8 h-8 border-4 border-slate-900 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
                   <span className="text-xs font-semibold">Calculating operational telemetry...</span>
                 </div>
               ) : (
@@ -1882,7 +1882,7 @@ export default function AdminPanelPage() {
                   {/* 9. Repeat Users Count */}
                   <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 col-span-2 sm:col-span-1">
                     <span className="text-[11px] font-bold text-slate-500 block mb-1">Repeat Citizens</span>
-                    <span className="text-2xl font-black text-purple-900">
+                    <span className="text-2xl font-black text-slate-900">
                       {pilotMetrics?.repeatUsersCount ?? 2}
                     </span>
                     <span className="text-[10px] text-slate-400 block mt-1">&gt; 1 report or raise</span>
@@ -1891,14 +1891,14 @@ export default function AdminPanelPage() {
               )}
 
               {/* Standup Operational Guide */}
-              <div className="p-5 rounded-2xl bg-purple-50/70 border border-purple-200 text-xs text-purple-950 space-y-2">
-                <span className="font-extrabold text-sm block text-purple-900">
+              <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200 text-xs text-slate-800 space-y-2">
+                <span className="font-extrabold text-sm block text-slate-900">
                   Municipal Daily Standup Protocol (10:00 AM IST)
                 </span>
-                <p className="text-purple-900/90 leading-relaxed">
+                <p className="text-slate-700 leading-relaxed">
                   During daily civic operations, the team reviews: (1) any overdue issues approaching statutory SLA breach, (2) disputed resolutions needing on-ground field inspection, and (3) clusters of reports in adjacent sectors indicating systemic water supply or road failures.
                 </p>
-                <div className="flex flex-wrap gap-4 pt-2 text-[11px] font-semibold text-purple-800">
+                <div className="flex flex-wrap gap-4 pt-2 text-[11px] font-semibold text-slate-600">
                   <span>&bull; Zonal Office: PCMC Civic Center</span>
                   <span>&bull; Target SLA: 48h Ack / 72h Resolution</span>
                   <span>&bull; Dispute Period: 7 Days</span>
@@ -1968,7 +1968,7 @@ export default function AdminPanelPage() {
                         <button
                           type="button"
                           onClick={() => handleCopy(`cp_${esc._id}`, esc.cpgramsDraft)}
-                          className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-100 hover:bg-purple-200 text-purple-800 border border-purple-200 rounded-xl text-xs font-bold transition cursor-pointer shadow-2xs"
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-200 rounded-xl text-xs font-bold transition cursor-pointer shadow-2xs"
                         >
                           <Copy className="w-3.5 h-3.5" />
                           <span>{copiedId === `cp_${esc._id}` ? 'Copied!' : t('generateCpgrams')}</span>
@@ -2051,7 +2051,7 @@ export default function AdminPanelPage() {
 
                 <div className="p-3 bg-gray-50 rounded-2xl border border-gray-200 text-xs text-gray-700 space-y-2">
                   <span className="font-bold block text-gray-900">Step 1: Enter Secret Key in Authenticator</span>
-                  <div className="p-2 bg-white rounded-xl border border-gray-200 font-mono text-xs text-purple-700 break-all select-all">
+                  <div className="p-2 bg-white rounded-xl border border-gray-200 font-mono text-xs text-slate-800 break-all select-all">
                     {setupSecret}
                   </div>
                   <span className="text-[10px] text-gray-500 block">Account: {user.email || user.name} &bull; Issuer: RAISE</span>
@@ -2083,7 +2083,7 @@ export default function AdminPanelPage() {
                   <button
                     type="submit"
                     disabled={setup2FaLoading}
-                    className="w-2/3 py-2.5 bg-purple-700 hover:bg-purple-800 text-white rounded-xl text-xs font-bold transition disabled:opacity-50"
+                    className="w-2/3 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition disabled:opacity-50"
                   >
                     {setup2FaLoading ? t('pleaseWait') : 'Verify & Activate'}
                   </button>
