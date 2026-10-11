@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { Header } from '../../components/Header';
+import { AppShell } from '../../components/AppShell';
 import {
   Building2,
   Clock,
@@ -547,9 +548,9 @@ export default function OfficePortalPage() {
   // If visitor is unauthenticated or not official/agency/admin
   if (!user || (user.role !== 'official' && user.role !== 'agency' && user.role !== 'admin')) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-slate-900 via-blue-950 to-slate-900 flex flex-col text-white">
-        <Header />
-        <div className="max-w-lg mx-auto my-auto p-6 sm:p-8 bg-white/10 backdrop-blur-md rounded-3xl border border-blue-400/30 text-center shadow-2xl my-8">
+      <AppShell activeTab="office_portal">
+        <div className="min-h-[calc(100vh-60px)] bg-gradient-to-b from-slate-900 via-blue-950 to-slate-900 flex flex-col text-white py-12 px-4">
+          <div className="max-w-lg mx-auto my-auto p-6 sm:p-8 bg-white/10 backdrop-blur-md rounded-3xl border border-blue-400/30 text-center shadow-2xl">
           <div className="w-14 h-14 rounded-2xl bg-blue-600/30 border border-blue-400/40 flex items-center justify-center mx-auto mb-3 shadow-lg shadow-blue-600/20">
             <Building2 className="w-7 h-7 text-blue-300" />
           </div>
@@ -979,7 +980,8 @@ export default function OfficePortalPage() {
             </Link>
           </div>
         </div>
-      </div>
+        </div>
+      </AppShell>
     );
   }
 
@@ -1035,8 +1037,7 @@ export default function OfficePortalPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col pb-20">
-      <Header />
+    <AppShell activeTab="office_portal">
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full flex-1">
         {/* Pending Account Notice Banner */}
@@ -2183,6 +2184,6 @@ export default function OfficePortalPage() {
           </div>
         </div>
       )}
-    </div>
+    </AppShell>
   );
 }

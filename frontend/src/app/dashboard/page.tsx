@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { Header } from '../../components/Header';
+import { AppShell } from '../../components/AppShell';
 import { RaiseModal } from '../../components/RaiseModal';
 import { NotificationPreferencesSection } from '../../components/NotificationPreferencesSection';
 import {
@@ -410,9 +411,8 @@ export default function CitizenDashboardPage() {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-gray-50 flex flex-col">
-        <Header />
-        <div className="max-w-md mx-auto my-auto p-6 bg-white rounded-3xl border border-gray-200 text-center shadow-xs">
+      <AppShell activeTab="my_issues">
+        <div className="max-w-md mx-auto my-auto p-6 bg-white rounded-3xl border border-gray-200 text-center shadow-xs my-12">
           <Shield className="w-12 h-12 text-orange-600 mx-auto mb-3" />
           <h2 className="text-xl font-bold text-gray-900 mb-2">{t('myDashboard')}</h2>
           <p className="text-xs text-gray-600 mb-5">
@@ -425,7 +425,7 @@ export default function CitizenDashboardPage() {
             {t('signIn')}
           </button>
         </div>
-      </div>
+      </AppShell>
     );
   }
 
@@ -468,8 +468,7 @@ export default function CitizenDashboardPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col pb-20">
-      <Header activeTab="my_issues" />
+    <AppShell activeTab="my_issues" onOpenRaiseModal={() => setIsRaiseModalOpen(true)}>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full flex-1">
         {/* Top Header Banner */}
@@ -1579,6 +1578,6 @@ export default function CitizenDashboardPage() {
           </div>
         </div>
       )}
-    </div>
+    </AppShell>
   );
 }

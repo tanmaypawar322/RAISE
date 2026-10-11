@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useLanguage } from '../../context/LanguageContext';
 import { useAuth } from '../../context/AuthContext';
+import { AppShell } from '../../components/AppShell';
 import {
   Users2,
   FileText,
@@ -144,7 +145,11 @@ export default function TownhallsFeedPage() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8">
+    <AppShell
+      title={language === 'mr' ? 'डिजिटल ग्रामसभा व लोकशाही विमर्श कक्ष' : language === 'hi' ? 'डिजिटल ग्राम सभा एवं नागरिक नीति विमर्श' : 'Digital Gram Sabha & Civic Townhalls'}
+      subtitle={language === 'mr' ? 'गावाच्या व प्रभागाच्या धोरणांवर नागरिकांची थेट चर्चा' : language === 'hi' ? 'गाँव और वार्ड की नीतियों पर नागरिकों का सीधा विचार-विमर्श' : 'Direct citizen deliberation on local budgets, resolutions & public schemes'}
+    >
+      <div className="max-w-6xl mx-auto px-4 py-6 w-full flex-1">
       {/* Top Banner */}
       <div className="bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 rounded-3xl p-6 sm:p-8 text-white mb-8 shadow-xl">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -427,6 +432,7 @@ export default function TownhallsFeedPage() {
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </AppShell>
   );
 }

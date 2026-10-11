@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Header } from '../../../components/Header';
+import { AppShell } from '../../../components/AppShell';
 import { useLanguage } from '../../../context/LanguageContext';
 import { Shield, ArrowLeft, BarChart3, AlertTriangle, FileText, CheckCircle2 } from 'lucide-react';
 
@@ -46,8 +46,10 @@ export default function ModerationTransparencyPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col font-sans">
-      <Header />
+    <AppShell
+      title={language === 'mr' ? 'तक्रार व मजकूर नियमन पारदर्शकता' : 'Public Content & Grievance Moderation Audit'}
+      subtitle={language === 'mr' ? 'नागरी कायद्यानुसार दरमहा तक्रार निवारण व मजकूर कारवाई अहवाल' : 'Monthly statutory takedown, redaction, and civic grievance resolution audits'}
+    >
       <main className="flex-1 max-w-4xl mx-auto px-4 py-8 w-full">
         <div className="mb-6">
           <Link
@@ -157,6 +159,6 @@ export default function ModerationTransparencyPage() {
           )}
         </div>
       </main>
-    </div>
+    </AppShell>
   );
 }

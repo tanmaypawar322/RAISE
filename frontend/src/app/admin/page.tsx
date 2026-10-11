@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { Header } from '../../components/Header';
+import { AppShell } from '../../components/AppShell';
 import {
   ShieldAlert,
   Users,
@@ -593,9 +594,9 @@ export default function AdminPanelPage() {
   // If visitor is unauthenticated or not admin
   if (!user || user.role !== 'admin') {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-gray-900 via-purple-950 to-gray-900 flex flex-col text-white">
-        <Header />
-        <div className="max-w-md mx-auto my-auto p-6 sm:p-8 bg-white/10 backdrop-blur-md rounded-3xl border border-purple-500/30 text-center shadow-2xl my-8">
+      <AppShell activeTab="admin">
+        <div className="min-h-[calc(100vh-60px)] bg-gradient-to-b from-gray-900 via-purple-950 to-gray-900 flex flex-col text-white py-12 px-4">
+          <div className="max-w-md mx-auto my-auto p-6 sm:p-8 bg-white/10 backdrop-blur-md rounded-3xl border border-purple-500/30 text-center shadow-2xl">
           <div className="w-14 h-14 rounded-2xl bg-purple-600/30 border border-purple-400/40 flex items-center justify-center mx-auto mb-3 shadow-lg shadow-purple-600/20">
             <ShieldAlert className="w-7 h-7 text-purple-300" />
           </div>
@@ -707,7 +708,8 @@ export default function AdminPanelPage() {
             </Link>
           </div>
         </div>
-      </div>
+        </div>
+      </AppShell>
     );
   }
 
@@ -765,8 +767,7 @@ export default function AdminPanelPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col pb-20">
-      <Header />
+    <AppShell activeTab="admin">
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full flex-1">
         {/* Admin Header Banner */}
@@ -2154,6 +2155,6 @@ export default function AdminPanelPage() {
           </div>
         </div>
       )}
-    </div>
+    </AppShell>
   );
 }

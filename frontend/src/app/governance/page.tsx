@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Header } from '../../components/Header';
+import { AppShell } from '../../components/AppShell';
 import { useLanguage } from '../../context/LanguageContext';
 import {
   UserCheck,
@@ -47,9 +47,10 @@ export default function GovernanceDirectoryPage() {
   }, [search, roleFilter, sortBy]);
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 pb-20">
-      <Header />
-
+    <AppShell
+      title={language === 'mr' ? 'कलम ८ लोकशाही शासन व तटस्थता सूची' : 'Section 8 Civic Neutrality & Governance Directory'}
+      subtitle={language === 'mr' ? 'लोकप्रतिनिधी व प्रशासकीय जबाबदारी निर्देशिका' : 'Official statutory roster of elected representatives and public governance compliance'}
+    >
       <main className="max-w-4xl mx-auto px-4 py-8 space-y-6">
         {/* Navigation */}
         <div className="flex items-center justify-between">
@@ -200,6 +201,6 @@ export default function GovernanceDirectoryPage() {
           </div>
         )}
       </main>
-    </div>
+    </AppShell>
   );
 }

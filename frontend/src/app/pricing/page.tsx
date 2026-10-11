@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useLanguage } from '../../context/LanguageContext';
-import { Header } from '../../components/Header';
+import { AppShell } from '../../components/AppShell';
 import {
   ShieldCheck,
   Check,
@@ -141,9 +141,10 @@ export default function PricingPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
-      <Header />
-
+    <AppShell
+      title={t('pricingTitle') || 'Plans & Financial Neutrality'}
+      subtitle={language === 'mr' ? 'नागरिकांसाठी कायम मोफत • स्वतंत्र लोकशाही पायाभूत सुविधा' : 'Free forever for citizens • Statutorily neutral civic infrastructure'}
+    >
       <main className="flex-1 max-w-6xl mx-auto px-4 py-8 w-full">
         {/* Neutrality Pillar Guarantee */}
         <div className="bg-emerald-900 text-white rounded-2xl p-6 sm:p-8 mb-8 shadow-sm">
@@ -294,6 +295,6 @@ export default function PricingPage() {
           </div>
         </div>
       </main>
-    </div>
+    </AppShell>
   );
 }

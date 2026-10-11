@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Header } from '../../components/Header';
+import { AppShell } from '../../components/AppShell';
 import { useLanguage } from '../../context/LanguageContext';
 import {
   ShieldCheck,
@@ -133,9 +133,10 @@ export default function TransparencyPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col text-slate-800">
-      <Header />
-
+    <AppShell
+      title={t('transparencyTitle') || 'Statutory Public Ledger & Neutrality Audit'}
+      subtitle={language === 'mr' ? '100% सार्वजनिक आर्थिक पारदर्शकता व निधी वापर अहवाल' : '100% statutory financial transparency and funding compliance'}
+    >
       <main className="flex-1 max-w-5xl mx-auto px-4 py-8 sm:py-12 w-full space-y-8">
         {/* Page Title & Mission Pledge */}
         <div className="space-y-3">
@@ -476,6 +477,6 @@ export default function TransparencyPage() {
           </p>
         </div>
       </main>
-    </div>
+    </AppShell>
   );
 }

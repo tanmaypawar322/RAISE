@@ -5,6 +5,7 @@ import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
+import { AppShell } from '../components/AppShell';
 import { Header } from '../components/Header';
 import { BottomNav, AppTab } from '../components/BottomNav';
 import { IssueCard, IssueItem } from '../components/IssueCard';
@@ -440,11 +441,11 @@ export default function HomePage() {
   });
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50 pb-20 sm:pb-12">
-      <Header
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-      />
+    <AppShell
+      activeTab={activeTab}
+      onTabChange={setActiveTab}
+      onOpenRaiseModal={handleRaiseIssueClick}
+    >
 
       {/* Pilot Notification Banner */}
       <div className="bg-orange-600 text-white text-xs font-semibold px-4 py-1.5 text-center shadow-xs">
@@ -1125,6 +1126,6 @@ export default function HomePage() {
           </div>
         </div>
       )}
-    </div>
+    </AppShell>
   );
 }

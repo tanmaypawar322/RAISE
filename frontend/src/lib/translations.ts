@@ -654,6 +654,12 @@ export const translations = {
     tabFreezeWindows: 'निवडणूक आचारसंहिता (MCC)',
     tabRepUpdatesMod: 'प्रतिनिधी अपडेट्स तपासणी',
     tabOutreachJur: 'कार्यक्षेत्र व राउटिंग',
+    collapseSidebar: 'साइडबार संकुचित करा',
+    expandSidebar: 'साइडबार विस्तार करा',
+    civicModules: 'नागरी व्यासपीठ',
+    workspaces: 'कार्यक्षेत्र व दालने',
+    helpAndSupport: 'मदत व तक्रार निवारण',
+    section8Governance: 'कलम ८ कायदेशीर मानके',
   },
 
   hi: {
@@ -1304,6 +1310,12 @@ export const translations = {
     tabFreezeWindows: 'चुनाव आचार संहिता (MCC)',
     tabRepUpdatesMod: 'प्रतिनिधि अपडेट्स समीक्षा',
     tabOutreachJur: 'कार्यक्षेत्र एवं रूटिंग',
+    collapseSidebar: 'साइडबार संक्षिप्त करें',
+    expandSidebar: 'साइडबार विस्तार करें',
+    civicModules: 'नागरिक मॉड्यूल',
+    workspaces: 'कार्यक्षेत्र और पोर्टल',
+    helpAndSupport: 'सहायता और शिकायत निवारण',
+    section8Governance: 'धारा ८ कानूनी मानक',
   },
 
   en: {
@@ -1954,6 +1966,12 @@ export const translations = {
     tabFreezeWindows: 'Election Freeze Windows (MCC)',
     tabRepUpdatesMod: 'Representative Updates Moderation',
     tabOutreachJur: 'Outreach & Jurisdictions',
+    collapseSidebar: 'Collapse Sidebar',
+    expandSidebar: 'Expand Sidebar',
+    civicModules: 'Civic Modules',
+    workspaces: 'Workspaces & Portals',
+    helpAndSupport: 'Help & Grievance Redressal',
+    section8Governance: 'Section 8 Governance',
   },
 };
 
