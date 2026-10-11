@@ -6,6 +6,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { Header } from '../../components/Header';
 import { AppShell } from '../../components/AppShell';
+import { CivicSealBadge } from '../../components/CivicSealBadge';
 import {
   Building2,
   Clock,
@@ -39,14 +40,10 @@ import {
 } from 'lucide-react';
 
 export type OfficeTab =
-  | 'queue'
-  | 'resolution'
-  | 'analysis'
-  | 'directives'
-  | 'representative'
-  | 'reports'
-  | 'scorecard'
-  | 'billing';
+  | 'operations'
+  | 'analytics'
+  | 'inquiries'
+  | 'team';
 
 export default function OfficePortalPage() {
   const {
@@ -62,7 +59,10 @@ export default function OfficePortalPage() {
   } = useAuth();
   const { t, language } = useLanguage();
 
-  const [activeTab, setActiveTab] = useState<OfficeTab>('queue');
+  const [activeTab, setActiveTab] = useState<OfficeTab>('operations');
+  const [operationsSubTab, setOperationsSubTab] = useState<'queue' | 'resolution'>('queue');
+  const [analyticsSubTab, setAnalyticsSubTab] = useState<'directives' | 'analysis'>('directives');
+  const [teamSubTab, setTeamSubTab] = useState<'roster' | 'reports' | 'scorecard'>('roster');
   const [officeScorecard, setOfficeScorecard] = useState<any | null>(null);
   const [billingData, setBillingData] = useState<any | null>(null);
   const [billingLoading, setBillingLoading] = useState(false);
@@ -151,14 +151,36 @@ export default function OfficePortalPage() {
       if (typeof window !== 'undefined') {
         const params = new URLSearchParams(window.location.search);
         const tabParam = params.get('tab');
-        if (tabParam === 'resolution') setActiveTab('resolution');
-        else if (tabParam === 'analysis') setActiveTab('analysis');
-        else if (tabParam === 'directives') setActiveTab('directives');
-        else if (tabParam === 'representative' || tabParam === 'reps') setActiveTab('representative');
-        else if (tabParam === 'reports') setActiveTab('reports');
-        else if (tabParam === 'scorecard') setActiveTab('scorecard');
-        else if (tabParam === 'billing' || tabParam === 'seats') setActiveTab('billing');
-        else if (tabParam === 'queue') setActiveTab('queue');
+        if (tabParam === 'queue') {
+          setActiveTab('operations');
+          setOperationsSubTab('queue');
+        } else if (tabParam === 'resolution') {
+          setActiveTab('operations');
+          setOperationsSubTab('resolution');
+        } else if (tabParam === 'operations') {
+          setActiveTab('operations');
+        } else if (tabParam === 'directives') {
+          setActiveTab('analytics');
+          setAnalyticsSubTab('directives');
+        } else if (tabParam === 'analysis') {
+          setActiveTab('analytics');
+          setAnalyticsSubTab('analysis');
+        } else if (tabParam === 'analytics') {
+          setActiveTab('analytics');
+        } else if (tabParam === 'representative' || tabParam === 'reps' || tabParam === 'inquiries') {
+          setActiveTab('inquiries');
+        } else if (tabParam === 'reports') {
+          setActiveTab('team');
+          setTeamSubTab('reports');
+        } else if (tabParam === 'scorecard') {
+          setActiveTab('team');
+          setTeamSubTab('scorecard');
+        } else if (tabParam === 'billing' || tabParam === 'seats' || tabParam === 'roster' || tabParam === 'team') {
+          setActiveTab('team');
+          setTeamSubTab('roster');
+        } else {
+          setActiveTab('operations');
+        }
       }
     };
     handleUrlTab();
@@ -998,50 +1020,29 @@ export default function OfficePortalPage() {
   const isPending = user.status === 'pending';
   const isContractor = user.role === 'agency';
 
-  const officialSidebarItems: { id: OfficeTab; label: string; icon: any; count?: number; badge?: string }[] = [
+  const officialTabs: { id: OfficeTab; label: string; icon: any; count?: number; badge?: string }[] = [
     {
-      id: 'queue',
-      label: t('tabAssignedQueue'),
+      id: 'operations',
+      label: language === 'mr' ? 'कार्यवाही डेस्क' : 'Operations Desk',
       icon: Clock,
       count: assignedIssues.length,
     },
     {
-      id: 'resolution',
-      label: t('tabResolutionDesk'),
-      icon: CheckCircle2,
-      badge: '150m GPS',
-    },
-    {
-      id: 'analysis',
-      label: t('tabDeptAnalytics'),
+      id: 'analytics',
+      label: language === 'mr' ? 'निर्देश व विश्लेषण' : 'Directives & Analytics',
       icon: BarChart3,
     },
     {
-      id: 'directives',
-      label: t('tabBindingDirectives'),
-      icon: FileText,
-    },
-    {
-      id: 'representative',
-      label: t('tabRepInquiries'),
+      id: 'inquiries',
+      label: language === 'mr' ? 'विधिमंडळ चौकशी' : 'Legislative Inquiries',
       icon: Users,
       badge: '72h SLA',
     },
     {
-      id: 'reports',
-      label: t('tabMonthlyReports'),
-      icon: FileSpreadsheet,
-      count: reportsList.length,
-    },
-    {
-      id: 'scorecard',
-      label: 'Public Scorecard',
+      id: 'team',
+      label: language === 'mr' ? 'कार्यालय पथक व अहवाल' : 'Office Team & Reports',
       icon: Building2,
-    },
-    {
-      id: 'billing',
-      label: t('tabTeamSeats'),
-      icon: CreditCard,
+      count: reportsList.length,
     },
   ];
 
@@ -1063,21 +1064,25 @@ export default function OfficePortalPage() {
         )}
 
         {/* Office Official Identity Banner */}
-        <section className="bg-gradient-to-r from-blue-900 via-blue-800 to-indigo-900 rounded-3xl p-6 text-white shadow-md mb-6">
+        <section className="bg-gradient-to-r from-slate-900 via-slate-800 to-blue-950 rounded-3xl p-6 text-white shadow-md mb-6 border border-slate-700/50">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-              <div className="inline-flex items-center gap-1.5 bg-blue-700/60 text-blue-100 text-[11px] font-bold px-3 py-1 rounded-full mb-2 border border-blue-400/30">
-                <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-                <span>
-                  {isContractor
-                    ? `${t('agencyPartnerBadge')} - ${user.name}`
-                    : `${t('verifiedOfficialBadge')} - PCMC`}
-                </span>
+              <div className="mb-2">
+                <CivicSealBadge
+                  tier="executive"
+                  role={isContractor ? 'agency' : 'official'}
+                  officeName={user.officeName || 'Municipal Administration, PCMC'}
+                  designation={user.designation || (isContractor ? 'Verified Agency Partner' : 'Executive Officer')}
+                  jurisdiction={user.homeArea?.city || user.homeWard || 'Pimpri Chinchwad'}
+                  verificationId={user.employeeId || 'MH-GOV-OFF-2024'}
+                  isVerified={!isPending}
+                  interactive={true}
+                />
               </div>
               <h1 className="text-xl sm:text-2xl font-black">
                 {language === 'mr' ? 'पिं.चिं.म.न.पा. अधिकृत कार्यालय कक्ष' : 'PCMC Public Authority & Engineering Portal'}
               </h1>
-              <p className="text-xs text-blue-200 mt-1">
+              <p className="text-xs text-slate-300 mt-1">
                 {user.designation || 'Department Officer'}: <strong className="text-white">{user.name}</strong> ({user.email}) &bull;{' '}
                 <span className={`uppercase text-[10px] font-extrabold px-1.5 py-0.5 rounded ${
                   isPending ? 'bg-amber-400 text-amber-950' : 'bg-emerald-400 text-emerald-950'
@@ -1088,19 +1093,23 @@ export default function OfficePortalPage() {
             </div>
 
             <div className="flex items-center gap-2">
-              <Link
-                href="/office-portal/analysis"
-                className="flex items-center gap-1.5 px-3 py-2 bg-purple-600/40 hover:bg-purple-600/60 border border-purple-400/30 rounded-xl text-xs font-bold text-white transition shadow-xs"
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab('analytics');
+                  setAnalyticsSubTab('analysis');
+                }}
+                className="flex items-center gap-1.5 px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl text-xs font-bold text-white transition shadow-xs cursor-pointer"
               >
-                <BarChart3 className="w-3.5 h-3.5 text-purple-200" />
+                <BarChart3 className="w-3.5 h-3.5 text-blue-200" />
                 <span>Executive Analysis</span>
-              </Link>
+              </button>
               {/* Invite Colleague Button (Only for verified officials / admin) */}
               {!isPending && !isContractor && (
                 <button
                   type="button"
                   onClick={() => setShowInviteModal(true)}
-                  className="flex items-center gap-1 px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl text-xs font-bold text-white transition shadow-xs cursor-pointer"
+                  className="flex items-center gap-1 px-3 py-2 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-400/30 rounded-xl text-xs font-bold text-amber-200 transition shadow-xs cursor-pointer"
                 >
                   <UserPlus className="w-3.5 h-3.5" />
                   <span>{t('inviteColleagueBtn')}</span>
@@ -1126,21 +1135,21 @@ export default function OfficePortalPage() {
           </div>
 
           {/* Quick Metrics & Response Clock */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-6 pt-5 border-t border-blue-700/50 text-left">
-            <div className="bg-blue-950/40 p-3.5 rounded-2xl border border-blue-800/60">
-              <span className="text-[11px] text-blue-300 block">{t('assignedIssues')}</span>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-6 pt-5 border-t border-slate-700/60 text-left">
+            <div className="bg-slate-950/40 p-3.5 rounded-2xl border border-slate-700/60">
+              <span className="text-[11px] text-slate-300 block">{t('assignedIssues')}</span>
               <span className="text-xl font-black text-white mt-0.5 block">{assignedIssues.length}</span>
             </div>
-            <div className="bg-blue-950/40 p-3.5 rounded-2xl border border-blue-800/60">
-              <span className="text-[11px] text-blue-300 block">{t('pendingAck')}</span>
+            <div className="bg-slate-950/40 p-3.5 rounded-2xl border border-slate-700/60">
+              <span className="text-[11px] text-slate-300 block">{t('pendingAck')}</span>
               <span className="text-xl font-black text-amber-400 mt-0.5 block">1</span>
             </div>
-            <div className="bg-blue-950/40 p-3.5 rounded-2xl border border-blue-800/60">
-              <span className="text-[11px] text-blue-300 block">{t('inProgressStat')}</span>
+            <div className="bg-slate-950/40 p-3.5 rounded-2xl border border-slate-700/60">
+              <span className="text-[11px] text-slate-300 block">{t('inProgressStat')}</span>
               <span className="text-xl font-black text-blue-300 mt-0.5 block">1</span>
             </div>
-            <div className="bg-blue-950/40 p-3.5 rounded-2xl border border-blue-800/60">
-              <span className="text-[11px] text-blue-300 block">{t('slaClock')}</span>
+            <div className="bg-slate-950/40 p-3.5 rounded-2xl border border-slate-700/60">
+              <span className="text-[11px] text-slate-300 block">{t('slaClock')}</span>
               <span className="text-sm font-black text-emerald-400 mt-1 block flex items-center gap-1">
                 <Clock className="w-3.5 h-3.5" />
                 <span>{t('averageResponseClock')}</span>
@@ -1149,28 +1158,35 @@ export default function OfficePortalPage() {
           </div>
         </section>
 
-        {/* Mobile Horizontal Tabs Scroller */}
-        <div className="lg:hidden flex items-center gap-1.5 overflow-x-auto pb-3 mb-4 scrollbar-none">
-          {officialSidebarItems.map((item) => {
+        {/* 4-Tab Switcher */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-2 mb-6 scrollbar-none border-b border-gray-200">
+          {officialTabs.map((item) => {
             const Icon = item.icon;
             const isSelected = activeTab === item.id;
             return (
               <button
                 key={item.id}
                 onClick={() => setActiveTab(item.id)}
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition cursor-pointer shrink-0 border ${
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-bold whitespace-nowrap transition cursor-pointer border ${
                   isSelected
-                    ? 'bg-blue-900 text-white border-blue-900 shadow-xs'
-                    : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-100'
+                    ? 'bg-slate-900 text-white border-slate-900 shadow-xs'
+                    : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50 hover:text-gray-900'
                 }`}
               >
-                <Icon className="w-3.5 h-3.5" />
+                <Icon className={`w-4 h-4 ${isSelected ? 'text-amber-400' : 'text-gray-500'}`} />
                 <span>{item.label}</span>
                 {item.count !== undefined && (
-                  <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
                     isSelected ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-700'
                   }`}>
                     {item.count}
+                  </span>
+                )}
+                {item.badge && (
+                  <span className={`text-[9px] px-2 py-0.5 rounded-full font-black uppercase tracking-wider ${
+                    isSelected ? 'bg-amber-400 text-slate-950' : 'bg-amber-100 text-amber-800'
+                  }`}>
+                    {item.badge}
                   </span>
                 )}
               </button>
@@ -1181,273 +1197,335 @@ export default function OfficePortalPage() {
         {/* Main Workspace Content Area */}
         <section className="w-full space-y-6">
 
-        {/* TAB 1: ISSUES ACTION QUEUE */}
-        {activeTab === 'queue' && (
-          <div className="space-y-4">
-            {assignedIssues.map((issue) => (
-              <div key={issue._id} className="bg-white rounded-2xl border border-gray-200 p-5 shadow-xs">
-                <div className="flex items-center justify-between gap-2 mb-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold uppercase tracking-wider text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md">
-                      {issue.category}
-                    </span>
-                    <span className="text-xs text-gray-500">
-                      {issue.location?.ward || 'Ward 12'}, {issue.location?.city || 'Pimpri-Chinchwad'}
-                    </span>
-                  </div>
-
-                  <span
-                    className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${
-                      issue.status === 'resolved'
-                        ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                        : issue.status === 'acknowledged'
-                        ? 'bg-amber-50 text-amber-800 border-amber-200'
-                        : 'bg-red-50 text-red-800 border-red-200'
-                    }`}
-                  >
-                    <Clock className="w-3 h-3" />
-                    <span>{issue.status}</span>
-                  </span>
-                </div>
-
-                <h3 className="font-bold text-base text-gray-900 mb-1">
-                  {language === 'mr' && issue.titleMr ? issue.titleMr : issue.title}
-                </h3>
-                <p className="text-xs text-gray-600 line-clamp-2 mb-4 leading-relaxed">
-                  {language === 'mr' && issue.descriptionMr ? issue.descriptionMr : issue.description}
-                </p>
-
-                <div className="flex items-center justify-between pt-3 border-t border-gray-100">
-                  <span className="text-xs font-bold text-blue-900">
-                    {issue.raiseCount} {t('raiseCountText')}
-                  </span>
-
-                  <button
-                    onClick={() => {
-                      if (isPending) {
-                        alert(t('pendingVerificationBanner'));
-                        return;
-                      }
-                      setSelectedIssue(issue);
-                      setStatusUpdate(issue.status === 'submitted' ? 'acknowledged' : 'in_progress');
-                    }}
-                    disabled={isPending}
-                    className="flex items-center gap-1.5 px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white rounded-xl text-xs font-bold transition shadow-xs cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-                  >
-                    <Send className="w-3.5 h-3.5" />
-                    <span>{t('officialResponse')}</span>
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* TAB: RESOLUTION DESK */}
-        {activeTab === 'resolution' && (
-          <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-xs space-y-5">
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-[10px] font-black uppercase tracking-wider text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                  Geo-Tag Verification (150m Rule)
-                </span>
-                <span className="text-[10px] text-gray-400">Statutory Redressal Desk</span>
-              </div>
-              <h2 className="text-lg font-black text-gray-900">
-                {t('tabResolutionDesk')}
-              </h2>
-              <p className="text-xs text-gray-500 mt-0.5">
-                Upload completion photos with geo-coordinates within 150m of the site, or select an official exception justification.
-              </p>
+        {/* TAB 1: OPERATIONS DESK */}
+        {activeTab === 'operations' && (
+          <div className="space-y-6">
+            {/* Sub-switcher */}
+            <div className="flex items-center gap-2 bg-gray-100 p-1.5 rounded-2xl w-fit">
+              <button
+                type="button"
+                onClick={() => setOperationsSubTab('queue')}
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
+                  operationsSubTab === 'queue'
+                    ? 'bg-white text-slate-900 shadow-2xs'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                <Clock className="w-3.5 h-3.5 text-blue-600" />
+                <span>{t('tabAssignedQueue')} ({assignedIssues.length})</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setOperationsSubTab('resolution')}
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
+                  operationsSubTab === 'resolution'
+                    ? 'bg-white text-slate-900 shadow-2xs'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                <span>{t('tabResolutionDesk')} (150m GPS)</span>
+              </button>
             </div>
 
-            {assignedIssues.length === 0 ? (
-              <div className="p-8 text-center text-xs text-gray-500 bg-gray-50 rounded-2xl border border-gray-200">
-                No active assigned issues in the queue currently requiring resolution proof.
-              </div>
-            ) : (
-              <form onSubmit={handleUpdateStatusSubmit} className="space-y-4">
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">
-                    Select Assigned Grievance to Resolve:
-                  </label>
-                  <select
-                    value={selectedIssue?._id || ''}
-                    onChange={(e) => {
-                      const found = assignedIssues.find((it) => it._id === e.target.value);
-                      setSelectedIssue(found || null);
-                      setStatusUpdate('resolved');
-                    }}
-                    className="w-full px-3 py-2.5 bg-gray-50 border border-gray-300 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-blue-600 focus:outline-none cursor-pointer"
-                    required
-                  >
-                    <option value="">-- Choose Grievance --</option>
-                    {assignedIssues.map((issue) => (
-                      <option key={issue._id} value={issue._id}>
-                        [{issue.category?.toUpperCase()}] {issue.title} ({issue.location?.ward || 'Ward 12'})
-                      </option>
-                    ))}
-                  </select>
-                </div>
+            {operationsSubTab === 'queue' && (
+              <div className="space-y-4">
+                {assignedIssues.map((issue) => (
+                  <div key={issue._id} className="bg-white rounded-2xl border border-gray-200 p-5 shadow-xs">
+                    <div className="flex items-center justify-between gap-2 mb-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold uppercase tracking-wider text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md">
+                          {issue.category}
+                        </span>
+                        <span className="text-xs text-gray-500">
+                          {issue.location?.ward || 'Ward 12'}, {issue.location?.city || 'Pimpri-Chinchwad'}
+                        </span>
+                      </div>
 
-                {selectedIssue && (
-                  <div className="p-4 bg-blue-50/60 rounded-xl border border-blue-200 text-xs space-y-2">
-                    <span className="font-bold text-blue-950 block">Selected Issue Overview:</span>
-                    <p className="text-blue-900 font-semibold">{selectedIssue.title}</p>
-                    <p className="text-[11px] text-blue-800/80">{selectedIssue.description}</p>
-                    <div className="flex items-center gap-3 text-[11px] text-blue-900 pt-1">
-                      <span>Location: {selectedIssue.location?.ward || 'Ward 12'}</span>
-                      <span>&bull;</span>
-                      <span>Backers: {selectedIssue.raiseCount} citizens</span>
+                      <span
+                        className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${
+                          issue.status === 'resolved'
+                            ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                            : issue.status === 'acknowledged'
+                            ? 'bg-amber-50 text-amber-800 border-amber-200'
+                            : 'bg-red-50 text-red-800 border-red-200'
+                        }`}
+                      >
+                        <Clock className="w-3 h-3" />
+                        <span>{issue.status}</span>
+                      </span>
+                    </div>
+
+                    <h3 className="font-bold text-base text-gray-900 mb-1">
+                      {language === 'mr' && issue.titleMr ? issue.titleMr : issue.title}
+                    </h3>
+                    <p className="text-xs text-gray-600 line-clamp-2 mb-4 leading-relaxed">
+                      {language === 'mr' && issue.descriptionMr ? issue.descriptionMr : issue.description}
+                    </p>
+
+                    <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+                      <span className="text-xs font-bold text-blue-900">
+                        {issue.raiseCount} {t('raiseCountText')}
+                      </span>
+
+                      <button
+                        onClick={() => {
+                          if (isPending) {
+                            alert(t('pendingVerificationBanner'));
+                            return;
+                          }
+                          setSelectedIssue(issue);
+                          setStatusUpdate(issue.status === 'submitted' ? 'acknowledged' : 'in_progress');
+                        }}
+                        disabled={isPending}
+                        className="flex items-center gap-1.5 px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white rounded-xl text-xs font-bold transition shadow-xs cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        <Send className="w-3.5 h-3.5" />
+                        <span>{t('officialResponse')}</span>
+                      </button>
                     </div>
                   </div>
-                )}
+                ))}
+              </div>
+            )}
 
+            {operationsSubTab === 'resolution' && (
+              <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-xs space-y-5">
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">
-                    After-Work Photo URL (GPS Timestamped):
-                  </label>
-                  <input
-                    type="url"
-                    value={afterPhotoUrl}
-                    onChange={(e) => setAfterPhotoUrl(e.target.value)}
-                    placeholder="https://images.example.com/proof.jpg"
-                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-xl text-xs focus:ring-2 focus:ring-blue-600 focus:outline-none"
-                  />
-                  <p className="text-[11px] text-gray-400 mt-1">
-                    Must be taken on-site within 150m proximity of the reported location.
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                      Geo-Tag Verification (150m Rule)
+                    </span>
+                    <span className="text-[10px] text-gray-400">Statutory Redressal Desk</span>
+                  </div>
+                  <h2 className="text-lg font-black text-gray-900">
+                    {t('tabResolutionDesk')}
+                  </h2>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    Upload completion photos with geo-coordinates within 150m of the site, or select an official exception justification.
                   </p>
                 </div>
 
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">
-                    Or Statutory Exception Justification (if photo cannot be taken within 150m):
-                  </label>
-                  <select
-                    value={exceptionReason}
-                    onChange={(e) => setExceptionReason(e.target.value)}
-                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-xl text-xs focus:ring-2 focus:ring-blue-600 focus:outline-none cursor-pointer"
-                  >
-                    <option value="">None (Standard On-Site Photo Attached)</option>
-                    <option value="underground_infrastructure">Underground drainage / pipeline work (Sub-surface non-visible)</option>
-                    <option value="boundary_ambiguity">Administrative ward boundary reconciliation</option>
-                    <option value="emergency_night_work">Emergency nocturnal heavy machinery deployment</option>
-                    <option value="statutory_policy_order">Administrative policy determination / Section 68 directive</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">
-                    Official Closure / Completion Note (Publicly visible to citizens):
-                  </label>
-                  <textarea
-                    rows={3}
-                    value={officialNote}
-                    onChange={(e) => setOfficialNote(e.target.value)}
-                    placeholder="Describe the completed civil works, contractor details, and quality inspection notes..."
-                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-xl text-xs focus:ring-2 focus:ring-blue-600 focus:outline-none"
-                    required
-                  />
-                </div>
-
-                {statusError && (
-                  <div className="p-3 bg-red-100 border border-red-300 rounded-xl text-xs text-red-800 font-medium">
-                    {statusError}
+                {assignedIssues.length === 0 ? (
+                  <div className="p-8 text-center text-xs text-gray-500 bg-gray-50 rounded-2xl border border-gray-200">
+                    No active assigned issues in the queue currently requiring resolution proof.
                   </div>
-                )}
+                ) : (
+                  <form onSubmit={handleUpdateStatusSubmit} className="space-y-4">
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 mb-1">
+                        Select Assigned Grievance to Resolve:
+                      </label>
+                      <select
+                        value={selectedIssue?._id || ''}
+                        onChange={(e) => {
+                          const found = assignedIssues.find((it) => it._id === e.target.value);
+                          setSelectedIssue(found || null);
+                          setStatusUpdate('resolved');
+                        }}
+                        className="w-full px-3 py-2.5 bg-gray-50 border border-gray-300 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-blue-600 focus:outline-none cursor-pointer"
+                        required
+                      >
+                        <option value="">-- Choose Grievance --</option>
+                        {assignedIssues.map((issue) => (
+                          <option key={issue._id} value={issue._id}>
+                            [{issue.category?.toUpperCase()}] {issue.title} ({issue.location?.ward || 'Ward 12'})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
 
-                <button
-                  type="submit"
-                  disabled={!selectedIssue}
-                  className="w-full py-2.5 bg-emerald-700 hover:bg-emerald-800 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition shadow-xs cursor-pointer flex items-center justify-center gap-1.5"
-                >
-                  <CheckCircle2 className="w-4 h-4" />
-                  <span>Submit Verified Proof & Resolve Grievance</span>
-                </button>
-              </form>
+                    {selectedIssue && (
+                      <div className="p-4 bg-blue-50/60 rounded-xl border border-blue-200 text-xs space-y-2">
+                        <span className="font-bold text-blue-950 block">Selected Issue Overview:</span>
+                        <p className="text-blue-900 font-semibold">{selectedIssue.title}</p>
+                        <p className="text-[11px] text-blue-800/80">{selectedIssue.description}</p>
+                        <div className="flex items-center gap-3 text-[11px] text-blue-900 pt-1">
+                          <span>Location: {selectedIssue.location?.ward || 'Ward 12'}</span>
+                          <span>&bull;</span>
+                          <span>Backers: {selectedIssue.raiseCount} citizens</span>
+                        </div>
+                      </div>
+                    )}
+
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 mb-1">
+                        After-Work Photo URL (GPS Timestamped):
+                      </label>
+                      <input
+                        type="url"
+                        value={afterPhotoUrl}
+                        onChange={(e) => setAfterPhotoUrl(e.target.value)}
+                        placeholder="https://images.example.com/proof.jpg"
+                        className="w-full px-3 py-2 bg-white border border-gray-300 rounded-xl text-xs focus:ring-2 focus:ring-blue-600 focus:outline-none"
+                      />
+                      <p className="text-[11px] text-gray-400 mt-1">
+                        Must be taken on-site within 150m proximity of the reported location.
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 mb-1">
+                        Or Statutory Exception Justification (if photo cannot be taken within 150m):
+                      </label>
+                      <select
+                        value={exceptionReason}
+                        onChange={(e) => setExceptionReason(e.target.value)}
+                        className="w-full px-3 py-2 bg-white border border-gray-300 rounded-xl text-xs focus:ring-2 focus:ring-blue-600 focus:outline-none cursor-pointer"
+                      >
+                        <option value="">None (Standard On-Site Photo Attached)</option>
+                        <option value="underground_infrastructure">Underground drainage / pipeline work (Sub-surface non-visible)</option>
+                        <option value="boundary_ambiguity">Administrative ward boundary reconciliation</option>
+                        <option value="emergency_night_work">Emergency nocturnal heavy machinery deployment</option>
+                        <option value="statutory_policy_order">Administrative policy determination / Section 68 directive</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 mb-1">
+                        Official Closure / Completion Note (Publicly visible to citizens):
+                      </label>
+                      <textarea
+                        rows={3}
+                        value={officialNote}
+                        onChange={(e) => setOfficialNote(e.target.value)}
+                        placeholder="Describe the completed civil works, contractor details, and quality inspection notes..."
+                        className="w-full px-3 py-2 bg-white border border-gray-300 rounded-xl text-xs focus:ring-2 focus:ring-blue-600 focus:outline-none"
+                        required
+                      />
+                    </div>
+
+                    {statusError && (
+                      <div className="p-3 bg-red-100 border border-red-300 rounded-xl text-xs text-red-800 font-medium">
+                        {statusError}
+                      </div>
+                    )}
+
+                    <button
+                      type="submit"
+                      disabled={!selectedIssue}
+                      className="w-full py-2.5 bg-emerald-700 hover:bg-emerald-800 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition shadow-xs cursor-pointer flex items-center justify-center gap-1.5"
+                    >
+                      <CheckCircle2 className="w-4 h-4" />
+                      <span>Submit Verified Proof & Resolve Grievance</span>
+                    </button>
+                  </form>
+                )}
+              </div>
             )}
           </div>
         )}
 
-        {/* TAB: DEPARTMENT ANALYTICS */}
-        {activeTab === 'analysis' && (
-          <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-xs space-y-5">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-gray-100">
-              <div>
-                <span className="text-[10px] font-black uppercase text-purple-700 bg-purple-50 px-2 py-0.5 rounded-full border border-purple-200">
-                  Analytics & Trends Desk
-                </span>
-                <h2 className="text-lg font-black text-gray-900 mt-1">
-                  {t('tabDeptAnalytics')}
-                </h2>
-                <p className="text-xs text-gray-500 mt-0.5">
-                  Cross-ward grievance volumes, resolution velocity, and recurring infrastructure hotspots.
-                </p>
-              </div>
-              <Link
-                href="/office-portal/analysis"
-                className="inline-flex items-center gap-1.5 px-4 py-2 bg-purple-700 hover:bg-purple-800 text-white text-xs font-bold rounded-xl shadow-xs transition"
+        {/* TAB 2: DIRECTIVES & ANALYTICS */}
+        {activeTab === 'analytics' && (
+          <div className="space-y-6">
+            {/* Sub-switcher */}
+            <div className="flex items-center gap-2 bg-gray-100 p-1.5 rounded-2xl w-fit">
+              <button
+                type="button"
+                onClick={() => setAnalyticsSubTab('directives')}
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
+                  analyticsSubTab === 'directives'
+                    ? 'bg-white text-slate-900 shadow-2xs'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
               >
-                <span>Open Full Analytics Console</span>
-                <ExternalLink className="w-3.5 h-3.5" />
-              </Link>
+                <FileText className="w-3.5 h-3.5 text-blue-600" />
+                <span>{t('tabBindingDirectives')}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setAnalyticsSubTab('analysis')}
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
+                  analyticsSubTab === 'analysis'
+                    ? 'bg-white text-slate-900 shadow-2xs'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                <BarChart3 className="w-3.5 h-3.5 text-amber-600" />
+                <span>{t('tabDeptAnalytics')}</span>
+              </button>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="p-4 bg-purple-50 rounded-xl border border-purple-200">
-                <span className="text-[11px] font-bold text-purple-800 block">Average Redressal Velocity</span>
-                <span className="text-2xl font-black text-purple-950 mt-1 block">36.4 Hours</span>
-                <span className="text-[10px] text-purple-700">Well within 72h statutory target</span>
+            {analyticsSubTab === 'directives' && (
+              <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-xs space-y-5">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-gray-100">
+                  <div>
+                    <span className="text-[10px] font-black uppercase text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200">
+                      Administrative Mandates
+                    </span>
+                    <h2 className="text-lg font-black text-gray-900 mt-1">
+                      {t('tabBindingDirectives')}
+                    </h2>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      Statutory administrative directives issued under Section 68 / 72 by Municipal Commissioner & District Magistrate.
+                    </p>
+                  </div>
+                  <Link
+                    href="/office-portal/directives"
+                    className="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl shadow-xs transition"
+                  >
+                    <span>Open Directives Console</span>
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </Link>
+                </div>
+
+                <div className="p-4 bg-amber-50 rounded-xl border border-amber-200 text-xs space-y-2">
+                  <span className="font-bold text-amber-950 block">Active Statutory Mandate: PCMC Pothole-Free Monsoon 2026</span>
+                  <p className="text-amber-900 leading-relaxed">
+                    All arterial roads in Ward 10, Ward 12, and Ward 18 must have complete cold-mix and mastic asphalt patching within 48 hours of citizen reporting.
+                  </p>
+                </div>
               </div>
-              <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-200">
-                <span className="text-[11px] font-bold text-emerald-800 block">SLA Compliance Rate</span>
-                <span className="text-2xl font-black text-emerald-950 mt-1 block">94.2%</span>
-                <span className="text-[10px] text-emerald-700">Ranked #2 in PCMC jurisdiction</span>
+            )}
+
+            {analyticsSubTab === 'analysis' && (
+              <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-xs space-y-5">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-gray-100">
+                  <div>
+                    <span className="text-[10px] font-black uppercase text-slate-700 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200">
+                      Analytics & Trends Desk
+                    </span>
+                    <h2 className="text-lg font-black text-gray-900 mt-1">
+                      {t('tabDeptAnalytics')}
+                    </h2>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      Cross-ward grievance volumes, resolution velocity, and recurring infrastructure hotspots.
+                    </p>
+                  </div>
+                  <Link
+                    href="/office-portal/analysis"
+                    className="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl shadow-xs transition"
+                  >
+                    <span>Open Full Analytics Console</span>
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </Link>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
+                    <span className="text-[11px] font-bold text-slate-800 block">Average Redressal Velocity</span>
+                    <span className="text-2xl font-black text-slate-950 mt-1 block">36.4 Hours</span>
+                    <span className="text-[10px] text-slate-600">Well within 72h statutory target</span>
+                  </div>
+                  <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-200">
+                    <span className="text-[11px] font-bold text-emerald-800 block">SLA Compliance Rate</span>
+                    <span className="text-2xl font-black text-emerald-950 mt-1 block">94.2%</span>
+                    <span className="text-[10px] text-emerald-700">Ranked #2 in PCMC jurisdiction</span>
+                  </div>
+                  <div className="p-4 bg-blue-50 rounded-xl border border-blue-200">
+                    <span className="text-[11px] font-bold text-blue-800 block">Citizen Confirmation</span>
+                    <span className="text-2xl font-black text-blue-950 mt-1 block">88.7%</span>
+                    <span className="text-[10px] text-blue-700">Dispute rate lower than 5%</span>
+                  </div>
+                </div>
               </div>
-              <div className="p-4 bg-blue-50 rounded-xl border border-blue-200">
-                <span className="text-[11px] font-bold text-blue-800 block">Citizen Confirmation</span>
-                <span className="text-2xl font-black text-blue-950 mt-1 block">88.7%</span>
-                <span className="text-[10px] text-blue-700">Dispute rate lower than 5%</span>
-              </div>
-            </div>
+            )}
           </div>
         )}
 
-        {/* TAB: BINDING DIRECTIVES */}
-        {activeTab === 'directives' && (
-          <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-xs space-y-5">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-gray-100">
-              <div>
-                <span className="text-[10px] font-black uppercase text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200">
-                  Administrative Mandates
-                </span>
-                <h2 className="text-lg font-black text-gray-900 mt-1">
-                  {t('tabBindingDirectives')}
-                </h2>
-                <p className="text-xs text-gray-500 mt-0.5">
-                  Statutory administrative directives issued under Section 68 / 72 by Municipal Commissioner & District Magistrate.
-                </p>
-              </div>
-              <Link
-                href="/office-portal/directives"
-                className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white text-xs font-bold rounded-xl shadow-xs transition"
-              >
-                <span>Open Directives Console</span>
-                <ExternalLink className="w-3.5 h-3.5" />
-              </Link>
-            </div>
-
-            <div className="p-4 bg-amber-50 rounded-xl border border-amber-200 text-xs space-y-2">
-              <span className="font-bold text-amber-950 block">Active Statutory Mandate: PCMC Pothole-Free Monsoon 2026</span>
-              <p className="text-amber-900 leading-relaxed">
-                All arterial roads in Ward 10, Ward 12, and Ward 18 must have complete cold-mix and mastic asphalt patching within 48 hours of citizen reporting.
-              </p>
-            </div>
-          </div>
-        )}
-
-        {/* TAB: REPRESENTATIVE INQUIRIES */}
-        {activeTab === 'representative' && (
+        {/* TAB 3: LEGISLATIVE INQUIRIES */}
+        {activeTab === 'inquiries' && (
           <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-xs space-y-5">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-gray-100">
               <div>
@@ -1463,7 +1541,7 @@ export default function OfficePortalPage() {
               </div>
               <Link
                 href="/office-portal/representative"
-                className="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-900 hover:bg-indigo-800 text-white text-xs font-bold rounded-xl shadow-xs transition"
+                className="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl shadow-xs transition"
               >
                 <span>Open Inquiries Desk</span>
                 <ExternalLink className="w-3.5 h-3.5" />
@@ -1482,8 +1560,50 @@ export default function OfficePortalPage() {
           </div>
         )}
 
-        {/* TAB 2: WORK & BUDGET REPORTS */}
-        {activeTab === 'reports' && (
+        {/* TAB 4: OFFICE TEAM & REPORTS */}
+        {activeTab === 'team' && (
+          <div className="space-y-6">
+            {/* Sub-switcher */}
+            <div className="flex items-center gap-2 bg-gray-100 p-1.5 rounded-2xl w-fit">
+              <button
+                type="button"
+                onClick={() => setTeamSubTab('roster')}
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
+                  teamSubTab === 'roster'
+                    ? 'bg-white text-slate-900 shadow-2xs'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                <CreditCard className="w-3.5 h-3.5 text-blue-600" />
+                <span>{t('tabTeamSeats')}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setTeamSubTab('reports')}
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
+                  teamSubTab === 'reports'
+                    ? 'bg-white text-slate-900 shadow-2xs'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
+                <span>{t('tabMonthlyReports')} ({reportsList.length})</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setTeamSubTab('scorecard')}
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
+                  teamSubTab === 'scorecard'
+                    ? 'bg-white text-slate-900 shadow-2xs'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                <Building2 className="w-3.5 h-3.5 text-amber-600" />
+                <span>Public Scorecard</span>
+              </button>
+            </div>
+
+            {teamSubTab === 'reports' && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-xs">
               <h2 className="text-base font-bold text-gray-900 mb-1">{t('publishReportBtn')}</h2>
@@ -1576,10 +1696,7 @@ export default function OfficePortalPage() {
           </div>
         )}
 
-        {/* ============================================================ */}
-        {/* TAB 3: PUBLIC SCORECARD (PHASE 7) */}
-        {/* ============================================================ */}
-        {activeTab === 'scorecard' && (
+        {teamSubTab === 'scorecard' && (
           <div className="space-y-6">
             <div className="bg-white rounded-3xl p-6 sm:p-8 border border-gray-200 shadow-xs">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
@@ -1693,8 +1810,8 @@ export default function OfficePortalPage() {
           </div>
         )}
 
-        {/* TAB 4: BILLING & SUBSCRIPTIONS */}
-        {activeTab === 'billing' && (
+        {/* SUBTAB: TEAM ROSTER & BILLING */}
+        {teamSubTab === 'roster' && (
           <div className="space-y-6">
             {/* Current Plan Overview Card */}
             <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-xs">
@@ -1871,6 +1988,8 @@ export default function OfficePortalPage() {
                 </div>
               )}
             </div>
+          </div>
+        )}
           </div>
         )}
           </section>

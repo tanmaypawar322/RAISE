@@ -8,6 +8,8 @@ import { Header } from '../../components/Header';
 import { AppShell } from '../../components/AppShell';
 import { RaiseModal } from '../../components/RaiseModal';
 import { NotificationPreferencesSection } from '../../components/NotificationPreferencesSection';
+import { CivicSealBadge } from '../../components/CivicSealBadge';
+import { AffiliationModal } from '../../components/AffiliationModal';
 import {
   FileText,
   ThumbsUp,
@@ -33,15 +35,14 @@ import {
   ShieldCheck,
   Award,
   Sparkles,
+  Landmark,
 } from 'lucide-react';
 
 type CitizenTab =
   | 'my_grievances'
-  | 'supported_issues'
-  | 'my_representatives'
   | 'townhall_activity'
-  | 'notifications'
-  | 'profile';
+  | 'my_representatives'
+  | 'account_privacy';
 
 export default function CitizenDashboardPage() {
   const {
@@ -58,6 +59,8 @@ export default function CitizenDashboardPage() {
   const { t, language } = useLanguage();
 
   const [activeTab, setActiveTab] = useState<CitizenTab>('my_grievances');
+  const [grievanceSubTab, setGrievanceSubTab] = useState<'my_reported' | 'backed'>('my_reported');
+  const [isAffiliationModalOpen, setIsAffiliationModalOpen] = useState(false);
   const [isRaiseModalOpen, setIsRaiseModalOpen] = useState(false);
   const [disputeModalIssue, setDisputeModalIssue] = useState<any | null>(null);
   const [disputeReason, setDisputeReason] = useState('');
@@ -117,12 +120,19 @@ export default function CitizenDashboardPage() {
       if (typeof window !== 'undefined') {
         const params = new URLSearchParams(window.location.search);
         const tabParam = params.get('tab');
-        if (tabParam === 'profile') setActiveTab('profile');
-        else if (tabParam === 'my_representatives' || tabParam === 'representatives' || tabParam === 'reps') setActiveTab('my_representatives');
-        else if (tabParam === 'townhall_activity' || tabParam === 'townhalls') setActiveTab('townhall_activity');
-        else if (tabParam === 'notifications') setActiveTab('notifications');
-        else if (tabParam === 'supported_issues' || tabParam === 'supported') setActiveTab('supported_issues');
-        else if (tabParam === 'my_grievances' || tabParam === 'grievances' || tabParam === 'my_issues') setActiveTab('my_grievances');
+        if (tabParam === 'account_privacy' || tabParam === 'profile' || tabParam === 'notifications') {
+          setActiveTab('account_privacy');
+        } else if (tabParam === 'my_representatives' || tabParam === 'representatives' || tabParam === 'reps') {
+          setActiveTab('my_representatives');
+        } else if (tabParam === 'townhall_activity' || tabParam === 'townhalls') {
+          setActiveTab('townhall_activity');
+        } else if (tabParam === 'supported_issues' || tabParam === 'supported') {
+          setActiveTab('my_grievances');
+          setGrievanceSubTab('backed');
+        } else if (tabParam === 'my_grievances' || tabParam === 'grievances' || tabParam === 'my_issues') {
+          setActiveTab('my_grievances');
+          setGrievanceSubTab('my_reported');
+        }
       }
     };
     handleUrlTab();
@@ -434,40 +444,29 @@ export default function CitizenDashboardPage() {
     );
   }
 
-  // Sidebar items definition
+  // Streamlined 4-Tab Workspace Definition
   const sidebarItems: { id: CitizenTab; label: string; icon: any; count?: number; badge?: string }[] = [
     {
       id: 'my_grievances',
-      label: t('tabMyGrievances'),
+      label: t('tabMyGrievances') || 'My Grievances',
       icon: FileText,
-      count: myIssues.length,
-    },
-    {
-      id: 'supported_issues',
-      label: t('tabBackedIssues'),
-      icon: ThumbsUp,
-      count: supportedIssues.length,
-    },
-    {
-      id: 'my_representatives',
-      label: t('tabMyReps'),
-      icon: Users,
-      badge: '3 Active',
+      count: myIssues.length + supportedIssues.length,
     },
     {
       id: 'townhall_activity',
-      label: t('tabTownhallActivity'),
+      label: t('tabTownhallActivity') || 'Townhall Deliberations',
       icon: Vote,
       badge: '2 Motions',
     },
     {
-      id: 'notifications',
-      label: t('tabNotificationsPref'),
-      icon: Bell,
+      id: 'my_representatives',
+      label: t('tabMyReps') || 'My Representatives',
+      icon: Users,
+      badge: '3 Active',
     },
     {
-      id: 'profile',
-      label: t('tabPrivacyDpdp'),
+      id: 'account_privacy',
+      label: t('tabPrivacyDpdp') || 'Account & DPDP Privacy',
       icon: Settings,
     },
   ];
@@ -479,17 +478,28 @@ export default function CitizenDashboardPage() {
         {/* Top Header Banner */}
         <div className="bg-white rounded-2xl border border-gray-200 p-5 mb-6 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3.5">
-            <div className="w-12 h-12 rounded-2xl bg-orange-100 text-orange-700 font-extrabold flex items-center justify-center text-xl shadow-xs">
+            <div className="w-12 h-12 rounded-2xl bg-slate-900 text-white font-extrabold flex items-center justify-center text-xl shadow-xs">
               {user.name ? user.name[0].toUpperCase() : 'C'}
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <span className="text-[11px] bg-orange-100 text-orange-800 font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
-                  Citizen Account
-                </span>
+              <div className="flex items-center gap-2 flex-wrap">
+                <CivicSealBadge
+                  tier={
+                    user.role === 'official' || user.role === 'agency' || user.role === 'admin'
+                      ? 'executive'
+                      : (user.role as string) === 'representative'
+                      ? 'constitutional'
+                      : 'resident'
+                  }
+                  role={user.role}
+                  officeName={(user as any).officeName || (user.role === 'official' ? 'Civic Administration' : undefined)}
+                  designation={(user as any).designation}
+                  jurisdiction={language === 'mr' ? 'प्रभाग १२ (निगडी - प्राधिकरण)' : 'Ward 12 (Nigdi - Pradhikaran)'}
+                  size="xs"
+                />
                 <span className="text-xs text-gray-500">{user.email || user.phoneMasked}</span>
               </div>
-              <h1 className="text-xl sm:text-2xl font-black text-gray-900 mt-0.5">
+              <h1 className="text-xl sm:text-2xl font-black text-gray-900 mt-1">
                 {t('welcomeGreeting')} {user.name || user.displayName}
               </h1>
               <p className="text-xs text-gray-500 flex items-center gap-1 mt-0.5">
@@ -499,10 +509,19 @@ export default function CitizenDashboardPage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            <button
+              onClick={() => setIsAffiliationModalOpen(true)}
+              className="flex items-center justify-center gap-1.5 px-3.5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold shadow-xs transition cursor-pointer"
+              title="Link Government Office or Constitutional Seat"
+            >
+              <Landmark className="w-4 h-4 text-amber-400" />
+              <span>Link Office / Seat</span>
+            </button>
+
             <button
               onClick={() => setIsRaiseModalOpen(true)}
-              className="flex items-center justify-center gap-1.5 px-4 py-2.5 bg-orange-600 hover:bg-orange-700 text-white rounded-xl text-xs font-bold shadow-xs transition cursor-pointer"
+              className="flex items-center justify-center gap-1.5 px-4 py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold shadow-xs transition cursor-pointer"
             >
               <Plus className="w-4 h-4 stroke-[3]" />
               <span>{t('raiseIssueBtn')}</span>
@@ -510,8 +529,8 @@ export default function CitizenDashboardPage() {
           </div>
         </div>
 
-        {/* Mobile Horizontal Tab Scroller */}
-        <div className="lg:hidden flex items-center gap-1.5 overflow-x-auto pb-3 mb-4 scrollbar-none">
+        {/* Streamlined 4-Tab Primary Bar */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-2 mb-6 scrollbar-none border-b border-slate-200">
           {sidebarItems.map((item) => {
             const Icon = item.icon;
             const isSelected = activeTab === item.id;
@@ -519,19 +538,26 @@ export default function CitizenDashboardPage() {
               <button
                 key={item.id}
                 onClick={() => setActiveTab(item.id)}
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition cursor-pointer shrink-0 border ${
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap transition cursor-pointer shrink-0 border ${
                   isSelected
-                    ? 'bg-orange-600 text-white border-orange-600 shadow-xs'
-                    : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-100'
+                    ? 'bg-slate-900 text-white border-slate-900 shadow-xs'
+                    : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50 hover:text-slate-900'
                 }`}
               >
-                <Icon className="w-3.5 h-3.5" />
+                <Icon className={`w-3.5 h-3.5 ${isSelected ? 'text-amber-400' : 'text-slate-500'}`} />
                 <span>{item.label}</span>
                 {item.count !== undefined && (
-                  <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
-                    isSelected ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-700'
+                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
+                    isSelected ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-700'
                   }`}>
                     {item.count}
+                  </span>
+                )}
+                {item.badge && (
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded-md font-bold ${
+                    isSelected ? 'bg-amber-400 text-slate-950' : 'bg-amber-100 text-amber-900'
+                  }`}>
+                    {item.badge}
                   </span>
                 )}
               </button>
@@ -541,9 +567,37 @@ export default function CitizenDashboardPage() {
 
         {/* Main Workspace Content Area */}
         <section className="w-full space-y-6">
-            {/* TAB 1: MY GRIEVANCES */}
+            {/* TAB 1: MY GRIEVANCES & BACKED ISSUES */}
             {activeTab === 'my_grievances' && (
               <div className="space-y-4">
+                {/* Sub-tab Switcher: Reported by Me vs Backed by Me */}
+                <div className="flex items-center gap-2 bg-slate-100 p-1.5 rounded-2xl w-fit">
+                  <button
+                    onClick={() => setGrievanceSubTab('my_reported')}
+                    className={`flex items-center gap-1.5 px-4 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
+                      grievanceSubTab === 'my_reported'
+                        ? 'bg-white text-slate-900 shadow-xs'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    <FileText className="w-3.5 h-3.5 text-amber-600" />
+                    <span>Reported by Me ({myIssues.length})</span>
+                  </button>
+                  <button
+                    onClick={() => setGrievanceSubTab('backed')}
+                    className={`flex items-center gap-1.5 px-4 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
+                      grievanceSubTab === 'backed'
+                        ? 'bg-white text-slate-900 shadow-xs'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    <ThumbsUp className="w-3.5 h-3.5 text-blue-600" />
+                    <span>Issues I Backed ({supportedIssues.length})</span>
+                  </button>
+                </div>
+
+                {grievanceSubTab === 'my_reported' ? (
+                  <>
                 {/* Search & Status Filters */}
                 <div className="bg-white rounded-2xl border border-gray-200 p-4 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div className="relative flex-1">
@@ -691,55 +745,56 @@ export default function CitizenDashboardPage() {
                     ))}
                   </div>
                 )}
-              </div>
-            )}
-
-            {/* TAB 2: SUPPORTED ISSUES */}
-            {activeTab === 'supported_issues' && (
-              <div>
-                {loadingIssues ? (
-                  <div className="bg-white rounded-2xl border border-gray-200 p-12 text-center shadow-xs">
-                    <div className="w-8 h-8 border-3 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-                    <p className="text-xs font-semibold text-gray-500">{t('pleaseWait')}</p>
-                  </div>
-                ) : supportedIssues.length === 0 ? (
-                  <div className="bg-white rounded-2xl border border-gray-200 p-10 text-center shadow-xs">
-                    <div className="w-12 h-12 bg-orange-50 text-orange-600 rounded-2xl flex items-center justify-center mx-auto mb-3">
-                      <ThumbsUp className="w-6 h-6" />
-                    </div>
-                    <h3 className="font-bold text-sm text-gray-900 mb-1">{t('noSupportedIssues')}</h3>
-                    <p className="text-xs text-gray-500 mb-5 max-w-sm mx-auto leading-relaxed">
-                      {t('noSupportedIssuesDesc')}
-                    </p>
-                    <Link
-                      href="/"
-                      className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-orange-600 hover:bg-orange-700 text-white rounded-xl text-xs font-bold transition shadow-xs cursor-pointer"
-                    >
-                      <span>{t('browseFeedBtn')}</span>
-                    </Link>
-                  </div>
+                  </>
                 ) : (
-                  <div className="space-y-4">
-                    {supportedIssues.map((issue) => (
-                      <div key={issue._id} className="bg-white rounded-2xl border border-gray-200 p-5 shadow-xs">
-                        <div className="flex items-center justify-between gap-2 mb-2">
-                          <span className="text-xs font-bold uppercase tracking-wider text-orange-600">
-                            {t(issue.category as any) || issue.category}
-                          </span>
-                          <span className="text-[11px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                            {t('citizenBackedBadge')}
-                          </span>
-                        </div>
-                        <h3 className="font-bold text-base text-gray-900 mb-1">
-                          {language === 'mr' && issue.titleMr ? issue.titleMr : issue.title}
-                        </h3>
-                        <p className="text-xs text-gray-600 mb-3">{issue.description}</p>
-                        <div className="flex items-center justify-between text-xs text-gray-500 pt-2 border-t border-gray-100">
-                          <span>{language === 'mr' && issue.office?.nameMr ? issue.office.nameMr : issue.office?.name}</span>
-                          <span className="font-bold text-gray-800">{t('raiseCountText')}: {issue.raiseCount}</span>
-                        </div>
+                  <div>
+                    {loadingIssues ? (
+                      <div className="bg-white rounded-2xl border border-gray-200 p-12 text-center shadow-xs">
+                        <div className="w-8 h-8 border-3 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+                        <p className="text-xs font-semibold text-gray-500">{t('pleaseWait')}</p>
                       </div>
-                    ))}
+                    ) : supportedIssues.length === 0 ? (
+                      <div className="bg-white rounded-2xl border border-gray-200 p-10 text-center shadow-xs">
+                        <div className="w-12 h-12 bg-orange-50 text-orange-600 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                          <ThumbsUp className="w-6 h-6" />
+                        </div>
+                        <h3 className="font-bold text-sm text-gray-900 mb-1">{t('noSupportedIssues')}</h3>
+                        <p className="text-xs text-gray-500 mb-5 max-w-sm mx-auto leading-relaxed">
+                          {t('noSupportedIssuesDesc')}
+                        </p>
+                        <Link
+                          href="/"
+                          className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-orange-600 hover:bg-orange-700 text-white rounded-xl text-xs font-bold transition shadow-xs cursor-pointer"
+                        >
+                          <span>{t('browseFeedBtn')}</span>
+                        </Link>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        {supportedIssues.map((issue) => (
+                          <div key={issue._id} className="bg-white rounded-2xl border border-gray-200 p-5 shadow-xs">
+                            <div className="flex items-center justify-between gap-2 mb-2">
+                              <span className="text-xs font-bold uppercase tracking-wider text-orange-600">
+                                {t(issue.category as any) || issue.category}
+                              </span>
+                              <span className="text-[11px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                                {t('citizenBackedBadge')}
+                              </span>
+                            </div>
+                            <h3 className="font-bold text-base text-gray-900 mb-1">
+                              <Link href={`/issues/${issue._id}/canonical`} className="hover:text-orange-600 transition">
+                                {language === 'mr' && issue.titleMr ? issue.titleMr : issue.title}
+                              </Link>
+                            </h3>
+                            <p className="text-xs text-gray-600 mb-3">{issue.description}</p>
+                            <div className="flex items-center justify-between text-xs text-gray-500 pt-2 border-t border-gray-100">
+                              <span>{language === 'mr' && issue.office?.nameMr ? issue.office.nameMr : issue.office?.name}</span>
+                              <span className="font-bold text-gray-800">{t('raiseCountText')}: {issue.raiseCount}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -856,12 +911,12 @@ export default function CitizenDashboardPage() {
                   </div>
 
                   {/* MP */}
-                  <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-xs space-y-4 hover:border-purple-300 transition">
+                  <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-xs space-y-4 hover:border-slate-300 transition">
                     <div className="flex items-start justify-between">
-                      <div className="w-12 h-12 rounded-2xl bg-purple-100 text-purple-700 flex items-center justify-center font-black text-lg">
+                      <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-800 flex items-center justify-center font-black text-lg">
                         SB
                       </div>
-                      <span className="text-[10px] bg-purple-100 text-purple-800 font-extrabold px-2 py-0.5 rounded-full uppercase">
+                      <span className="text-[10px] bg-slate-100 text-slate-800 font-extrabold px-2 py-0.5 rounded-full uppercase">
                         खासदार (MP)
                       </span>
                     </div>
@@ -873,7 +928,7 @@ export default function CitizenDashboardPage() {
                     <div className="grid grid-cols-2 gap-2 pt-2 border-t border-gray-100 text-[11px]">
                       <div className="bg-gray-50 p-2 rounded-xl">
                         <span className="text-gray-400 block text-[10px]">संसद हजेरी</span>
-                        <span className="font-extrabold text-purple-700">86% हजेरी</span>
+                        <span className="font-extrabold text-slate-900">86% हजेरी</span>
                       </div>
                       <div className="bg-gray-50 p-2 rounded-xl">
                         <span className="text-gray-400 block text-[10px]">MPLADS खर्च</span>
@@ -888,7 +943,7 @@ export default function CitizenDashboardPage() {
 
                     <Link
                       href="/representatives"
-                      className="block text-center w-full py-2 bg-gray-100 hover:bg-purple-50 hover:text-purple-700 text-gray-800 rounded-xl text-xs font-bold transition"
+                      className="block text-center w-full py-2 bg-gray-100 hover:bg-slate-100 hover:text-slate-900 text-gray-800 rounded-xl text-xs font-bold transition"
                     >
                       पूर्ण गुणपत्रिका पहा
                     </Link>
@@ -968,22 +1023,71 @@ export default function CitizenDashboardPage() {
               </div>
             )}
 
-            {/* TAB 5: NOTIFICATIONS */}
-            {activeTab === 'notifications' && (
-              <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-xs">
-                <NotificationPreferencesSection />
-              </div>
-            )}
+            {/* TAB 4: ACCOUNT, NOTIFICATIONS & DPDP PRIVACY */}
+            {activeTab === 'account_privacy' && (
+              <div className="space-y-6">
+                {/* 1. Official Civic Affiliation & Public Accreditation Desk */}
+                <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-xs">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-gray-100">
+                    <div>
+                      <h2 className="text-base font-extrabold text-slate-900 flex items-center gap-2">
+                        <Landmark className="w-5 h-5 text-amber-600" />
+                        <span>Civic Affiliation & Accreditation Status</span>
+                      </h2>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        Indian Municipal & Constitutional Identity Seal Management
+                      </p>
+                    </div>
 
-            {/* TAB 6: PROFILE & DPDP PRIVACY */}
-            {activeTab === 'profile' && (
-              <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-xs max-w-2xl">
-                <h2 className="text-base font-bold text-gray-900 mb-4 pb-2 border-b border-gray-100 flex items-center justify-between">
-                  <span>{t('profileSettingsTab')}</span>
-                  <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
-                    DPDP Act 2023 Compliant
-                  </span>
-                </h2>
+                    <button
+                      onClick={() => setIsAffiliationModalOpen(true)}
+                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition shadow-xs cursor-pointer self-start sm:self-auto"
+                    >
+                      <Landmark className="w-4 h-4 text-amber-400" />
+                      <span>Link Government Office / Seat</span>
+                    </button>
+                  </div>
+
+                  <div className="pt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="space-y-1.5">
+                      <span className="text-xs text-slate-500 block">Current Active Civic Badge:</span>
+                      <CivicSealBadge
+                        tier={
+                          user.role === 'official' || user.role === 'agency' || user.role === 'admin'
+                            ? 'executive'
+                            : (user.role as string) === 'representative'
+                            ? 'constitutional'
+                            : 'resident'
+                        }
+                        role={user.role}
+                        officeName={(user as any).officeName || (user.role === 'official' ? 'Civic Administration' : undefined)}
+                        designation={(user as any).designation}
+                        jurisdiction={language === 'mr' ? 'प्रभाग १२ (निगडी - प्राधिकरण)' : 'Ward 12 (Nigdi - Pradhikaran)'}
+                        size="md"
+                      />
+                    </div>
+
+                    <div className="text-xs text-slate-500 max-w-sm">
+                      <p>
+                        Affiliated officers and elected representatives receive official verification seals and statutory escalation rights on citizen dossiers.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 2. Notification Preferences & Statutory Quiet Hours (IST) */}
+                <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-xs">
+                  <NotificationPreferencesSection />
+                </div>
+
+                {/* 3. Account Settings & DPDP Privacy */}
+                <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-xs">
+                  <h2 className="text-base font-bold text-gray-900 mb-4 pb-2 border-b border-gray-100 flex items-center justify-between">
+                    <span>{t('profileSettingsTab')}</span>
+                    <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                      DPDP Act 2023 Compliant
+                    </span>
+                  </h2>
 
                 <div className="space-y-4 text-xs">
                   <div>
@@ -1464,6 +1568,7 @@ export default function CitizenDashboardPage() {
                   </div>
                 </div>
               </div>
+              </div>
             )}
           </section>
       </main>
@@ -1473,6 +1578,12 @@ export default function CitizenDashboardPage() {
         isOpen={isRaiseModalOpen}
         onClose={() => setIsRaiseModalOpen(false)}
         onIssueCreated={(newIt) => setMyIssues((prev) => [newIt, ...prev])}
+      />
+
+      {/* Official Affiliation Linking Modal */}
+      <AffiliationModal
+        isOpen={isAffiliationModalOpen}
+        onClose={() => setIsAffiliationModalOpen(false)}
       />
 
       {/* Dispute Modal */}

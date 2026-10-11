@@ -140,8 +140,8 @@ export function AppSidebar({
               <div className="flex flex-col truncate">
                 <div className="flex items-center gap-1.5 leading-none">
                   <span className="font-black text-sm tracking-tight text-gray-900">RAISE</span>
-                  <span className="text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-700 border border-orange-200">
-                    Pilot
+                  <span className="text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
+                    Live
                   </span>
                 </div>
                 <span className="text-[9px] text-gray-400 font-semibold tracking-wider uppercase leading-none mt-0.5">
@@ -321,36 +321,12 @@ export function AppSidebar({
                     href="/dashboard?tab=my_grievances"
                     onClick={handleLinkClick}
                     className={`w-full flex items-center justify-between py-1.5 px-2 rounded-lg text-[11px] font-bold transition ${
-                      pathname === '/dashboard' && (activeTabParam === 'my_grievances' || !activeTabParam)
+                      pathname === '/dashboard' && (activeTabParam === 'my_grievances' || activeTabParam === 'supported_issues' || !activeTabParam)
                         ? 'bg-orange-100 text-orange-900'
                         : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
                     }`}
                   >
                     <span className="truncate">{t('tabMyGrievances')}</span>
-                  </Link>
-
-                  <Link
-                    href="/dashboard?tab=supported_issues"
-                    onClick={handleLinkClick}
-                    className={`w-full flex items-center justify-between py-1.5 px-2 rounded-lg text-[11px] font-bold transition ${
-                      pathname === '/dashboard' && activeTabParam === 'supported_issues'
-                        ? 'bg-orange-100 text-orange-900'
-                        : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-                    }`}
-                  >
-                    <span className="truncate">{t('tabBackedIssues')}</span>
-                  </Link>
-
-                  <Link
-                    href="/dashboard?tab=my_representatives"
-                    onClick={handleLinkClick}
-                    className={`w-full flex items-center justify-between py-1.5 px-2 rounded-lg text-[11px] font-bold transition ${
-                      pathname === '/dashboard' && activeTabParam === 'my_representatives'
-                        ? 'bg-orange-100 text-orange-900'
-                        : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-                    }`}
-                  >
-                    <span className="truncate">{t('tabMyReps')}</span>
                   </Link>
 
                   <Link
@@ -366,22 +342,22 @@ export function AppSidebar({
                   </Link>
 
                   <Link
-                    href="/dashboard?tab=notifications"
+                    href="/dashboard?tab=my_representatives"
                     onClick={handleLinkClick}
                     className={`w-full flex items-center justify-between py-1.5 px-2 rounded-lg text-[11px] font-bold transition ${
-                      pathname === '/dashboard' && activeTabParam === 'notifications'
+                      pathname === '/dashboard' && activeTabParam === 'my_representatives'
                         ? 'bg-orange-100 text-orange-900'
                         : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
                     }`}
                   >
-                    <span className="truncate">{t('tabNotificationsPref')}</span>
+                    <span className="truncate">{t('tabMyReps')}</span>
                   </Link>
 
                   <Link
-                    href="/dashboard?tab=profile"
+                    href="/dashboard?tab=account_privacy"
                     onClick={handleLinkClick}
                     className={`w-full flex items-center justify-between py-1.5 px-2 rounded-lg text-[11px] font-bold transition ${
-                      pathname === '/dashboard' && activeTabParam === 'profile'
+                      pathname === '/dashboard' && (activeTabParam === 'account_privacy' || activeTabParam === 'profile' || activeTabParam === 'notifications')
                         ? 'bg-orange-100 text-orange-900'
                         : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
                     }`}
@@ -423,75 +399,51 @@ export function AppSidebar({
               {!isCollapsed && openAccordions.official && (
                 <div className="pl-6 pr-1 py-1 space-y-0.5 border-l-2 border-blue-100 ml-4 mt-1">
                   <Link
-                    href="/office-portal?tab=queue"
+                    href="/office-portal?tab=operations"
                     onClick={handleLinkClick}
                     className={`w-full flex items-center justify-between py-1.5 px-2 rounded-lg text-[11px] font-bold transition ${
-                      pathname === '/office-portal' && (activeTabParam === 'queue' || !activeTabParam)
+                      pathname === '/office-portal' && (activeTabParam === 'operations' || activeTabParam === 'queue' || activeTabParam === 'resolution' || !activeTabParam)
                         ? 'bg-blue-100 text-blue-900'
                         : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
                     }`}
                   >
-                    <span className="truncate">{t('tabAssignedQueue')}</span>
+                    <span className="truncate">{language === 'mr' ? 'कार्यवाही डेस्क' : 'Operations Desk'}</span>
                   </Link>
 
                   <Link
-                    href="/office-portal?tab=resolution"
+                    href="/office-portal?tab=analytics"
                     onClick={handleLinkClick}
                     className={`w-full flex items-center justify-between py-1.5 px-2 rounded-lg text-[11px] font-bold transition ${
-                      pathname === '/office-portal' && activeTabParam === 'resolution'
+                      pathname.startsWith('/office-portal') && (activeTabParam === 'analytics' || activeTabParam === 'directives' || activeTabParam === 'analysis' || pathname === '/office-portal/analysis' || pathname === '/office-portal/directives')
                         ? 'bg-blue-100 text-blue-900'
                         : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
                     }`}
                   >
-                    <span className="truncate">{t('tabResolutionDesk')}</span>
+                    <span className="truncate">{language === 'mr' ? 'निर्देश व विश्लेषण' : 'Directives & Analytics'}</span>
                   </Link>
 
                   <Link
-                    href="/office-portal/analysis"
+                    href="/office-portal?tab=inquiries"
                     onClick={handleLinkClick}
                     className={`w-full flex items-center justify-between py-1.5 px-2 rounded-lg text-[11px] font-bold transition ${
-                      pathname === '/office-portal/analysis'
+                      pathname.startsWith('/office-portal') && (activeTabParam === 'inquiries' || activeTabParam === 'representative' || pathname === '/office-portal/representative')
                         ? 'bg-blue-100 text-blue-900'
                         : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
                     }`}
                   >
-                    <span className="truncate">{t('tabDeptAnalytics')}</span>
+                    <span className="truncate">{language === 'mr' ? 'विधिमंडळ चौकशी' : 'Legislative Inquiries'}</span>
                   </Link>
 
                   <Link
-                    href="/office-portal/directives"
+                    href="/office-portal?tab=team"
                     onClick={handleLinkClick}
                     className={`w-full flex items-center justify-between py-1.5 px-2 rounded-lg text-[11px] font-bold transition ${
-                      pathname === '/office-portal/directives'
+                      pathname === '/office-portal' && (activeTabParam === 'team' || activeTabParam === 'roster' || activeTabParam === 'reports' || activeTabParam === 'scorecard' || activeTabParam === 'billing')
                         ? 'bg-blue-100 text-blue-900'
                         : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
                     }`}
                   >
-                    <span className="truncate">{t('tabBindingDirectives')}</span>
-                  </Link>
-
-                  <Link
-                    href="/office-portal/representative"
-                    onClick={handleLinkClick}
-                    className={`w-full flex items-center justify-between py-1.5 px-2 rounded-lg text-[11px] font-bold transition ${
-                      pathname === '/office-portal/representative'
-                        ? 'bg-blue-100 text-blue-900'
-                        : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-                    }`}
-                  >
-                    <span className="truncate">{t('tabRepInquiries')}</span>
-                  </Link>
-
-                  <Link
-                    href="/office-portal?tab=scorecard"
-                    onClick={handleLinkClick}
-                    className={`w-full flex items-center justify-between py-1.5 px-2 rounded-lg text-[11px] font-bold transition ${
-                      pathname === '/office-portal' && activeTabParam === 'scorecard'
-                        ? 'bg-blue-100 text-blue-900'
-                        : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-                    }`}
-                  >
-                    <span className="truncate">{t('officeScorecard')}</span>
+                    <span className="truncate">{language === 'mr' ? 'कार्यालय पथक व अहवाल' : 'Office Team & Reports'}</span>
                   </Link>
                 </div>
               )}
@@ -506,13 +458,13 @@ export function AppSidebar({
                 onClick={() => toggleAccordion('admin')}
                 className={`w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
                   pathname.startsWith('/admin')
-                    ? 'bg-purple-50/70 text-purple-950 font-black'
+                    ? 'bg-slate-100 text-slate-950 font-black'
                     : 'text-gray-700 hover:bg-gray-100'
                 } ${isCollapsed ? 'justify-center px-0' : ''}`}
                 title={t('adminPanel')}
               >
                 <div className="flex items-center gap-2.5 truncate">
-                  <ShieldCheck className="w-4 h-4 text-purple-700 shrink-0" />
+                  <ShieldCheck className="w-4 h-4 text-amber-600 shrink-0" />
                   {!isCollapsed && <span className="truncate">{t('adminPanel')}</span>}
                 </div>
                 {!isCollapsed && (
@@ -526,29 +478,29 @@ export function AppSidebar({
 
               {/* Admin Sub-tabs */}
               {!isCollapsed && openAccordions.admin && (
-                <div className="pl-6 pr-1 py-1 space-y-0.5 border-l-2 border-purple-100 ml-4 mt-1">
+                <div className="pl-6 pr-1 py-1 space-y-0.5 border-l-2 border-slate-200 ml-4 mt-1">
                   <Link
-                    href="/admin?tab=overview"
+                    href="/admin?tab=telemetry"
                     onClick={handleLinkClick}
                     className={`w-full flex items-center justify-between py-1.5 px-2 rounded-lg text-[11px] font-bold transition ${
-                      pathname === '/admin' && (activeTabParam === 'overview' || !activeTabParam)
-                        ? 'bg-purple-100 text-purple-900'
+                      pathname.startsWith('/admin') && (activeTabParam === 'telemetry' || activeTabParam === 'overview' || activeTabParam === 'finance' || activeTabParam === 'billing' || pathname === '/admin/finance' || pathname === '/admin/billing' || !activeTabParam)
+                        ? 'bg-slate-900 text-white'
                         : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
                     }`}
                   >
-                    <span className="truncate">{t('tabSystemOverview')}</span>
+                    <span className="truncate">{language === 'mr' ? 'प्रणाली मेट्रिक्स व वित्त' : 'Civic Telemetry & Finance'}</span>
                   </Link>
 
                   <Link
                     href="/admin?tab=claims"
                     onClick={handleLinkClick}
                     className={`w-full flex items-center justify-between py-1.5 px-2 rounded-lg text-[11px] font-bold transition ${
-                      pathname === '/admin' && activeTabParam === 'claims'
-                        ? 'bg-purple-100 text-purple-900'
+                      pathname === '/admin' && (activeTabParam === 'claims' || activeTabParam === 'security')
+                        ? 'bg-slate-900 text-white'
                         : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
                     }`}
                   >
-                    <span className="truncate">{t('tabClaimsQueue')}</span>
+                    <span className="truncate">{language === 'mr' ? 'संलग्नता व अधिकार कक्ष' : 'Affiliation & Claims Desk'}</span>
                   </Link>
 
                   <Link
@@ -556,83 +508,23 @@ export function AppSidebar({
                     onClick={handleLinkClick}
                     className={`w-full flex items-center justify-between py-1.5 px-2 rounded-lg text-[11px] font-bold transition ${
                       pathname === '/admin' && activeTabParam === 'moderation'
-                        ? 'bg-purple-100 text-purple-900'
+                        ? 'bg-slate-900 text-white'
                         : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
                     }`}
                   >
-                    <span className="truncate">{t('tabModerationFlags')}</span>
+                    <span className="truncate">{language === 'mr' ? 'तक्रार निवारण व नियंत्रण' : 'Integrity & Moderation'}</span>
                   </Link>
 
                   <Link
-                    href="/admin/finance"
+                    href="/admin?tab=governance"
                     onClick={handleLinkClick}
                     className={`w-full flex items-center justify-between py-1.5 px-2 rounded-lg text-[11px] font-bold transition ${
-                      pathname === '/admin/finance'
-                        ? 'bg-purple-100 text-purple-900'
+                      pathname.startsWith('/admin') && (activeTabParam === 'governance' || activeTabParam === 'freeze_windows' || activeTabParam === 'rep_updates' || activeTabParam === 'outreach' || pathname === '/admin/freeze-windows' || pathname === '/admin/rep-updates' || pathname === '/admin/outreach')
+                        ? 'bg-slate-900 text-white'
                         : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
                     }`}
                   >
-                    <span className="truncate">{t('tabFinanceLedger')}</span>
-                  </Link>
-
-                  <Link
-                    href="/admin/billing"
-                    onClick={handleLinkClick}
-                    className={`w-full flex items-center justify-between py-1.5 px-2 rounded-lg text-[11px] font-bold transition ${
-                      pathname === '/admin/billing'
-                        ? 'bg-purple-100 text-purple-900'
-                        : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-                    }`}
-                  >
-                    <span className="truncate">{t('tabBillingPlans')}</span>
-                  </Link>
-
-                  <Link
-                    href="/admin/freeze-windows"
-                    onClick={handleLinkClick}
-                    className={`w-full flex items-center justify-between py-1.5 px-2 rounded-lg text-[11px] font-bold transition ${
-                      pathname === '/admin/freeze-windows'
-                        ? 'bg-purple-100 text-purple-900'
-                        : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-                    }`}
-                  >
-                    <span className="truncate">{t('tabFreezeWindows')}</span>
-                  </Link>
-
-                  <Link
-                    href="/admin/rep-updates"
-                    onClick={handleLinkClick}
-                    className={`w-full flex items-center justify-between py-1.5 px-2 rounded-lg text-[11px] font-bold transition ${
-                      pathname === '/admin/rep-updates'
-                        ? 'bg-purple-100 text-purple-900'
-                        : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-                    }`}
-                  >
-                    <span className="truncate">{t('tabRepUpdatesMod')}</span>
-                  </Link>
-
-                  <Link
-                    href="/admin/outreach"
-                    onClick={handleLinkClick}
-                    className={`w-full flex items-center justify-between py-1.5 px-2 rounded-lg text-[11px] font-bold transition ${
-                      pathname === '/admin/outreach'
-                        ? 'bg-purple-100 text-purple-900'
-                        : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-                    }`}
-                  >
-                    <span className="truncate">{t('tabOutreachJur')}</span>
-                  </Link>
-
-                  <Link
-                    href="/admin?tab=security"
-                    onClick={handleLinkClick}
-                    className={`w-full flex items-center justify-between py-1.5 px-2 rounded-lg text-[11px] font-bold transition ${
-                      pathname === '/admin' && activeTabParam === 'security'
-                        ? 'bg-purple-100 text-purple-900'
-                        : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-                    }`}
-                  >
-                    <span className="truncate">{t('twoFactorAuth')}</span>
+                    <span className="truncate">{language === 'mr' ? 'प्रशासकीय कायदे व नियमन' : 'Governance & Legal'}</span>
                   </Link>
                 </div>
               )}

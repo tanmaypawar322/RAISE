@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { AppShell } from '../../../components/AppShell';
+import { CivicSealBadge } from '../../../components/CivicSealBadge';
 import { useLanguage } from '../../../context/LanguageContext';
 import { useAuth } from '../../../context/AuthContext';
 import {
@@ -274,13 +275,21 @@ function TownhallDetailContent() {
         {/* Official Response Banner */}
         {topic.officialResponse ? (
           <div className="p-5 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-950">
-            <div className="flex items-center gap-2 mb-2 font-bold text-sm text-emerald-800">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-              <span>
-                {language === 'mr'
-                  ? 'ग्रामपंचायत / प्रशासकीय विभागाचे अधिकृत उत्तर:'
-                  : 'Official Administrative / Gram Panchayat Statement:'}
-              </span>
+            <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
+              <div className="flex items-center gap-2 font-bold text-sm text-emerald-800">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>
+                  {language === 'mr'
+                    ? 'ग्रामपंचायत / प्रशासकीय विभागाचे अधिकृत उत्तर:'
+                    : 'Official Administrative / Gram Panchayat Statement:'}
+                </span>
+              </div>
+              <CivicSealBadge
+                tier={topic.settlementType === 'rural_panchayat' ? 'panchayat' : 'executive'}
+                officeName={topic.officialResponse.respondedByOfficeId?.name || (topic.settlementType === 'rural_panchayat' ? 'Gram Panchayat' : 'Civic Office')}
+                designation={topic.settlementType === 'rural_panchayat' ? 'Sarpanch / Gram Sevak' : 'Ward Officer'}
+                size="xs"
+              />
             </div>
             <p className="text-sm leading-relaxed">{topic.officialResponse.text}</p>
             <div className="text-[11px] text-emerald-700 mt-2">
@@ -480,7 +489,7 @@ function TownhallDetailContent() {
                 className="bg-white rounded-2xl border border-gray-200 p-4 shadow-xs"
               >
                 <div className="flex items-center justify-between gap-2 mb-1.5">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <span
                       className={`text-[10px] font-bold px-2 py-0.5 rounded-full capitalize ${
                         fb.type === 'amendment'
@@ -495,6 +504,11 @@ function TownhallDetailContent() {
                     <span className="text-xs font-bold text-gray-800">
                       {fb.userId?.displayName || 'Citizen Contributor'}
                     </span>
+                    <CivicSealBadge
+                      role={fb.userId?.role || 'citizen'}
+                      jurisdiction={topic.villageOrWard}
+                      size="xs"
+                    />
                   </div>
                   <span className="text-[10px] text-gray-400">
                     {new Date(fb.createdAt).toLocaleDateString()}

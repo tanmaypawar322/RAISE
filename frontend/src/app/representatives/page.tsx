@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useLanguage } from '../../context/LanguageContext';
 import { useAuth } from '../../context/AuthContext';
 import { AppShell } from '../../components/AppShell';
+import { CivicSealBadge } from '../../components/CivicSealBadge';
 import {
   Users,
   Search,
@@ -140,7 +141,7 @@ export default function RepresentativesDirectoryPage() {
       case 'mla':
         return { label: language === 'mr' ? 'आमदार (MLA)' : 'MLA (State Assembly)', color: 'bg-blue-100 text-blue-800 border-blue-200' };
       case 'mp':
-        return { label: language === 'mr' ? 'खासदार (MP)' : 'MP (Lok Sabha)', color: 'bg-purple-100 text-purple-800 border-purple-200' };
+        return { label: language === 'mr' ? 'खासदार (MP)' : 'MP (Lok Sabha)', color: 'bg-slate-100 text-slate-900 border-slate-300' };
       default:
         return { label: role.toUpperCase(), color: 'bg-gray-100 text-gray-800 border-gray-200' };
     }
@@ -228,7 +229,7 @@ export default function RepresentativesDirectoryPage() {
               onClick={() => setRoleFilter('mp')}
               className={`px-3 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer ${
                 roleFilter === 'mp'
-                  ? 'bg-purple-700 text-white shadow-xs'
+                  ? 'bg-slate-900 text-white shadow-xs'
                   : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               }`}
             >
@@ -247,12 +248,16 @@ export default function RepresentativesDirectoryPage() {
                 className="bg-white rounded-3xl border border-gray-200 p-5 shadow-xs hover:border-blue-300 hover:shadow-md transition flex flex-col justify-between space-y-4"
               >
                 <div>
-                  <div className="flex items-start justify-between gap-2 mb-3">
-                    <span className={`text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full border ${badge.color}`}>
-                      {badge.label}
-                    </span>
+                  <div className="flex items-start justify-between gap-2 mb-3 flex-wrap">
+                    <CivicSealBadge
+                      tier="constitutional"
+                      role={rep.role}
+                      officeName={rep.jurisdiction?.name}
+                      designation={badge.label}
+                      size="xs"
+                    />
                     <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
-                      Verified Profile
+                      Certified Seat
                     </span>
                   </div>
 

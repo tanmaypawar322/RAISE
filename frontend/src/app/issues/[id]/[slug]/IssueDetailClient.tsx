@@ -4,9 +4,9 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useLanguage } from '../../../../context/LanguageContext';
 import { useAuth } from '../../../../context/AuthContext';
-import { slugifyTitle } from '../../../../lib/slug';
 import { ShareModal } from '../../../../components/ShareModal';
 import { AppShell } from '../../../../components/AppShell';
+import { CivicSealBadge } from '../../../../components/CivicSealBadge';
 import {
   ArrowLeft,
   MapPin,
@@ -540,8 +540,16 @@ export default function IssueDetailClient({
                 </span>
               </span>
               <span>•</span>
-              <span>
-                Reported by {issue.author?.displayName || 'Anonymous citizen'}
+              <span className="inline-flex items-center gap-1.5 flex-wrap">
+                <span>Reported by</span>
+                <span className="font-semibold text-slate-800">
+                  {issue.author?.displayName || 'Anonymous citizen'}
+                </span>
+                <CivicSealBadge
+                  tier="resident"
+                  jurisdiction={issue.location?.ward || 'Ward Resident'}
+                  size="xs"
+                />
               </span>
               <span>•</span>
               <span>{new Date(issue.createdAt).toLocaleDateString()}</span>
@@ -638,9 +646,17 @@ export default function IssueDetailClient({
 
                 {issue.resolutionNotes && (
                   <div className="bg-white p-4 rounded-xl border border-emerald-100 text-sm text-slate-700">
-                    <p className="font-semibold text-slate-900 text-xs mb-1 uppercase tracking-wide">
-                      Official Departmental Note:
-                    </p>
+                    <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
+                      <p className="font-semibold text-slate-900 text-xs uppercase tracking-wide">
+                        Official Departmental Resolution:
+                      </p>
+                      <CivicSealBadge
+                        tier="executive"
+                        officeName={issue.officeId?.name || issue.office?.name || 'Municipal Department'}
+                        designation="Attending Officer"
+                        size="xs"
+                      />
+                    </div>
                     <p>{issue.resolutionNotes}</p>
                   </div>
                 )}
@@ -705,19 +721,23 @@ export default function IssueDetailClient({
             )}
 
             {/* Responsible Office Dossier Card */}
-            <div className="p-4 rounded-xl bg-blue-50/50 border border-blue-100 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Building2 className="w-5 h-5 text-blue-600 shrink-0" />
+            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-start sm:items-center gap-3">
+                <Building2 className="w-5 h-5 text-slate-700 shrink-0 mt-0.5 sm:mt-0" />
                 <div>
-                  <h4 className="text-xs font-bold text-blue-950 uppercase tracking-wide">
-                    Responsible Civic Office
-                  </h4>
-                  <p className="text-sm font-bold text-slate-900">
-                    {issue.officeId?.name || issue.office?.name || 'Local Authority'}
-                  </p>
-                  <p className="text-xs text-slate-500">
-                    {issue.officeId?.department || 'Civil Administration'} • SLA:{' '}
-                    {issue.slaHours || 48}h
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wide">
+                      Responsible Authority
+                    </h4>
+                    <CivicSealBadge
+                      tier="executive"
+                      officeName={issue.officeId?.name || issue.office?.name || 'Local Authority'}
+                      designation={issue.officeId?.department || 'Civil Administration'}
+                      size="xs"
+                    />
+                  </div>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Statutory Mandate: {issue.slaHours || 48}h SLA Resolution Window
                   </p>
                 </div>
               </div>
@@ -725,7 +745,7 @@ export default function IssueDetailClient({
               <div className="text-right">
                 <button
                   onClick={handleRaiseSupport}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-600 text-white font-bold text-xs hover:bg-blue-700 transition shadow-sm"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-600 text-white font-bold text-xs hover:bg-amber-700 transition shadow-sm cursor-pointer"
                 >
                   <ThumbsUp className="w-4 h-4" />
                   <span>
@@ -818,14 +838,18 @@ export default function IssueDetailClient({
                         className="p-4 rounded-xl border border-slate-200 bg-slate-50/50 flex flex-col justify-between space-y-3"
                       >
                         <div>
-                          <div className="flex items-center justify-between gap-1 mb-1.5">
+                          <div className="flex items-center justify-between gap-1 mb-1.5 flex-wrap">
                             <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
                               {tier.title}
                             </span>
                             {matchedRep?.status === 'verified' ? (
-                              <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
-                                Verified ✓
-                              </span>
+                              <CivicSealBadge
+                                tier="constitutional"
+                                role={matchedRep.role || tier.roleKey}
+                                officeName={matchedRep.jurisdictionId?.name || issue.location?.ward}
+                                designation={tier.title}
+                                size="xs"
+                              />
                             ) : (
                               <span className="text-[10px] font-medium text-slate-500 bg-slate-200 px-2 py-0.5 rounded-full">
                                 {t('notYetOnRaise')}

@@ -54,15 +54,10 @@ const PILOT_CATEGORY_METRICS: Array<{ id: string; key: 'roads' | 'water' | 'sani
 ];
 
 export type AdminTab =
-  | 'overview'
+  | 'telemetry'
   | 'claims'
   | 'moderation'
-  | 'finance'
-  | 'billing'
-  | 'freeze_windows'
-  | 'rep_updates'
-  | 'outreach'
-  | 'security';
+  | 'governance';
 
 export default function AdminPanelPage() {
   const {
@@ -78,7 +73,10 @@ export default function AdminPanelPage() {
   } = useAuth();
   const { language, t } = useLanguage();
 
-  const [activeTab, setActiveTab] = useState<AdminTab>('overview');
+  const [activeTab, setActiveTab] = useState<AdminTab>('telemetry');
+  const [telemetrySubTab, setTelemetrySubTab] = useState<'metrics' | 'finance' | 'billing'>('metrics');
+  const [claimsSubTab, setClaimsSubTab] = useState<'claims' | 'security'>('claims');
+  const [governanceSubTab, setGovernanceSubTab] = useState<'freeze_windows' | 'rep_updates' | 'outreach'>('freeze_windows');
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [unclaimedProfiles, setUnclaimedProfiles] = useState<any[]>([]);
   const [selectedLinkProfileMap, setSelectedLinkProfileMap] = useState<Record<string, string>>({});
@@ -89,15 +87,34 @@ export default function AdminPanelPage() {
       if (typeof window !== 'undefined') {
         const params = new URLSearchParams(window.location.search);
         const tabParam = params.get('tab');
-        if (tabParam === 'claims') setActiveTab('claims');
-        else if (tabParam === 'moderation') setActiveTab('moderation');
-        else if (tabParam === 'finance') setActiveTab('finance');
-        else if (tabParam === 'billing') setActiveTab('billing');
-        else if (tabParam === 'freeze_windows' || tabParam === 'mcc') setActiveTab('freeze_windows');
-        else if (tabParam === 'rep_updates') setActiveTab('rep_updates');
-        else if (tabParam === 'outreach' || tabParam === 'jurisdictions') setActiveTab('outreach');
-        else if (tabParam === 'security' || tabParam === '2fa') setActiveTab('security');
-        else if (tabParam === 'overview' || tabParam === 'metrics' || tabParam === 'escalation') setActiveTab('overview');
+        if (tabParam === 'claims') {
+          setActiveTab('claims');
+          setClaimsSubTab('claims');
+        } else if (tabParam === 'security' || tabParam === '2fa') {
+          setActiveTab('claims');
+          setClaimsSubTab('security');
+        } else if (tabParam === 'moderation') {
+          setActiveTab('moderation');
+        } else if (tabParam === 'finance') {
+          setActiveTab('telemetry');
+          setTelemetrySubTab('finance');
+        } else if (tabParam === 'billing') {
+          setActiveTab('telemetry');
+          setTelemetrySubTab('billing');
+        } else if (tabParam === 'freeze_windows' || tabParam === 'mcc') {
+          setActiveTab('governance');
+          setGovernanceSubTab('freeze_windows');
+        } else if (tabParam === 'rep_updates') {
+          setActiveTab('governance');
+          setGovernanceSubTab('rep_updates');
+        } else if (tabParam === 'outreach' || tabParam === 'jurisdictions') {
+          setActiveTab('governance');
+          setGovernanceSubTab('outreach');
+        } else if (tabParam === 'governance') {
+          setActiveTab('governance');
+        } else {
+          setActiveTab('telemetry');
+        }
       }
     };
     handleUrlTab();
@@ -415,9 +432,9 @@ export default function AdminPanelPage() {
     if (user && user.role === 'admin' && token) {
       fetchClaims();
       fetchStats();
-      if (activeTab === 'outreach') {
+      if (activeTab === 'governance') {
         fetchJurisdictions();
-      } else if (activeTab === 'overview') {
+      } else if (activeTab === 'telemetry') {
         fetchPilotMetrics();
       }
     }
@@ -718,56 +735,30 @@ export default function AdminPanelPage() {
     );
   }
 
-  const adminSidebarItems: { id: AdminTab; label: string; icon: any; count?: number; badge?: string }[] = [
+  const adminTabs: { id: AdminTab; label: string; icon: any; count?: number; badge?: string }[] = [
     {
-      id: 'overview',
-      label: t('tabSystemOverview'),
+      id: 'telemetry',
+      label: language === 'mr' ? 'प्रणाली मेट्रिक्स व वित्त' : 'Civic Telemetry & Finance',
       icon: BarChart3,
-      badge: 'Ward 12 Live',
+      badge: 'Live',
     },
     {
       id: 'claims',
-      label: t('tabClaimsQueue'),
+      label: language === 'mr' ? 'अधिकार व संलग्नता कक्ष' : 'Affiliation & Claims Desk',
       icon: Building,
       count: claimsList.filter((c) => c.status === 'pending').length,
     },
     {
       id: 'moderation',
-      label: t('tabModerationFlags'),
+      label: language === 'mr' ? 'तक्रार निवारण व नियंत्रण' : 'Integrity & Moderation',
       icon: AlertTriangle,
       count: flaggedReports.length,
     },
     {
-      id: 'finance',
-      label: t('tabFinanceLedger'),
-      icon: Wallet,
-      badge: '100% Public',
-    },
-    {
-      id: 'billing',
-      label: t('tabBillingPlans'),
-      icon: CreditCard,
-    },
-    {
-      id: 'freeze_windows',
-      label: t('tabFreezeWindows'),
+      id: 'governance',
+      label: language === 'mr' ? 'प्रशासकीय कायदे व नियमन' : 'Governance & Legal',
       icon: Scale,
       badge: 'MCC Active',
-    },
-    {
-      id: 'rep_updates',
-      label: t('tabRepUpdatesMod'),
-      icon: FileText,
-    },
-    {
-      id: 'outreach',
-      label: t('tabOutreachJur'),
-      icon: MapPin,
-    },
-    {
-      id: 'security',
-      label: t('twoFactorAuth'),
-      icon: KeyRound,
     },
   ];
 
@@ -846,28 +837,35 @@ export default function AdminPanelPage() {
           </span>
         </div>
 
-        {/* Mobile Horizontal Tabs Scroller */}
-        <div className="lg:hidden flex items-center gap-1.5 overflow-x-auto pb-3 mb-4 scrollbar-none">
-          {adminSidebarItems.map((item) => {
+        {/* Universal 4-Tab Bar */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-2 mb-6 scrollbar-none border-b border-gray-200">
+          {adminTabs.map((item) => {
             const Icon = item.icon;
             const isSelected = activeTab === item.id;
             return (
               <button
                 key={item.id}
                 onClick={() => setActiveTab(item.id)}
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition cursor-pointer shrink-0 border ${
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-bold whitespace-nowrap transition cursor-pointer border ${
                   isSelected
                     ? 'bg-slate-900 text-white border-slate-900 shadow-xs'
-                    : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-100'
+                    : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50 hover:text-gray-900'
                 }`}
               >
-                <Icon className="w-3.5 h-3.5" />
+                <Icon className={`w-4 h-4 ${isSelected ? 'text-amber-400' : 'text-gray-500'}`} />
                 <span>{item.label}</span>
                 {item.count !== undefined && (
-                  <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
                     isSelected ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-700'
                   }`}>
                     {item.count}
+                  </span>
+                )}
+                {item.badge && (
+                  <span className={`text-[9px] px-2 py-0.5 rounded-full font-black uppercase tracking-wider ${
+                    isSelected ? 'bg-amber-400 text-slate-950' : 'bg-amber-100 text-amber-800'
+                  }`}>
+                    {item.badge}
                   </span>
                 )}
               </button>
@@ -878,9 +876,39 @@ export default function AdminPanelPage() {
         {/* Main Workspace Content Area */}
         <section className="w-full space-y-6">
 
-        {/* TAB 1: OFFICIAL CLAIMS QUEUE */}
+        {/* TAB 2: AFFILIATION & CLAIMS DESK */}
         {activeTab === 'claims' && (
-          <div className="space-y-4">
+          <div className="space-y-6">
+            {/* Sub-switcher */}
+            <div className="flex items-center gap-2 bg-gray-100 p-1.5 rounded-2xl w-fit">
+              <button
+                type="button"
+                onClick={() => setClaimsSubTab('claims')}
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
+                  claimsSubTab === 'claims'
+                    ? 'bg-white text-slate-900 shadow-2xs'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                <Building className="w-3.5 h-3.5 text-blue-600" />
+                <span>{t('tabClaimsQueue')} ({claimsList.filter((c) => c.status === 'pending').length})</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setClaimsSubTab('security')}
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
+                  claimsSubTab === 'security'
+                    ? 'bg-white text-slate-900 shadow-2xs'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                <KeyRound className="w-3.5 h-3.5 text-amber-600" />
+                <span>{t('twoFactorAuth')}</span>
+              </button>
+            </div>
+
+            {claimsSubTab === 'claims' && (
+              <div className="space-y-4">
             {claimsLoading ? (
               <div className="bg-white p-8 rounded-2xl border border-gray-200 text-center text-xs text-gray-500">
                 Loading official claims queue...
@@ -1056,6 +1084,74 @@ export default function AdminPanelPage() {
                 </div>
               ))
             )}
+              </div>
+            )}
+
+            {claimsSubTab === 'security' && (
+              <div className="max-w-xl mx-auto bg-white rounded-3xl border border-gray-200 p-6 shadow-xs space-y-6">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-800 shrink-0">
+                    <KeyRound className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-base text-gray-900">{t('twoFactorAuth')}</h3>
+                    <p className="text-xs text-gray-500">{t('twoFactorRequiredAdmin')}</p>
+                  </div>
+                </div>
+
+                {user.twoFactorEnabled ? (
+                  <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl text-xs text-emerald-800 space-y-4">
+                    <div className="flex items-center gap-2 font-bold text-sm text-emerald-900">
+                      <ShieldCheck className="w-5 h-5 text-emerald-600" />
+                      <span>Two-factor authentication is active on your administrator account.</span>
+                    </div>
+                    <p className="text-xs text-emerald-700">
+                      Your account is protected with RFC 6238 time-based one-time passwords and single-use backup codes.
+                    </p>
+
+                    <form onSubmit={handleDisable2Fa} className="pt-2 border-t border-emerald-200 space-y-2">
+                      <label className="block text-[11px] font-bold text-emerald-900">Disable 2FA (Enter Password)</label>
+                      <div className="flex gap-2">
+                        <input
+                          type="password"
+                          value={disablePassword}
+                          onChange={(e) => setDisablePassword(e.target.value)}
+                          placeholder="••••••••"
+                          className="flex-1 px-3 py-2 bg-white border border-emerald-300 rounded-xl text-xs"
+                          required
+                        />
+                        <button
+                          type="submit"
+                          disabled={disableLoading}
+                          className="px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold transition whitespace-nowrap"
+                        >
+                          {disableLoading ? t('pleaseWait') : 'Disable 2FA'}
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl text-xs text-amber-800 space-y-1">
+                      <span className="font-bold block text-amber-900">Recommended Action:</span>
+                      <p>
+                        Protect your administrative privileges against credential theft by enabling Google Authenticator or any TOTP app.
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleStart2FaSetup}
+                      disabled={setup2FaLoading}
+                      className="w-full py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition shadow-xs flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      <KeyRound className="w-4 h-4" />
+                      <span>{t('setup2FaBtn')}</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
 
@@ -1179,153 +1275,50 @@ export default function AdminPanelPage() {
           </div>
         )}
 
-
-        {/* TAB 4: SECURITY & 2FA MANAGEMENT */}
-        {activeTab === 'security' && (
-          <div className="max-w-xl mx-auto bg-white rounded-3xl border border-gray-200 p-6 shadow-xs space-y-6">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-800 shrink-0">
-                <KeyRound className="w-6 h-6" />
-              </div>
-              <div>
-                <h3 className="font-bold text-base text-gray-900">{t('twoFactorAuth')}</h3>
-                <p className="text-xs text-gray-500">{t('twoFactorRequiredAdmin')}</p>
-              </div>
-            </div>
-
-            {user.twoFactorEnabled ? (
-              <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl text-xs text-emerald-800 space-y-4">
-                <div className="flex items-center gap-2 font-bold text-sm text-emerald-900">
-                  <ShieldCheck className="w-5 h-5 text-emerald-600" />
-                  <span>Two-factor authentication is active on your administrator account.</span>
-                </div>
-                <p className="text-xs text-emerald-700">
-                  Your account is protected with RFC 6238 time-based one-time passwords and single-use backup codes.
-                </p>
-
-                <form onSubmit={handleDisable2Fa} className="pt-2 border-t border-emerald-200 space-y-2">
-                  <label className="block text-[11px] font-bold text-emerald-900">Disable 2FA (Enter Password)</label>
-                  <div className="flex gap-2">
-                    <input
-                      type="password"
-                      value={disablePassword}
-                      onChange={(e) => setDisablePassword(e.target.value)}
-                      placeholder="••••••••"
-                      className="flex-1 px-3 py-2 bg-white border border-emerald-300 rounded-xl text-xs"
-                      required
-                    />
-                    <button
-                      type="submit"
-                      disabled={disableLoading}
-                      className="px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold transition whitespace-nowrap"
-                    >
-                      {disableLoading ? t('pleaseWait') : 'Disable 2FA'}
-                    </button>
-                  </div>
-                </form>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl text-xs text-amber-800 space-y-1">
-                  <span className="font-bold block text-amber-900">Recommended Action:</span>
-                  <p>
-                    Protect your administrative privileges against credential theft by enabling Google Authenticator or any TOTP app.
-                  </p>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={handleStart2FaSetup}
-                  disabled={setup2FaLoading}
-                  className="w-full py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition shadow-xs flex items-center justify-center gap-2 cursor-pointer"
-                >
-                  <KeyRound className="w-4 h-4" />
-                  <span>{t('setup2FaBtn')}</span>
-                </button>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* TAB: FINANCE & PUBLIC LEDGER */}
-        {activeTab === 'finance' && (
-          <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-xs space-y-5">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-gray-100">
-              <div>
-                <span className="text-[10px] font-black uppercase text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
-                  100% Public Audit
-                </span>
-                <h2 className="text-lg font-black text-gray-900 mt-1">
-                  {t('tabFinanceLedger')}
-                </h2>
-                <p className="text-xs text-gray-500 mt-0.5">
-                  Real-time double-entry public transparency ledger for platform operational expenditures and public citizen patronage.
-                </p>
-              </div>
-              <Link
-                href="/admin/finance"
-                className="inline-flex items-center gap-1.5 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl shadow-xs transition"
+        {/* TAB 4: GOVERNANCE & LEGAL */}
+        {activeTab === 'governance' && (
+          <div className="space-y-6">
+            {/* Sub-switcher */}
+            <div className="flex items-center gap-2 bg-gray-100 p-1.5 rounded-2xl w-fit">
+              <button
+                type="button"
+                onClick={() => setGovernanceSubTab('freeze_windows')}
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
+                  governanceSubTab === 'freeze_windows'
+                    ? 'bg-white text-slate-900 shadow-2xs'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
               >
-                <span>Open Financial Ledger Console</span>
-                <ExternalLink className="w-3.5 h-3.5" />
-              </Link>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-200">
-                <span className="text-[11px] font-bold text-emerald-800 block">Total Public Contributions</span>
-                <span className="text-2xl font-black text-emerald-950 mt-1 block">₹ 28,54,200</span>
-                <span className="text-[10px] text-emerald-700">From 142 citizen patrons</span>
-              </div>
-              <div className="p-4 bg-amber-50 rounded-xl border border-amber-200">
-                <span className="text-[11px] font-bold text-amber-800 block">Operating Server & SMS Costs</span>
-                <span className="text-2xl font-black text-amber-950 mt-1 block">₹ 16,21,800</span>
-                <span className="text-[10px] text-amber-700">Zero advertiser capital</span>
-              </div>
-              <div className="p-4 bg-blue-50 rounded-xl border border-blue-200">
-                <span className="text-[11px] font-bold text-blue-800 block">Net Operating Reserves</span>
-                <span className="text-2xl font-black text-blue-950 mt-1 block">₹ 12,32,400</span>
-                <span className="text-[10px] text-blue-700">Dedicated to Municipal Operations</span>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* TAB: BILLING & PLANS */}
-        {activeTab === 'billing' && (
-          <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-xs space-y-5">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-gray-100">
-              <div>
-                <span className="text-[10px] font-black uppercase text-teal-700 bg-teal-50 px-2 py-0.5 rounded-full border border-teal-200">
-                  Subscription Plans Management
-                </span>
-                <h2 className="text-lg font-black text-gray-900 mt-1">
-                  {t('tabBillingPlans')}
-                </h2>
-                <p className="text-xs text-gray-500 mt-0.5">
-                  Enterprise seat quotas, municipal tiers, and Section 8 non-profit revenue compliance.
-                </p>
-              </div>
-              <Link
-                href="/admin/billing"
-                className="inline-flex items-center gap-1.5 px-4 py-2 bg-teal-700 hover:bg-teal-800 text-white text-xs font-bold rounded-xl shadow-xs transition"
+                <Scale className="w-3.5 h-3.5 text-rose-600" />
+                <span>{t('tabFreezeWindows')}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setGovernanceSubTab('rep_updates')}
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
+                  governanceSubTab === 'rep_updates'
+                    ? 'bg-white text-slate-900 shadow-2xs'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
               >
-                <span>Open Full Billing Console</span>
-                <ExternalLink className="w-3.5 h-3.5" />
-              </Link>
+                <FileText className="w-3.5 h-3.5 text-blue-600" />
+                <span>{t('tabRepUpdatesMod')}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setGovernanceSubTab('outreach')}
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
+                  governanceSubTab === 'outreach'
+                    ? 'bg-white text-slate-900 shadow-2xs'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                <MapPin className="w-3.5 h-3.5 text-amber-600" />
+                <span>{t('tabOutreachJur')}</span>
+              </button>
             </div>
 
-            <div className="p-4 bg-gray-50 rounded-xl border border-gray-200 text-xs space-y-2">
-              <span className="font-bold text-gray-900 block">Plan Quota Overview:</span>
-              <p className="text-gray-600 leading-relaxed">
-                Office Basic (Free for all statutory public authorities with 5 nodal team seats) &bull; Office Pro (₹4,999/mo for large municipal divisions with 25 seats & priority analytics).
-              </p>
-            </div>
-          </div>
-        )}
-
-        {/* TAB: ELECTION FREEZE WINDOWS (MCC) */}
-        {activeTab === 'freeze_windows' && (
+            {governanceSubTab === 'freeze_windows' && (
           <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-xs space-y-5">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-gray-100">
               <div>
@@ -1357,8 +1350,7 @@ export default function AdminPanelPage() {
           </div>
         )}
 
-        {/* TAB: REPRESENTATIVE UPDATES MODERATION */}
-        {activeTab === 'rep_updates' && (
+        {governanceSubTab === 'rep_updates' && (
           <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-xs space-y-5">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-gray-100">
               <div>
@@ -1390,8 +1382,7 @@ export default function AdminPanelPage() {
           </div>
         )}
 
-        {/* TAB 5: JURISDICTIONS & ROUTING */}
-        {activeTab === 'outreach' && (
+        {governanceSubTab === 'outreach' && (
           <div className="space-y-6">
             {/* Top Toolbar: Run Escalations & Download CSV */}
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-4 bg-white rounded-2xl border border-gray-200 shadow-xs">
@@ -1737,13 +1728,57 @@ export default function AdminPanelPage() {
                 )}
               </div>
             </div>
+          )}
+          </div>
         )}
 
         {/* ============================================================ */}
-        {/* TAB: SYSTEM OVERVIEW, OPERATIONS METRICS & ESCALATION WATCH */}
+        {/* TAB 1: CIVIC TELEMETRY & FINANCE */}
         {/* ============================================================ */}
-        {activeTab === 'overview' && (
+        {activeTab === 'telemetry' && (
           <div className="space-y-6">
+            {/* Sub-switcher */}
+            <div className="flex items-center gap-2 bg-gray-100 p-1.5 rounded-2xl w-fit">
+              <button
+                type="button"
+                onClick={() => setTelemetrySubTab('metrics')}
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
+                  telemetrySubTab === 'metrics'
+                    ? 'bg-white text-slate-900 shadow-2xs'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                <BarChart3 className="w-3.5 h-3.5 text-blue-600" />
+                <span>{t('tabSystemOverview')}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setTelemetrySubTab('finance')}
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
+                  telemetrySubTab === 'finance'
+                    ? 'bg-white text-slate-900 shadow-2xs'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                <Wallet className="w-3.5 h-3.5 text-amber-600" />
+                <span>{t('tabFinanceLedger')} (100% Public)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setTelemetrySubTab('billing')}
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
+                  telemetrySubTab === 'billing'
+                    ? 'bg-white text-slate-900 shadow-2xs'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                <CreditCard className="w-3.5 h-3.5 text-teal-600" />
+                <span>{t('tabBillingPlans')}</span>
+              </button>
+            </div>
+
+            {telemetrySubTab === 'metrics' && (
+              <div className="space-y-6">
             <div className="bg-white rounded-3xl p-6 sm:p-8 border border-gray-200 shadow-xs">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                 <div>
@@ -1988,6 +2023,83 @@ export default function AdminPanelPage() {
                 ))}
               </div>
             </div>
+          </div>
+        )}
+
+        {telemetrySubTab === 'finance' && (
+          <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-xs space-y-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-gray-100">
+              <div>
+                <span className="text-[10px] font-black uppercase text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
+                  100% Public Audit
+                </span>
+                <h2 className="text-lg font-black text-gray-900 mt-1">
+                  {t('tabFinanceLedger')}
+                </h2>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  Real-time double-entry public transparency ledger for platform operational expenditures and public citizen patronage.
+                </p>
+              </div>
+              <Link
+                href="/admin/finance"
+                className="inline-flex items-center gap-1.5 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl shadow-xs transition"
+              >
+                <span>Open Financial Ledger Console</span>
+                <ExternalLink className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-200">
+                <span className="text-[11px] font-bold text-emerald-800 block">Total Public Contributions</span>
+                <span className="text-2xl font-black text-emerald-950 mt-1 block">₹ 28,54,200</span>
+                <span className="text-[10px] text-emerald-700">From 142 citizen patrons</span>
+              </div>
+              <div className="p-4 bg-amber-50 rounded-xl border border-amber-200">
+                <span className="text-[11px] font-bold text-amber-800 block">Operating Server & SMS Costs</span>
+                <span className="text-2xl font-black text-amber-950 mt-1 block">₹ 16,21,800</span>
+                <span className="text-[10px] text-amber-700">Zero advertiser capital</span>
+              </div>
+              <div className="p-4 bg-blue-50 rounded-xl border border-blue-200">
+                <span className="text-[11px] font-bold text-blue-800 block">Net Operating Reserves</span>
+                <span className="text-2xl font-black text-blue-950 mt-1 block">₹ 12,32,400</span>
+                <span className="text-[10px] text-blue-700">Dedicated to Municipal Operations</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {telemetrySubTab === 'billing' && (
+          <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-xs space-y-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-gray-100">
+              <div>
+                <span className="text-[10px] font-black uppercase text-teal-700 bg-teal-50 px-2 py-0.5 rounded-full border border-teal-200">
+                  Subscription Plans Management
+                </span>
+                <h2 className="text-lg font-black text-gray-900 mt-1">
+                  {t('tabBillingPlans')}
+                </h2>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  Enterprise seat quotas, municipal tiers, and Section 8 non-profit revenue compliance.
+                </p>
+              </div>
+              <Link
+                href="/admin/billing"
+                className="inline-flex items-center gap-1.5 px-4 py-2 bg-teal-700 hover:bg-teal-800 text-white text-xs font-bold rounded-xl shadow-xs transition"
+              >
+                <span>Open Full Billing Console</span>
+                <ExternalLink className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+
+            <div className="p-4 bg-gray-50 rounded-xl border border-gray-200 text-xs space-y-2">
+              <span className="font-bold text-gray-900 block">Plan Quota Overview:</span>
+              <p className="text-gray-600 leading-relaxed">
+                Office Basic (Free for all statutory public authorities with 5 nodal team seats) &bull; Office Pro (₹4,999/mo for large municipal divisions with 25 seats & priority analytics).
+              </p>
+            </div>
+          </div>
+        )}
           </div>
         )}
           </section>
