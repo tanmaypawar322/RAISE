@@ -12,23 +12,12 @@ import {
   Building2,
   Wallet,
   ShieldCheck,
-  ChevronDown,
-  Clock,
-  ThumbsUp,
-  Bell,
   Shield,
   Briefcase,
-  CheckCircle2,
-  TrendingUp,
-  Layers,
-  MessageSquare,
   FileText,
   Award,
-  CreditCard,
   BarChart3,
-  AlertTriangle,
   Scale,
-  MapPin,
   KeyRound,
   HelpCircle,
   BookOpen,
@@ -37,6 +26,8 @@ import {
   X,
   LogOut,
   User,
+  UserPlus,
+  ExternalLink,
   Sparkles,
 } from 'lucide-react';
 
@@ -59,31 +50,6 @@ export function AppSidebar({
 
   const { user, logout, openAuthModal, openAuthModalWithAction } = useAuth();
   const { language, setLanguage, t } = useLanguage();
-
-  // Accordion open/close states
-  const [openAccordions, setOpenAccordions] = useState<{ [key: string]: boolean }>({
-    citizen: false,
-    official: false,
-    admin: false,
-  });
-
-  // Automatically expand corresponding accordion if user is on that route
-  useEffect(() => {
-    if (pathname.startsWith('/dashboard')) {
-      setOpenAccordions((prev) => ({ ...prev, citizen: true }));
-    } else if (pathname.startsWith('/office-portal')) {
-      setOpenAccordions((prev) => ({ ...prev, official: true }));
-    } else if (pathname.startsWith('/admin')) {
-      setOpenAccordions((prev) => ({ ...prev, admin: true }));
-    }
-  }, [pathname]);
-
-  const toggleAccordion = (key: string) => {
-    if (isCollapsed) {
-      onToggleCollapse(); // expand sidebar if user clicks an accordion while collapsed
-    }
-    setOpenAccordions((prev) => ({ ...prev, [key]: !prev[key] }));
-  };
 
   const isNavActive = (href: string, tab?: string) => {
     if (tab) {
@@ -174,387 +140,435 @@ export function AppSidebar({
         {/* Scrollable Navigation Body */}
         <div className="flex-1 overflow-y-auto overflow-x-hidden p-2.5 space-y-4 scrollbar-thin scrollbar-thumb-gray-200">
           
-          {/* SECTION 1: CIVIC MODULES */}
+          {/* UNIFIED PRIMARY ROLE NAVIGATION */}
           <div className="space-y-0.5">
             {!isCollapsed && (
               <div className="px-2 py-1 flex items-center justify-between text-[10px] font-black uppercase tracking-wider text-gray-400">
-                <span>{t('civicModules')}</span>
-                <span className="text-[9px] bg-gray-100 text-gray-500 px-1.5 py-0.2 rounded font-mono">6</span>
+                <span>
+                  {user?.role === 'admin'
+                    ? t('adminConsoleTitle')
+                    : user?.role === 'official' || user?.role === 'agency'
+                    ? t('executivePortalTitle')
+                    : user
+                    ? t('citizenWorkspaceTitle')
+                    : t('guestPortalTitle')}
+                </span>
+                <span className="text-[9px] bg-gray-100 text-gray-500 px-1.5 py-0.2 rounded font-mono">
+                  {user ? '6' : '4'}
+                </span>
               </div>
             )}
 
-            {/* 1. Grievance Feed */}
-            <Link
-              href="/"
-              onClick={handleLinkClick}
-              className={`w-full flex items-center gap-3 px-2.5 py-2 rounded-xl text-xs font-bold transition ${
-                pathname === '/' && !activeTabParam
-                  ? 'bg-orange-50 text-orange-900 shadow-2xs'
-                  : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-              } ${isCollapsed ? 'justify-center px-0' : ''}`}
-              title={t('navFeed')}
-            >
-              <Flame className={`w-4 h-4 shrink-0 ${pathname === '/' && !activeTabParam ? 'text-orange-600' : 'text-gray-500'}`} />
-              {!isCollapsed && <span className="truncate">{t('navFeed')}</span>}
-            </Link>
-
-            {/* 2. Elected Representatives */}
-            <Link
-              href="/representatives"
-              onClick={handleLinkClick}
-              className={`w-full flex items-center gap-3 px-2.5 py-2 rounded-xl text-xs font-bold transition ${
-                pathname.startsWith('/representatives')
-                  ? 'bg-orange-50 text-orange-900 shadow-2xs'
-                  : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-              } ${isCollapsed ? 'justify-center px-0' : ''}`}
-              title={t('navRepresentatives')}
-            >
-              <Users className={`w-4 h-4 shrink-0 ${pathname.startsWith('/representatives') ? 'text-orange-600' : 'text-gray-500'}`} />
-              {!isCollapsed && <span className="truncate">{t('navRepresentatives')}</span>}
-            </Link>
-
-            {/* 3. Townhalls (Digital Gram Sabha) */}
-            <Link
-              href="/townhalls"
-              onClick={handleLinkClick}
-              className={`w-full flex items-center gap-3 px-2.5 py-2 rounded-xl text-xs font-bold transition ${
-                pathname.startsWith('/townhalls')
-                  ? 'bg-orange-50 text-orange-900 shadow-2xs'
-                  : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-              } ${isCollapsed ? 'justify-center px-0' : ''}`}
-              title={t('navTownhalls')}
-            >
-              <Building className={`w-4 h-4 shrink-0 ${pathname.startsWith('/townhalls') ? 'text-orange-600' : 'text-gray-500'}`} />
-              {!isCollapsed && <span className="truncate">{t('navTownhalls')}</span>}
-            </Link>
-
-            {/* 4. Public Offices Directory */}
-            <Link
-              href="/offices"
-              onClick={handleLinkClick}
-              className={`w-full flex items-center gap-3 px-2.5 py-2 rounded-xl text-xs font-bold transition ${
-                pathname.startsWith('/offices')
-                  ? 'bg-orange-50 text-orange-900 shadow-2xs'
-                  : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-              } ${isCollapsed ? 'justify-center px-0' : ''}`}
-              title={t('navOffices')}
-            >
-              <Building2 className={`w-4 h-4 shrink-0 ${pathname.startsWith('/offices') ? 'text-orange-600' : 'text-gray-500'}`} />
-              {!isCollapsed && <span className="truncate">{t('navOffices')}</span>}
-            </Link>
-
-            {/* 5. Transparency Ledger */}
-            <Link
-              href="/transparency"
-              onClick={handleLinkClick}
-              className={`w-full flex items-center gap-3 px-2.5 py-2 rounded-xl text-xs font-bold transition ${
-                pathname === '/transparency'
-                  ? 'bg-orange-50 text-orange-900 shadow-2xs'
-                  : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-              } ${isCollapsed ? 'justify-center px-0' : ''}`}
-              title={t('navTransparency')}
-            >
-              <Wallet className={`w-4 h-4 shrink-0 ${pathname === '/transparency' ? 'text-orange-600' : 'text-gray-500'}`} />
-              {!isCollapsed && <span className="truncate">{t('navTransparency')}</span>}
-            </Link>
-
-            {/* 6. Moderation Logs */}
-            <Link
-              href="/transparency/moderation"
-              onClick={handleLinkClick}
-              className={`w-full flex items-center gap-3 px-2.5 py-2 rounded-xl text-xs font-bold transition ${
-                pathname === '/transparency/moderation'
-                  ? 'bg-orange-50 text-orange-900 shadow-2xs'
-                  : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-              } ${isCollapsed ? 'justify-center px-0' : ''}`}
-              title="Moderation Audit Logs"
-            >
-              <ShieldCheck className={`w-4 h-4 shrink-0 ${pathname === '/transparency/moderation' ? 'text-orange-600' : 'text-gray-500'}`} />
-              {!isCollapsed && <span className="truncate">Moderation Logs</span>}
-            </Link>
-          </div>
-
-          {/* SECTION 2: WORKSPACES & ACCORDION SUB-TABS */}
-          <div className="pt-2 border-t border-gray-100 space-y-1">
-            {!isCollapsed && (
-              <div className="px-2 py-1 text-[10px] font-black uppercase tracking-wider text-gray-400">
-                {t('workspaces')}
-              </div>
-            )}
-
-            {/* 1. ADMINISTRATOR CONSOLE (For Admin users) */}
-            {user && user.role === 'admin' && (
-              <div className="rounded-xl overflow-hidden mb-1">
-                <button
-                  type="button"
-                  onClick={() => toggleAccordion('admin')}
-                  className={`w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
-                    pathname.startsWith('/admin')
-                      ? 'bg-slate-900 text-white font-black shadow-xs'
-                      : 'text-gray-700 hover:bg-gray-100'
+            {/* 1. ADMINISTRATOR NAVIGATION */}
+            {user?.role === 'admin' && (
+              <>
+                <Link
+                  href="/admin?tab=telemetry"
+                  onClick={handleLinkClick}
+                  className={`w-full flex items-center gap-3 px-2.5 py-2 rounded-xl text-xs font-bold transition ${
+                    pathname.startsWith('/admin') && (activeTabParam === 'telemetry' || activeTabParam === 'overview' || activeTabParam === 'finance' || activeTabParam === 'billing' || pathname === '/admin/finance' || pathname === '/admin/billing' || !activeTabParam)
+                      ? 'bg-slate-900 text-white shadow-xs'
+                      : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
                   } ${isCollapsed ? 'justify-center px-0' : ''}`}
-                  title={t('adminPanel')}
+                  title={t('navTelemetryFinance')}
                 >
-                  <div className="flex items-center gap-2.5 truncate">
-                    <ShieldCheck className="w-4 h-4 text-amber-400 shrink-0" />
-                    {!isCollapsed && <span className="truncate">{t('adminPanel')}</span>}
-                  </div>
-                  {!isCollapsed && (
-                    <ChevronDown
-                      className={`w-3.5 h-3.5 text-gray-400 transition-transform duration-200 ${
-                        openAccordions.admin ? 'rotate-180' : ''
-                      }`}
-                    />
-                  )}
-                </button>
+                  <BarChart3 className={`w-4 h-4 shrink-0 ${pathname.startsWith('/admin') && (activeTabParam === 'telemetry' || activeTabParam === 'overview' || activeTabParam === 'finance' || activeTabParam === 'billing' || pathname === '/admin/finance' || pathname === '/admin/billing' || !activeTabParam) ? 'text-amber-400' : 'text-gray-500'}`} />
+                  {!isCollapsed && <span className="truncate">{t('navTelemetryFinance')}</span>}
+                </Link>
 
-                {!isCollapsed && openAccordions.admin && (
-                  <div className="pl-6 pr-1 py-1 space-y-0.5 border-l-2 border-slate-700 ml-4 mt-1">
-                    <Link
-                      href="/admin?tab=telemetry"
-                      onClick={handleLinkClick}
-                      className={`w-full flex items-center justify-between py-1.5 px-2 rounded-lg text-[11px] font-bold transition ${
-                        pathname.startsWith('/admin') && (activeTabParam === 'telemetry' || activeTabParam === 'overview' || activeTabParam === 'finance' || activeTabParam === 'billing' || pathname === '/admin/finance' || pathname === '/admin/billing' || !activeTabParam)
-                          ? 'bg-slate-900 text-white'
-                          : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-                      }`}
-                    >
-                      <span className="truncate">{language === 'mr' ? 'प्रणाली मेट्रिक्स व वित्त' : language === 'hi' ? 'सिस्टम मेट्रिक्स व वित्त' : 'Civic Telemetry & Finance'}</span>
-                    </Link>
-
-                    <Link
-                      href="/admin?tab=claims"
-                      onClick={handleLinkClick}
-                      className={`w-full flex items-center justify-between py-1.5 px-2 rounded-lg text-[11px] font-bold transition ${
-                        pathname === '/admin' && (activeTabParam === 'claims' || activeTabParam === 'security')
-                          ? 'bg-slate-900 text-white'
-                          : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-                      }`}
-                    >
-                      <span className="truncate">{language === 'mr' ? 'संलग्नता व अधिकार कक्ष' : language === 'hi' ? 'संबद्धता व दावा डेस्क' : 'Affiliation & Claims Desk'}</span>
-                    </Link>
-
-                    <Link
-                      href="/admin?tab=moderation"
-                      onClick={handleLinkClick}
-                      className={`w-full flex items-center justify-between py-1.5 px-2 rounded-lg text-[11px] font-bold transition ${
-                        pathname === '/admin' && activeTabParam === 'moderation'
-                          ? 'bg-slate-900 text-white'
-                          : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-                      }`}
-                    >
-                      <span className="truncate">{language === 'mr' ? 'तक्रार निवारण व नियंत्रण' : language === 'hi' ? 'सत्यनिष्ठा व मॉडरेशन' : 'Integrity & Moderation'}</span>
-                    </Link>
-
-                    <Link
-                      href="/admin?tab=governance"
-                      onClick={handleLinkClick}
-                      className={`w-full flex items-center justify-between py-1.5 px-2 rounded-lg text-[11px] font-bold transition ${
-                        pathname.startsWith('/admin') && (activeTabParam === 'governance' || activeTabParam === 'freeze_windows' || activeTabParam === 'rep_updates' || activeTabParam === 'outreach' || pathname === '/admin/freeze-windows' || pathname === '/admin/rep-updates' || pathname === '/admin/outreach')
-                          ? 'bg-slate-900 text-white'
-                          : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-                      }`}
-                    >
-                      <span className="truncate">{language === 'mr' ? 'प्रशासकीय कायदे व नियमन' : language === 'hi' ? 'प्रशासन व विधिक' : 'Governance & Legal'}</span>
-                    </Link>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* 2. OFFICIAL PORTAL (For Official/Agency users) */}
-            {user && (user.role === 'official' || user.role === 'agency') && (
-              <div className="rounded-xl overflow-hidden mb-1">
-                <button
-                  type="button"
-                  onClick={() => toggleAccordion('official')}
-                  className={`w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
-                    pathname.startsWith('/office-portal')
-                      ? 'bg-blue-50/70 text-blue-950 font-black'
-                      : 'text-gray-700 hover:bg-gray-100'
+                <Link
+                  href="/admin?tab=claims"
+                  onClick={handleLinkClick}
+                  className={`w-full flex items-center gap-3 px-2.5 py-2 rounded-xl text-xs font-bold transition ${
+                    pathname === '/admin' && (activeTabParam === 'claims' || activeTabParam === 'security')
+                      ? 'bg-slate-900 text-white shadow-xs'
+                      : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
                   } ${isCollapsed ? 'justify-center px-0' : ''}`}
-                  title={t('navPortal')}
+                  title={t('navAffiliationClaims')}
                 >
-                  <div className="flex items-center gap-2.5 truncate">
-                    <Briefcase className="w-4 h-4 text-blue-600 shrink-0" />
-                    {!isCollapsed && <span className="truncate">{t('navPortal')}</span>}
-                  </div>
-                  {!isCollapsed && (
-                    <ChevronDown
-                      className={`w-3.5 h-3.5 text-gray-400 transition-transform duration-200 ${
-                        openAccordions.official ? 'rotate-180' : ''
-                      }`}
-                    />
-                  )}
-                </button>
+                  <KeyRound className={`w-4 h-4 shrink-0 ${pathname === '/admin' && (activeTabParam === 'claims' || activeTabParam === 'security') ? 'text-amber-400' : 'text-gray-500'}`} />
+                  {!isCollapsed && <span className="truncate">{t('navAffiliationClaims')}</span>}
+                </Link>
 
-                {!isCollapsed && openAccordions.official && (
-                  <div className="pl-6 pr-1 py-1 space-y-0.5 border-l-2 border-blue-100 ml-4 mt-1">
-                    <Link
-                      href="/office-portal?tab=operations"
-                      onClick={handleLinkClick}
-                      className={`w-full flex items-center justify-between py-1.5 px-2 rounded-lg text-[11px] font-bold transition ${
-                        pathname === '/office-portal' && (activeTabParam === 'operations' || activeTabParam === 'queue' || activeTabParam === 'resolution' || !activeTabParam)
-                          ? 'bg-blue-100 text-blue-900'
-                          : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-                      }`}
-                    >
-                      <span className="truncate">{language === 'mr' ? 'कार्यवाही डेस्क' : language === 'hi' ? 'कार्यवाही डेस्क' : 'Operations Desk'}</span>
-                    </Link>
-
-                    <Link
-                      href="/office-portal?tab=analytics"
-                      onClick={handleLinkClick}
-                      className={`w-full flex items-center justify-between py-1.5 px-2 rounded-lg text-[11px] font-bold transition ${
-                        pathname.startsWith('/office-portal') && (activeTabParam === 'analytics' || activeTabParam === 'directives' || activeTabParam === 'analysis' || pathname === '/office-portal/analysis' || pathname === '/office-portal/directives')
-                          ? 'bg-blue-100 text-blue-900'
-                          : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-                      }`}
-                    >
-                      <span className="truncate">{language === 'mr' ? 'निर्देश व विश्लेषण' : language === 'hi' ? 'निर्देश व विश्लेषण' : 'Directives & Analytics'}</span>
-                    </Link>
-
-                    <Link
-                      href="/office-portal?tab=inquiries"
-                      onClick={handleLinkClick}
-                      className={`w-full flex items-center justify-between py-1.5 px-2 rounded-lg text-[11px] font-bold transition ${
-                        pathname.startsWith('/office-portal') && (activeTabParam === 'inquiries' || activeTabParam === 'representative' || pathname === '/office-portal/representative')
-                          ? 'bg-blue-100 text-blue-900'
-                          : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-                      }`}
-                    >
-                      <span className="truncate">{language === 'mr' ? 'विधिमंडळ चौकशी' : language === 'hi' ? 'विधानमंडल जांच' : 'Legislative Inquiries'}</span>
-                    </Link>
-
-                    <Link
-                      href="/office-portal?tab=team"
-                      onClick={handleLinkClick}
-                      className={`w-full flex items-center justify-between py-1.5 px-2 rounded-lg text-[11px] font-bold transition ${
-                        pathname === '/office-portal' && (activeTabParam === 'team' || activeTabParam === 'roster' || activeTabParam === 'reports' || activeTabParam === 'scorecard' || activeTabParam === 'billing')
-                          ? 'bg-blue-100 text-blue-900'
-                          : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-                      }`}
-                    >
-                      <span className="truncate">{language === 'mr' ? 'कार्यालय पथक व अहवाल' : language === 'hi' ? 'कार्यालय टीम व रिपोर्ट' : 'Office Team & Reports'}</span>
-                    </Link>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* 3. CITIZEN DASHBOARD (For Citizen users) */}
-            {user && user.role === 'citizen' && (
-              <div className="rounded-xl overflow-hidden mb-1">
-                <button
-                  type="button"
-                  onClick={() => toggleAccordion('citizen')}
-                  className={`w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
-                    pathname.startsWith('/dashboard')
-                      ? 'bg-orange-50/70 text-orange-950 font-black'
-                      : 'text-gray-700 hover:bg-gray-100'
+                <Link
+                  href="/admin?tab=moderation"
+                  onClick={handleLinkClick}
+                  className={`w-full flex items-center gap-3 px-2.5 py-2 rounded-xl text-xs font-bold transition ${
+                    pathname === '/admin' && activeTabParam === 'moderation'
+                      ? 'bg-slate-900 text-white shadow-xs'
+                      : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
                   } ${isCollapsed ? 'justify-center px-0' : ''}`}
-                  title={t('myDashboard')}
+                  title={t('navIntegrityModeration')}
                 >
-                  <div className="flex items-center gap-2.5 truncate">
-                    <User className="w-4 h-4 text-orange-500 shrink-0" />
-                    {!isCollapsed && <span className="truncate">{t('myDashboard')}</span>}
-                  </div>
-                  {!isCollapsed && (
-                    <ChevronDown
-                      className={`w-3.5 h-3.5 text-gray-400 transition-transform duration-200 ${
-                        openAccordions.citizen ? 'rotate-180' : ''
-                      }`}
-                    />
-                  )}
-                </button>
+                  <ShieldCheck className={`w-4 h-4 shrink-0 ${pathname === '/admin' && activeTabParam === 'moderation' ? 'text-amber-400' : 'text-gray-500'}`} />
+                  {!isCollapsed && <span className="truncate">{t('navIntegrityModeration')}</span>}
+                </Link>
 
-                {!isCollapsed && openAccordions.citizen && (
-                  <div className="pl-6 pr-1 py-1 space-y-0.5 border-l-2 border-orange-100 ml-4 mt-1">
-                    <Link
-                      href="/dashboard?tab=my_grievances"
-                      onClick={handleLinkClick}
-                      className={`w-full flex items-center justify-between py-1.5 px-2 rounded-lg text-[11px] font-bold transition ${
-                        pathname === '/dashboard' && (activeTabParam === 'my_grievances' || activeTabParam === 'supported_issues' || !activeTabParam)
-                          ? 'bg-orange-100 text-orange-900'
-                          : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-                      }`}
-                    >
-                      <span className="truncate">{t('tabMyGrievances')}</span>
-                    </Link>
+                <Link
+                  href="/admin?tab=governance"
+                  onClick={handleLinkClick}
+                  className={`w-full flex items-center gap-3 px-2.5 py-2 rounded-xl text-xs font-bold transition ${
+                    pathname.startsWith('/admin') && (activeTabParam === 'governance' || activeTabParam === 'freeze_windows' || activeTabParam === 'rep_updates' || activeTabParam === 'outreach' || pathname === '/admin/freeze-windows' || pathname === '/admin/rep-updates' || pathname === '/admin/outreach')
+                      ? 'bg-slate-900 text-white shadow-xs'
+                      : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                  } ${isCollapsed ? 'justify-center px-0' : ''}`}
+                  title={t('navGovernanceLegal')}
+                >
+                  <Scale className={`w-4 h-4 shrink-0 ${pathname.startsWith('/admin') && (activeTabParam === 'governance' || activeTabParam === 'freeze_windows' || activeTabParam === 'rep_updates' || activeTabParam === 'outreach' || pathname === '/admin/freeze-windows' || pathname === '/admin/rep-updates' || pathname === '/admin/outreach') ? 'text-amber-400' : 'text-gray-500'}`} />
+                  {!isCollapsed && <span className="truncate">{t('navGovernanceLegal')}</span>}
+                </Link>
 
-                    <Link
-                      href="/dashboard?tab=townhall_activity"
-                      onClick={handleLinkClick}
-                      className={`w-full flex items-center justify-between py-1.5 px-2 rounded-lg text-[11px] font-bold transition ${
-                        pathname === '/dashboard' && activeTabParam === 'townhall_activity'
-                          ? 'bg-orange-100 text-orange-900'
-                          : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-                      }`}
-                    >
-                      <span className="truncate">{t('tabTownhallActivity')}</span>
-                    </Link>
+                <Link
+                  href="/"
+                  onClick={handleLinkClick}
+                  className={`w-full flex items-center gap-3 px-2.5 py-2 rounded-xl text-xs font-bold transition ${
+                    pathname === '/' && !activeTabParam
+                      ? 'bg-slate-900 text-white shadow-xs'
+                      : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                  } ${isCollapsed ? 'justify-center px-0' : ''}`}
+                  title={t('navFeed')}
+                >
+                  <Flame className={`w-4 h-4 shrink-0 ${pathname === '/' && !activeTabParam ? 'text-amber-400' : 'text-gray-500'}`} />
+                  {!isCollapsed && <span className="truncate">{t('navFeed')}</span>}
+                </Link>
 
-                    <Link
-                      href="/dashboard?tab=my_representatives"
-                      onClick={handleLinkClick}
-                      className={`w-full flex items-center justify-between py-1.5 px-2 rounded-lg text-[11px] font-bold transition ${
-                        pathname === '/dashboard' && activeTabParam === 'my_representatives'
-                          ? 'bg-orange-100 text-orange-900'
-                          : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-                      }`}
-                    >
-                      <span className="truncate">{t('tabMyReps')}</span>
-                    </Link>
-
-                    <Link
-                      href="/dashboard?tab=account_privacy"
-                      onClick={handleLinkClick}
-                      className={`w-full flex items-center justify-between py-1.5 px-2 rounded-lg text-[11px] font-bold transition ${
-                        pathname === '/dashboard' && (activeTabParam === 'account_privacy' || activeTabParam === 'profile' || activeTabParam === 'notifications')
-                          ? 'bg-orange-100 text-orange-900'
-                          : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-                      }`}
-                    >
-                      <span className="truncate">{t('tabPrivacyDpdp')}</span>
-                    </Link>
-                  </div>
-                )}
-              </div>
+                <Link
+                  href="/dashboard?tab=account_privacy"
+                  onClick={handleLinkClick}
+                  className={`w-full flex items-center gap-3 px-2.5 py-2 rounded-xl text-xs font-bold transition ${
+                    pathname === '/dashboard' && (activeTabParam === 'account_privacy' || activeTabParam === 'profile')
+                      ? 'bg-slate-900 text-white shadow-xs'
+                      : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                  } ${isCollapsed ? 'justify-center px-0' : ''}`}
+                  title={t('tabPrivacyDpdp')}
+                >
+                  <Shield className={`w-4 h-4 shrink-0 ${pathname === '/dashboard' && (activeTabParam === 'account_privacy' || activeTabParam === 'profile') ? 'text-amber-400' : 'text-gray-500'}`} />
+                  {!isCollapsed && <span className="truncate">{t('tabPrivacyDpdp')}</span>}
+                </Link>
+              </>
             )}
 
-            {/* UNREGISTERED / GUEST WORKSPACE PROMPT */}
+            {/* 2. OFFICIAL / AGENCY NAVIGATION */}
+            {(user?.role === 'official' || user?.role === 'agency') && (
+              <>
+                <Link
+                  href="/office-portal?tab=operations"
+                  onClick={handleLinkClick}
+                  className={`w-full flex items-center gap-3 px-2.5 py-2 rounded-xl text-xs font-bold transition ${
+                    pathname === '/office-portal' && (activeTabParam === 'operations' || activeTabParam === 'queue' || activeTabParam === 'resolution' || !activeTabParam)
+                      ? 'bg-blue-50 text-blue-950 font-black shadow-2xs'
+                      : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                  } ${isCollapsed ? 'justify-center px-0' : ''}`}
+                  title={t('navOperationsDesk')}
+                >
+                  <Briefcase className={`w-4 h-4 shrink-0 ${pathname === '/office-portal' && (activeTabParam === 'operations' || activeTabParam === 'queue' || activeTabParam === 'resolution' || !activeTabParam) ? 'text-blue-600' : 'text-gray-500'}`} />
+                  {!isCollapsed && <span className="truncate">{t('navOperationsDesk')}</span>}
+                </Link>
+
+                <Link
+                  href="/office-portal?tab=analytics"
+                  onClick={handleLinkClick}
+                  className={`w-full flex items-center gap-3 px-2.5 py-2 rounded-xl text-xs font-bold transition ${
+                    pathname.startsWith('/office-portal') && (activeTabParam === 'analytics' || activeTabParam === 'directives' || activeTabParam === 'analysis' || pathname === '/office-portal/analysis' || pathname === '/office-portal/directives')
+                      ? 'bg-blue-50 text-blue-950 font-black shadow-2xs'
+                      : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                  } ${isCollapsed ? 'justify-center px-0' : ''}`}
+                  title={t('navDirectivesAnalytics')}
+                >
+                  <BarChart3 className={`w-4 h-4 shrink-0 ${pathname.startsWith('/office-portal') && (activeTabParam === 'analytics' || activeTabParam === 'directives' || activeTabParam === 'analysis' || pathname === '/office-portal/analysis' || pathname === '/office-portal/directives') ? 'text-blue-600' : 'text-gray-500'}`} />
+                  {!isCollapsed && <span className="truncate">{t('navDirectivesAnalytics')}</span>}
+                </Link>
+
+                <Link
+                  href="/office-portal?tab=inquiries"
+                  onClick={handleLinkClick}
+                  className={`w-full flex items-center gap-3 px-2.5 py-2 rounded-xl text-xs font-bold transition ${
+                    pathname.startsWith('/office-portal') && (activeTabParam === 'inquiries' || activeTabParam === 'representative' || pathname === '/office-portal/representative')
+                      ? 'bg-blue-50 text-blue-950 font-black shadow-2xs'
+                      : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                  } ${isCollapsed ? 'justify-center px-0' : ''}`}
+                  title={t('navLegislativeInquiries')}
+                >
+                  <Scale className={`w-4 h-4 shrink-0 ${pathname.startsWith('/office-portal') && (activeTabParam === 'inquiries' || activeTabParam === 'representative' || pathname === '/office-portal/representative') ? 'text-blue-600' : 'text-gray-500'}`} />
+                  {!isCollapsed && <span className="truncate">{t('navLegislativeInquiries')}</span>}
+                </Link>
+
+                <Link
+                  href="/office-portal?tab=team"
+                  onClick={handleLinkClick}
+                  className={`w-full flex items-center gap-3 px-2.5 py-2 rounded-xl text-xs font-bold transition ${
+                    pathname === '/office-portal' && (activeTabParam === 'team' || activeTabParam === 'roster' || activeTabParam === 'reports' || activeTabParam === 'scorecard' || activeTabParam === 'billing')
+                      ? 'bg-blue-50 text-blue-950 font-black shadow-2xs'
+                      : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                  } ${isCollapsed ? 'justify-center px-0' : ''}`}
+                  title={t('navOfficeTeam')}
+                >
+                  <Award className={`w-4 h-4 shrink-0 ${pathname === '/office-portal' && (activeTabParam === 'team' || activeTabParam === 'roster' || activeTabParam === 'reports' || activeTabParam === 'scorecard' || activeTabParam === 'billing') ? 'text-blue-600' : 'text-gray-500'}`} />
+                  {!isCollapsed && <span className="truncate">{t('navOfficeTeam')}</span>}
+                </Link>
+
+                <Link
+                  href="/"
+                  onClick={handleLinkClick}
+                  className={`w-full flex items-center gap-3 px-2.5 py-2 rounded-xl text-xs font-bold transition ${
+                    pathname === '/' && !activeTabParam
+                      ? 'bg-blue-50 text-blue-950 font-black shadow-2xs'
+                      : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                  } ${isCollapsed ? 'justify-center px-0' : ''}`}
+                  title={t('navFeed')}
+                >
+                  <Flame className={`w-4 h-4 shrink-0 ${pathname === '/' && !activeTabParam ? 'text-blue-600' : 'text-gray-500'}`} />
+                  {!isCollapsed && <span className="truncate">{t('navFeed')}</span>}
+                </Link>
+
+                <Link
+                  href="/dashboard?tab=account_privacy"
+                  onClick={handleLinkClick}
+                  className={`w-full flex items-center gap-3 px-2.5 py-2 rounded-xl text-xs font-bold transition ${
+                    pathname === '/dashboard' && (activeTabParam === 'account_privacy' || activeTabParam === 'profile')
+                      ? 'bg-blue-50 text-blue-950 font-black shadow-2xs'
+                      : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                  } ${isCollapsed ? 'justify-center px-0' : ''}`}
+                  title={t('tabPrivacyDpdp')}
+                >
+                  <Shield className={`w-4 h-4 shrink-0 ${pathname === '/dashboard' && (activeTabParam === 'account_privacy' || activeTabParam === 'profile') ? 'text-blue-600' : 'text-gray-500'}`} />
+                  {!isCollapsed && <span className="truncate">{t('tabPrivacyDpdp')}</span>}
+                </Link>
+              </>
+            )}
+
+            {/* 3. CITIZEN NAVIGATION */}
+            {user && user.role !== 'admin' && user.role !== 'official' && user.role !== 'agency' && (
+              <>
+                <Link
+                  href="/"
+                  onClick={handleLinkClick}
+                  className={`w-full flex items-center gap-3 px-2.5 py-2 rounded-xl text-xs font-bold transition ${
+                    pathname === '/' && !activeTabParam
+                      ? 'bg-orange-50 text-orange-900 shadow-2xs'
+                      : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                  } ${isCollapsed ? 'justify-center px-0' : ''}`}
+                  title={t('navFeed')}
+                >
+                  <Flame className={`w-4 h-4 shrink-0 ${pathname === '/' && !activeTabParam ? 'text-orange-600' : 'text-gray-500'}`} />
+                  {!isCollapsed && <span className="truncate">{t('navFeed')}</span>}
+                </Link>
+
+                <Link
+                  href="/dashboard?tab=my_grievances"
+                  onClick={handleLinkClick}
+                  className={`w-full flex items-center gap-3 px-2.5 py-2 rounded-xl text-xs font-bold transition ${
+                    pathname === '/dashboard' && (activeTabParam === 'my_grievances' || activeTabParam === 'supported_issues' || !activeTabParam)
+                      ? 'bg-orange-50 text-orange-900 shadow-2xs'
+                      : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                  } ${isCollapsed ? 'justify-center px-0' : ''}`}
+                  title={t('tabMyGrievances')}
+                >
+                  <FileText className={`w-4 h-4 shrink-0 ${pathname === '/dashboard' && (activeTabParam === 'my_grievances' || activeTabParam === 'supported_issues' || !activeTabParam) ? 'text-orange-600' : 'text-gray-500'}`} />
+                  {!isCollapsed && <span className="truncate">{t('tabMyGrievances')}</span>}
+                </Link>
+
+                <Link
+                  href="/townhalls"
+                  onClick={handleLinkClick}
+                  className={`w-full flex items-center gap-3 px-2.5 py-2 rounded-xl text-xs font-bold transition ${
+                    pathname.startsWith('/townhalls') || (pathname === '/dashboard' && activeTabParam === 'townhall_activity')
+                      ? 'bg-orange-50 text-orange-900 shadow-2xs'
+                      : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                  } ${isCollapsed ? 'justify-center px-0' : ''}`}
+                  title={t('navTownhalls')}
+                >
+                  <Building className={`w-4 h-4 shrink-0 ${pathname.startsWith('/townhalls') || (pathname === '/dashboard' && activeTabParam === 'townhall_activity') ? 'text-orange-600' : 'text-gray-500'}`} />
+                  {!isCollapsed && <span className="truncate">{t('navTownhalls')}</span>}
+                </Link>
+
+                <Link
+                  href="/representatives"
+                  onClick={handleLinkClick}
+                  className={`w-full flex items-center gap-3 px-2.5 py-2 rounded-xl text-xs font-bold transition ${
+                    pathname.startsWith('/representatives') || (pathname === '/dashboard' && activeTabParam === 'my_representatives')
+                      ? 'bg-orange-50 text-orange-900 shadow-2xs'
+                      : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                  } ${isCollapsed ? 'justify-center px-0' : ''}`}
+                  title={t('navRepresentatives')}
+                >
+                  <Users className={`w-4 h-4 shrink-0 ${pathname.startsWith('/representatives') || (pathname === '/dashboard' && activeTabParam === 'my_representatives') ? 'text-orange-600' : 'text-gray-500'}`} />
+                  {!isCollapsed && <span className="truncate">{t('navRepresentatives')}</span>}
+                </Link>
+
+                <Link
+                  href="/offices"
+                  onClick={handleLinkClick}
+                  className={`w-full flex items-center gap-3 px-2.5 py-2 rounded-xl text-xs font-bold transition ${
+                    pathname.startsWith('/offices')
+                      ? 'bg-orange-50 text-orange-900 shadow-2xs'
+                      : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                  } ${isCollapsed ? 'justify-center px-0' : ''}`}
+                  title={t('navOffices')}
+                >
+                  <Building2 className={`w-4 h-4 shrink-0 ${pathname.startsWith('/offices') ? 'text-orange-600' : 'text-gray-500'}`} />
+                  {!isCollapsed && <span className="truncate">{t('navOffices')}</span>}
+                </Link>
+
+                <Link
+                  href="/dashboard?tab=account_privacy"
+                  onClick={handleLinkClick}
+                  className={`w-full flex items-center gap-3 px-2.5 py-2 rounded-xl text-xs font-bold transition ${
+                    pathname === '/dashboard' && (activeTabParam === 'account_privacy' || activeTabParam === 'profile' || activeTabParam === 'notifications')
+                      ? 'bg-orange-50 text-orange-900 shadow-2xs'
+                      : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                  } ${isCollapsed ? 'justify-center px-0' : ''}`}
+                  title={t('tabPrivacyDpdp')}
+                >
+                  <Shield className={`w-4 h-4 shrink-0 ${pathname === '/dashboard' && (activeTabParam === 'account_privacy' || activeTabParam === 'profile' || activeTabParam === 'notifications') ? 'text-orange-600' : 'text-gray-500'}`} />
+                  {!isCollapsed && <span className="truncate">{t('tabPrivacyDpdp')}</span>}
+                </Link>
+              </>
+            )}
+
+            {/* 4. SIGNED-OUT VISITOR GATEWAY (Per user requirement: no app modules shown) */}
             {!user && (
-              <div className="pt-1">
+              <div className="space-y-2 pt-1">
                 {!isCollapsed ? (
-                  <div className="p-3 bg-orange-50/70 rounded-2xl border border-orange-200/80 text-center space-y-2">
-                    <p className="text-[11px] font-bold text-gray-700">Sign in to view your dashboard</p>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (isMobileOpen) onCloseMobile();
-                        openAuthModal();
-                      }}
-                      className="w-full py-1.5 px-2 bg-orange-600 hover:bg-orange-700 text-white rounded-xl text-xs font-bold transition shadow-xs cursor-pointer"
-                    >
-                      {t('signIn')}
-                    </button>
+                  <div className="p-3 bg-linear-to-b from-orange-50/90 to-amber-50/60 rounded-2xl border border-orange-200/80 space-y-3">
+                    <div>
+                      <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-orange-100 text-orange-800 text-[10px] font-extrabold uppercase">
+                        <Sparkles className="w-3 h-3 text-orange-600" />
+                        <span>RAISE Civic</span>
+                      </div>
+                      <h4 className="text-xs font-bold text-gray-900 mt-1">
+                        {t('guestSidebarWelcome')}
+                      </h4>
+                      <p className="text-[11px] text-gray-600 leading-tight mt-0.5">
+                        {t('guestSidebarSubtitle')}
+                      </p>
+                    </div>
+
+                    <div className="space-y-1.5 pt-1">
+                      {/* Sign In as Citizen */}
+                      <Link
+                        href="/sign-in"
+                        onClick={handleLinkClick}
+                        className="w-full flex items-center justify-center gap-2 py-2 px-3 bg-orange-600 hover:bg-orange-700 text-white rounded-xl text-xs font-bold transition shadow-xs"
+                      >
+                        <User className="w-3.5 h-3.5" />
+                        <span>{t('signInCitizen')}</span>
+                      </Link>
+
+                      {/* Create Citizen Account */}
+                      <Link
+                        href="/sign-up"
+                        onClick={handleLinkClick}
+                        className="w-full flex items-center justify-center gap-2 py-2 px-3 bg-white hover:bg-orange-50 text-orange-700 border border-orange-200 rounded-xl text-xs font-bold transition shadow-2xs"
+                      >
+                        <UserPlus className="w-3.5 h-3.5" />
+                        <span>{t('createAccount')}</span>
+                      </Link>
+
+                      {/* Executive Office Portal */}
+                      <Link
+                        href="/office/sign-in"
+                        onClick={handleLinkClick}
+                        className="w-full flex items-center justify-center gap-2 py-1.5 px-3 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-[11px] font-semibold transition"
+                      >
+                        <Briefcase className="w-3.5 h-3.5" />
+                        <span>{t('officePortalLogin')}</span>
+                      </Link>
+                    </div>
+
+                    {/* Learn About Platform / Marketing Site */}
+                    <div className="pt-2 border-t border-orange-200/60">
+                      <Link
+                        href="/how-it-works"
+                        onClick={handleLinkClick}
+                        className="w-full flex items-center justify-between py-1 px-1.5 text-[11px] font-bold text-gray-600 hover:text-orange-600 transition"
+                      >
+                        <span>{t('marketingWebsite')}</span>
+                        <ExternalLink className="w-3 h-3 text-gray-400" />
+                      </Link>
+                    </div>
                   </div>
                 ) : (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (isMobileOpen) onCloseMobile();
-                      openAuthModal();
-                    }}
-                    className="w-full flex justify-center p-2 text-orange-600 hover:bg-orange-50 rounded-xl transition"
-                    title={t('signIn')}
-                  >
-                    <User className="w-5 h-5" />
-                  </button>
+                  /* Collapsed guest rail */
+                  <div className="space-y-2 flex flex-col items-center">
+                    <Link
+                      href="/sign-in"
+                      onClick={handleLinkClick}
+                      className="w-10 h-10 flex items-center justify-center rounded-xl bg-orange-600 text-white hover:bg-orange-700 transition"
+                      title={t('signInCitizen')}
+                    >
+                      <User className="w-4 h-4" />
+                    </Link>
+                    <Link
+                      href="/sign-up"
+                      onClick={handleLinkClick}
+                      className="w-10 h-10 flex items-center justify-center rounded-xl bg-orange-50 text-orange-700 hover:bg-orange-100 border border-orange-200 transition"
+                      title={t('createAccount')}
+                    >
+                      <UserPlus className="w-4 h-4" />
+                    </Link>
+                    <Link
+                      href="/office/sign-in"
+                      onClick={handleLinkClick}
+                      className="w-10 h-10 flex items-center justify-center rounded-xl bg-slate-800 text-white hover:bg-slate-900 transition"
+                      title={t('officePortalLogin')}
+                    >
+                      <Briefcase className="w-4 h-4" />
+                    </Link>
+                    <Link
+                      href="/how-it-works"
+                      onClick={handleLinkClick}
+                      className="w-10 h-10 flex items-center justify-center rounded-xl text-gray-500 hover:bg-gray-100 transition"
+                      title={t('marketingWebsite')}
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                    </Link>
+                  </div>
                 )}
               </div>
             )}
           </div>
+
+          {/* SECONDARY GROUP: TRANSPARENCY & AUDIT (For authenticated users) */}
+          {user && (
+            <div className="pt-3 border-t border-gray-100 space-y-0.5">
+              {!isCollapsed && (
+                <div className="px-2 py-1 text-[10px] font-black uppercase tracking-wider text-gray-400">
+                  {t('transparencyAndAudit')}
+                </div>
+              )}
+
+              {/* Transparency Ledger */}
+              <Link
+                href="/transparency"
+                onClick={handleLinkClick}
+                className={`w-full flex items-center gap-3 px-2.5 py-1.5 rounded-xl text-xs font-bold transition ${
+                  pathname === '/transparency'
+                    ? 'bg-orange-50 text-orange-900 shadow-2xs'
+                    : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900'
+                } ${isCollapsed ? 'justify-center px-0' : ''}`}
+                title={t('navTransparency')}
+              >
+                <Wallet className={`w-4 h-4 shrink-0 ${pathname === '/transparency' ? 'text-orange-600' : 'text-gray-400'}`} />
+                {!isCollapsed && <span className="truncate">{t('navTransparency')}</span>}
+              </Link>
+
+              {/* Moderation Audit Logs */}
+              <Link
+                href="/transparency/moderation"
+                onClick={handleLinkClick}
+                className={`w-full flex items-center gap-3 px-2.5 py-1.5 rounded-xl text-xs font-bold transition ${
+                  pathname === '/transparency/moderation'
+                    ? 'bg-orange-50 text-orange-900 shadow-2xs'
+                    : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900'
+                } ${isCollapsed ? 'justify-center px-0' : ''}`}
+                title={t('moderationLogs')}
+              >
+                <ShieldCheck className={`w-4 h-4 shrink-0 ${pathname === '/transparency/moderation' ? 'text-orange-600' : 'text-gray-400'}`} />
+                {!isCollapsed && <span className="truncate">{t('moderationLogs')}</span>}
+              </Link>
+            </div>
+          )}
         </div>
 
         {/* SECTION 3: BOTTOM UTILITY FOOTER */}
