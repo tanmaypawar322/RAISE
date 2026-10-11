@@ -28,6 +28,26 @@ if (isProd) {
   if (!process.env.OTP_HASH_SECRET) {
     throw new Error('FATAL SECURITY ERROR: In production, OTP_HASH_SECRET must be provided.');
   }
+
+  const isBillingOn = process.env.BILLING_ENABLED === 'true';
+  const isDonationsOn = process.env.DONATIONS_ENABLED === 'true';
+  if (isBillingOn || isDonationsOn) {
+    const provider = process.env.PAYMENT_PROVIDER || 'razorpay';
+    if (provider === 'razorpay') {
+      const keyId = process.env.RAZORPAY_KEY_ID;
+      const keySecret = process.env.RAZORPAY_KEY_SECRET;
+      const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
+      if (!keyId || keyId.includes('placeholder') || !keySecret || keySecret.includes('placeholder') || !webhookSecret || webhookSecret.includes('placeholder')) {
+        throw new Error('FATAL SECURITY ERROR: In production with billing or donations enabled, RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET, and RAZORPAY_WEBHOOK_SECRET must be securely set and cannot be placeholders.');
+      }
+    }
+    if (process.env.ORG_80G_ENABLED === 'true') {
+      const panKey = process.env.PAN_ENC_KEY;
+      if (!panKey || panKey.length < 32 || panKey.includes('placeholder')) {
+        throw new Error('FATAL SECURITY ERROR: In production with ORG_80G_ENABLED=true, PAN_ENC_KEY must be provided (min 32 bytes).');
+      }
+    }
+  }
 }
 
 // Public pilot safeguard:
@@ -91,9 +111,15 @@ export const config = {
   authRequirePhoneToRaise: process.env.AUTH_REQUIRE_PHONE_TO_RAISE === 'true',
   newAccountDailyActionLimit: parseInt(process.env.NEW_ACCOUNT_DAILY_ACTION_LIMIT || '20', 10),
 
+  // Platform Access Gate (Phase 1)
+  appRequireLogin: process.env.APP_REQUIRE_LOGIN !== 'false',
+  publicIssuePages: process.env.PUBLIC_ISSUE_PAGES === 'true',
+  publicRecordPages: process.env.PUBLIC_RECORD_PAGES === 'true',
+
   // Dev-only testing flags (strictly blocked in production above)
   devMailbox: !isProd && process.env.DEV_MAILBOX === 'true',
   devSkipOfficialSecondFactor: !isProd && process.env.DEV_SKIP_OFFICIAL_SECOND_FACTOR === 'true',
+  electionFreezeEnabled: process.env.ELECTION_FREEZE_ENABLED === 'true',
 
   // Bot Protection (Cloudflare Turnstile)
   turnstileSecret: process.env.TURNSTILE_SECRET,
@@ -121,5 +147,31 @@ export const config = {
   grievanceOfficerEmail: process.env.GRIEVANCE_OFFICER_EMAIL || 'grievance@raise.org',
   grievanceOfficerPhone: process.env.GRIEVANCE_OFFICER_PHONE || '+91 20 2742 5555',
   legalTextStatus: process.env.LEGAL_TEXT_STATUS || 'DRAFT_NOT_REVIEWED',
+
+  // Billing & Subscriptions Controls
+  billingEnabled: process.env.BILLING_ENABLED === 'true',
+  donationsEnabled: process.env.DONATIONS_ENABLED === 'true',
+  paymentProvider: (process.env.PAYMENT_PROVIDER || 'mock') as 'razorpay' | 'mock',
+  razorpayKeyId: process.env.RAZORPAY_KEY_ID || 'rzp_test_mock_key_id',
+  razorpayKeySecret: process.env.RAZORPAY_KEY_SECRET || 'rzp_test_mock_key_secret',
+  razorpayWebhookSecret: process.env.RAZORPAY_WEBHOOK_SECRET || 'rzp_mock_webhook_secret',
+
+  // Organisation Legal & Tax Details
+  orgState: process.env.ORG_STATE || 'Maharashtra',
+  orgGstin: process.env.ORG_GSTIN,
+  orgPan: process.env.ORG_PAN,
+  org80gEnabled: process.env.ORG_80G_ENABLED === 'true',
+  org80gRegNo: process.env.ORG_80G_REG_NO,
+  org12aRegNo: process.env.ORG_12A_REG_NO,
+  fcraEnabled: process.env.FCRA_ENABLED === 'true',
+  gstRatePercent: parseFloat(process.env.GST_RATE_PERCENT || '18'),
+  gstSacCode: process.env.GST_SAC_CODE || '998313',
+  graceDays: parseInt(process.env.GRACE_DAYS || '7', 10),
+  donationMinPaise: parseInt(process.env.DONATION_MIN_PAISE || '1000', 10), // ₹10 minimum
+  donationMaxPaise: parseInt(process.env.DONATION_MAX_PAISE || '50000000', 10), // ₹5,00,000 maximum
+  discloseFunderThresholdPaise: parseInt(process.env.DISCLOSE_FUNDER_THRESHOLD_PAISE || '50000000', 10), // ₹5,00,000
+  funderConcentrationWarnPercent: parseFloat(process.env.FUNDER_CONCENTRATION_WARN_PERCENT || '25'),
+  panEncKey: process.env.PAN_ENC_KEY || 'raise_dev_pan_aes_key_32bytes_min_length_123',
+  supportEmail: process.env.SUPPORT_EMAIL || 'support@raise.org',
 };
 

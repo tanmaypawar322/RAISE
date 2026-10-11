@@ -21,6 +21,7 @@ import {
   XCircle,
   Trash2,
   Download,
+  GitMerge,
 } from 'lucide-react';
 
 export default function CitizenDashboardPage() {
@@ -33,6 +34,7 @@ export default function CitizenDashboardPage() {
     requestPhoneOtp,
     changePassword,
     addVerifiedPhone,
+    mergeAccounts,
   } = useAuth();
   const { t, language } = useLanguage();
 
@@ -69,59 +71,55 @@ export default function CitizenDashboardPage() {
   const [attachMsg, setAttachMsg] = useState('');
   const [attachError, setAttachError] = useState('');
 
-  // Sample data (populated from backend API if online)
-  const [myIssues, setMyIssues] = useState<any[]>([
-    {
-      _id: 'my_1',
-      title: 'Dangerous Potholes and Waterlogging in front of Akurdi Station',
-      titleMr: 'आकुर्डी रेल्वे स्टेशन समोरील रस्त्यावर धोकादायक खड्डे व तुंबलेले पाणी',
-      description: 'Road has collapsed for 2 weeks due to rain. Two-wheelers are skidding and multiple commuters injured.',
-      descriptionMr: 'पावसामुळे २ आठवड्यांपासून स्टेशन समोरील रस्ता खचला आहे. दुचाकी घसरून अनेक नागरिक जखमी झाले आहेत.',
-      category: 'roads',
-      office: { name: 'PCMC Road Maintenance Department', nameMr: 'पिं.चिं.म.न.पा. रस्ते देखभाल विभाग' },
-      status: 'submitted',
-      raiseCount: 84,
-      createdAt: '2026-10-05T08:30:00.000Z',
-    },
-    {
-      _id: 'my_2',
-      title: 'Low-Pressure Turbid Water Supply in Nigdi Sector 24',
-      titleMr: 'निगडी सेक्टर २४ मध्ये कमी दाबाने गढूळ पाण्याचा पुरवठा',
-      description: 'Water arrives for only 15 minutes in the morning at very low pressure. Requires line inspection and pressure restoration.',
-      descriptionMr: 'सकाळी फक्त १५ मिनिटे कमी दाबाने पाणी येते. दुरुस्ती व दाबाची पाहणी करावी.',
-      category: 'water',
-      office: { name: 'PCMC Water Supply Department', nameMr: 'पिं.चिं.म.न.पा. पाणी पुरवठा विभाग' },
-      status: 'resolved',
-      raiseCount: 142,
-      createdAt: '2026-10-03T11:00:00.000Z',
-    },
-  ]);
+  // Account Merge state
+  const [mergeMethod, setMergeMethod] = useState<'phone_otp' | 'email_password'>('phone_otp');
+  const [mergePhone, setMergePhone] = useState('');
+  const [mergeOtp, setMergeOtp] = useState('');
+  const [mergeOtpSent, setMergeOtpSent] = useState(false);
+  const [mergeEmail, setMergeEmail] = useState('');
+  const [mergePassword, setMergePassword] = useState('');
+  const [mergeLoading, setMergeLoading] = useState(false);
+  const [mergeMsg, setMergeMsg] = useState('');
+  const [mergeError, setMergeError] = useState('');
+  const [showMergeSection, setShowMergeSection] = useState(false);
 
-  const [supportedIssues, setSupportedIssues] = useState<any[]>([
-    {
-      _id: 'sup_1',
-      title: 'Garbage Accumulation and Foul Odour near Chinchwad Vegetable Market',
-      titleMr: 'चिंचवड भाजी मंडई जवळ कचऱ्याचे ढीग व दुर्गंधी',
-      category: 'sanitation',
-      office: { name: 'PCMC Health & Sanitation', nameMr: 'पिं.चिं.म.न.पा. आरोग्य विभाग' },
-      status: 'in_progress',
-      raiseCount: 67,
-      createdAt: '2026-10-06T14:15:00.000Z',
-    },
-  ]);
+  // Real data fetched from backend API
+  const [myIssues, setMyIssues] = useState<any[]>([]);
+  const [supportedIssues, setSupportedIssues] = useState<any[]>([]);
+  const [loadingIssues, setLoadingIssues] = useState(true);
 
   useEffect(() => {
     if (token) {
-      fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/issues/my-issues`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-        .then((res) => res.json())
-        .then((data) => {
-          if (data.success && data.issues?.length > 0) {
-            setMyIssues(data.issues);
+      setLoadingIssues(true);
+      Promise.all([
+        fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/issues/my-issues`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+          .then((res) => res.json())
+          .catch(() => ({ success: false })),
+        fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/issues/my-supported`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+          .then((res) => res.json())
+          .catch(() => ({ success: false })),
+      ])
+        .then(([myRes, supRes]) => {
+          if (myRes?.success && Array.isArray(myRes.issues)) {
+            setMyIssues(myRes.issues);
+          } else {
+            setMyIssues([]);
+          }
+          if (supRes?.success && Array.isArray(supRes.issues)) {
+            setSupportedIssues(supRes.issues);
+          } else {
+            setSupportedIssues([]);
           }
         })
-        .catch(() => {});
+        .finally(() => {
+          setLoadingIssues(false);
+        });
+    } else {
+      setLoadingIssues(false);
     }
   }, [token]);
 
@@ -244,6 +242,74 @@ export default function CitizenDashboardPage() {
       setAttachOtpSent(false);
     } else {
       setAttachError(res.message || 'Failed to attach phone');
+    }
+  };
+
+  const handleRequestMergeOtp = async () => {
+    setMergeError('');
+    setMergeMsg('');
+    const digitsOnly = mergePhone.replace(/\D/g, '');
+    if (!/^[6-9]\d{9}$/.test(digitsOnly)) {
+      setMergeError(t('phoneInvalidMsg'));
+      return;
+    }
+    setMergeLoading(true);
+    const res = await requestPhoneOtp(`+91${digitsOnly}`, undefined, 'auth');
+    setMergeLoading(false);
+    if (res.success) {
+      setMergeOtpSent(true);
+      setMergeMsg(res.message);
+    } else {
+      setMergeError(res.message);
+    }
+  };
+
+  const handleMergeSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setMergeError('');
+    setMergeMsg('');
+    setMergeLoading(true);
+
+    let res: { success: boolean; message?: string };
+    if (mergeMethod === 'phone_otp') {
+      const digitsOnly = mergePhone.replace(/\D/g, '');
+      res = await mergeAccounts({
+        method: 'phone_otp',
+        phone: `+91${digitsOnly}`,
+        otp: mergeOtp,
+      });
+    } else {
+      res = await mergeAccounts({
+        method: 'email_password',
+        email: mergeEmail.trim(),
+        password: mergePassword,
+      });
+    }
+    setMergeLoading(false);
+
+    if (res.success) {
+      setMergeMsg(res.message || 'Accounts successfully merged.');
+      setShowMergeSection(false);
+      setMergePhone('');
+      setMergeOtp('');
+      setMergeEmail('');
+      setMergePassword('');
+      if (token) {
+        fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/issues/my-issues`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+          .then((r) => r.json())
+          .then((d) => { if (d?.success) setMyIssues(d.issues || []); })
+          .catch(() => {});
+        fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/issues/my-supported`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+          .then((r) => r.json())
+          .then((d) => { if (d?.success) setSupportedIssues(d.issues || []); })
+          .catch(() => {});
+      }
+    } else {
+      setMergeError(res.message || 'Failed to merge accounts.');
     }
   };
 
@@ -380,95 +446,146 @@ export default function CitizenDashboardPage() {
 
         {/* Tab 1: MY ISSUES */}
         {activeTab === 'my_issues' && (
-          <div className="space-y-4">
-            {myIssues.map((issue) => (
-              <div key={issue._id} className="bg-white rounded-2xl border border-gray-200 p-5 shadow-xs">
-                <div className="flex items-center justify-between gap-2 mb-2">
-                  <span className="text-xs font-bold uppercase tracking-wider text-orange-600">
-                    {t(issue.category as any) || issue.category}
-                  </span>
-                  <span
-                    className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${
-                      issue.status === 'resolved'
-                        ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                        : issue.status === 'disputed'
-                        ? 'bg-red-50 text-red-800 border-red-200'
-                        : 'bg-blue-50 text-blue-800 border-blue-200'
-                    }`}
-                  >
-                    <Clock className="w-3 h-3" />
-                    <span>
-                      {issue.status === 'resolved'
-                        ? t('statusResolved')
-                        : issue.status === 'disputed'
-                        ? t('statusDisputed')
-                        : t('statusSubmitted')}
-                    </span>
-                  </span>
-                </div>
-
-                <h3 className="font-bold text-base text-gray-900 mb-1">{issue.title}</h3>
-                <p className="text-xs text-gray-600 mb-3 leading-relaxed">{issue.description}</p>
-
-                <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-gray-100 text-xs">
-                  <div className="flex items-center gap-1.5 text-gray-500">
-                    <Building className="w-3.5 h-3.5" />
-                    <span className="font-medium text-gray-700">
-                      {language === 'mr' && issue.office?.nameMr ? issue.office.nameMr : issue.office?.name}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <span className="font-bold text-orange-600 bg-orange-50 px-2 py-1 rounded-lg">
-                      👥 {issue.raiseCount} {t('raiseCountText')}
-                    </span>
-
-                    {/* Dispute & Confirm on Resolved items */}
-                    {issue.status === 'resolved' && (
-                      <div className="flex items-center gap-1.5 ml-2">
-                        <button
-                          onClick={() => handleConfirmResolution(issue._id)}
-                          className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-[11px] transition"
-                        >
-                          {t('confirmResolution')}
-                        </button>
-                        <button
-                          onClick={() => setDisputeModalIssue(issue)}
-                          className="px-2.5 py-1 bg-red-50 text-red-700 hover:bg-red-100 rounded-lg font-bold text-[11px] border border-red-200 transition"
-                        >
-                          {t('disputeResolution')}
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </div>
+          <div>
+            {loadingIssues ? (
+              <div className="bg-white rounded-2xl border border-gray-200 p-12 text-center shadow-xs">
+                <div className="w-8 h-8 border-3 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+                <p className="text-xs font-semibold text-gray-500">{t('pleaseWait')}</p>
               </div>
-            ))}
+            ) : myIssues.length === 0 ? (
+              <div className="bg-white rounded-2xl border border-gray-200 p-10 text-center shadow-xs">
+                <div className="w-12 h-12 bg-orange-50 text-orange-600 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                  <FileText className="w-6 h-6" />
+                </div>
+                <h3 className="font-bold text-sm text-gray-900 mb-1">{t('noMyIssues')}</h3>
+                <p className="text-xs text-gray-500 mb-5 max-w-sm mx-auto leading-relaxed">
+                  {t('noMyIssuesDesc')}
+                </p>
+                <button
+                  onClick={() => setIsRaiseModalOpen(true)}
+                  className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-orange-600 hover:bg-orange-700 text-white rounded-xl text-xs font-bold transition shadow-xs cursor-pointer"
+                >
+                  <Plus className="w-4 h-4 stroke-[3]" />
+                  <span>{t('raiseIssueBtn')}</span>
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {myIssues.map((issue) => (
+                  <div key={issue._id} className="bg-white rounded-2xl border border-gray-200 p-5 shadow-xs">
+                    <div className="flex items-center justify-between gap-2 mb-2">
+                      <span className="text-xs font-bold uppercase tracking-wider text-orange-600">
+                        {t(issue.category as any) || issue.category}
+                      </span>
+                      <span
+                        className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${
+                          issue.status === 'resolved'
+                            ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                            : issue.status === 'disputed'
+                            ? 'bg-red-50 text-red-800 border-red-200'
+                            : 'bg-blue-50 text-blue-800 border-blue-200'
+                        }`}
+                      >
+                        <Clock className="w-3 h-3" />
+                        <span>
+                          {issue.status === 'resolved'
+                            ? t('statusResolved')
+                            : issue.status === 'disputed'
+                            ? t('statusDisputed')
+                            : t('statusSubmitted')}
+                        </span>
+                      </span>
+                    </div>
+
+                    <h3 className="font-bold text-base text-gray-900 mb-1">{issue.title}</h3>
+                    <p className="text-xs text-gray-600 mb-3 leading-relaxed">{issue.description}</p>
+
+                    <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-gray-100 text-xs">
+                      <div className="flex items-center gap-1.5 text-gray-500">
+                        <Building className="w-3.5 h-3.5" />
+                        <span className="font-medium text-gray-700">
+                          {language === 'mr' && issue.office?.nameMr ? issue.office.nameMr : issue.office?.name}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-orange-600 bg-orange-50 px-2 py-1 rounded-lg">
+                          👥 {issue.raiseCount} {t('raiseCountText')}
+                        </span>
+
+                        {/* Dispute & Confirm on Resolved items */}
+                        {issue.status === 'resolved' && (
+                          <div className="flex items-center gap-1.5 ml-2">
+                            <button
+                              onClick={() => handleConfirmResolution(issue._id)}
+                              className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-[11px] transition"
+                            >
+                              {t('confirmResolution')}
+                            </button>
+                            <button
+                              onClick={() => setDisputeModalIssue(issue)}
+                              className="px-2.5 py-1 bg-red-50 text-red-700 hover:bg-red-100 rounded-lg font-bold text-[11px] border border-red-200 transition"
+                            >
+                              {t('disputeResolution')}
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
         {/* Tab 2: SUPPORTED ISSUES */}
         {activeTab === 'supported' && (
-          <div className="space-y-4">
-            {supportedIssues.map((issue) => (
-              <div key={issue._id} className="bg-white rounded-2xl border border-gray-200 p-5 shadow-xs">
-                <div className="flex items-center justify-between gap-2 mb-2">
-                  <span className="text-xs font-bold uppercase tracking-wider text-orange-600">
-                    {t(issue.category as any) || issue.category}
-                  </span>
-                  <span className="text-[11px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                    {t('citizenBackedBadge')}
-                  </span>
-                </div>
-                <h3 className="font-bold text-base text-gray-900 mb-1">
-                  {language === 'mr' && issue.titleMr ? issue.titleMr : issue.title}
-                </h3>
-                <div className="flex items-center justify-between text-xs text-gray-500 pt-2 border-t border-gray-100">
-                  <span>{language === 'mr' && issue.office?.nameMr ? issue.office.nameMr : issue.office?.name}</span>
-                  <span className="font-bold text-gray-800">{t('raiseCountText')}: {issue.raiseCount}</span>
-                </div>
+          <div>
+            {loadingIssues ? (
+              <div className="bg-white rounded-2xl border border-gray-200 p-12 text-center shadow-xs">
+                <div className="w-8 h-8 border-3 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+                <p className="text-xs font-semibold text-gray-500">{t('pleaseWait')}</p>
               </div>
-            ))}
+            ) : supportedIssues.length === 0 ? (
+              <div className="bg-white rounded-2xl border border-gray-200 p-10 text-center shadow-xs">
+                <div className="w-12 h-12 bg-orange-50 text-orange-600 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                  <ThumbsUp className="w-6 h-6" />
+                </div>
+                <h3 className="font-bold text-sm text-gray-900 mb-1">{t('noSupportedIssues')}</h3>
+                <p className="text-xs text-gray-500 mb-5 max-w-sm mx-auto leading-relaxed">
+                  {t('noSupportedIssuesDesc')}
+                </p>
+                <Link
+                  href="/"
+                  className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-orange-600 hover:bg-orange-700 text-white rounded-xl text-xs font-bold transition shadow-xs cursor-pointer"
+                >
+                  <span>{t('browseFeedBtn')}</span>
+                </Link>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {supportedIssues.map((issue) => (
+                  <div key={issue._id} className="bg-white rounded-2xl border border-gray-200 p-5 shadow-xs">
+                    <div className="flex items-center justify-between gap-2 mb-2">
+                      <span className="text-xs font-bold uppercase tracking-wider text-orange-600">
+                        {t(issue.category as any) || issue.category}
+                      </span>
+                      <span className="text-[11px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                        {t('citizenBackedBadge')}
+                      </span>
+                    </div>
+                    <h3 className="font-bold text-base text-gray-900 mb-1">
+                      {language === 'mr' && issue.titleMr ? issue.titleMr : issue.title}
+                    </h3>
+                    <div className="flex items-center justify-between text-xs text-gray-500 pt-2 border-t border-gray-100">
+                      <span>{language === 'mr' && issue.office?.nameMr ? issue.office.nameMr : issue.office?.name}</span>
+                      <span className="font-bold text-gray-800">{t('raiseCountText')}: {issue.raiseCount}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
@@ -634,6 +751,195 @@ export default function CitizenDashboardPage() {
                             className="px-4 py-1.5 bg-orange-600 hover:bg-orange-700 text-white rounded-xl text-xs font-bold transition disabled:opacity-50 cursor-pointer"
                           >
                             {attachLoading ? t('pleaseWait') : t('attachPhoneBtn')}
+                          </button>
+                        </div>
+                      </form>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Linked Credentials & Account Merging */}
+              <div className="mt-6 pt-5 border-t border-gray-200 text-left">
+                <div className="flex items-center justify-between gap-2 mb-1">
+                  <div className="flex items-center gap-1.5">
+                    <GitMerge className="w-4 h-4 text-orange-600" />
+                    <h3 className="font-bold text-sm text-gray-900">{t('accountLinkingTitle')}</h3>
+                  </div>
+                  {!showMergeSection && (
+                    <button
+                      type="button"
+                      onClick={() => setShowMergeSection(true)}
+                      className="px-2.5 py-1 bg-orange-50 hover:bg-orange-100 text-orange-700 border border-orange-200 rounded-lg text-[11px] font-bold transition cursor-pointer"
+                    >
+                      {t('mergeAccountsBtn')}
+                    </button>
+                  )}
+                </div>
+                <p className="text-[11px] text-gray-500 mb-3">{t('accountLinkingDesc')}</p>
+
+                {mergeError && (
+                  <div className="mb-3 p-2 bg-red-100 border border-red-300 rounded-xl text-[11px] text-red-800 font-medium">
+                    {mergeError}
+                  </div>
+                )}
+                {mergeMsg && (
+                  <div className="mb-3 p-2 bg-emerald-100 border border-emerald-300 rounded-xl text-[11px] text-emerald-800 font-medium">
+                    {mergeMsg}
+                  </div>
+                )}
+
+                {showMergeSection && (
+                  <div className="p-4 bg-gray-50 rounded-2xl border border-gray-200 space-y-3">
+                    <div className="p-2.5 bg-amber-50 rounded-xl border border-amber-200 text-[11px] text-amber-900">
+                      {t('mergeWarningNotice')}
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold text-gray-700 mb-1.5">
+                        {t('mergeMethodLabel')}
+                      </label>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setMergeMethod('phone_otp');
+                            setMergeOtpSent(false);
+                            setMergeError('');
+                          }}
+                          className={`flex-1 py-1.5 px-2 rounded-xl text-xs font-bold border transition ${
+                            mergeMethod === 'phone_otp'
+                              ? 'bg-orange-600 text-white border-orange-600'
+                              : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-100'
+                          }`}
+                        >
+                          {t('mergePhoneOtp')}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setMergeMethod('email_password');
+                            setMergeOtpSent(false);
+                            setMergeError('');
+                          }}
+                          className={`flex-1 py-1.5 px-2 rounded-xl text-xs font-bold border transition ${
+                            mergeMethod === 'email_password'
+                              ? 'bg-orange-600 text-white border-orange-600'
+                              : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-100'
+                          }`}
+                        >
+                          {t('mergeEmailPassword')}
+                        </button>
+                      </div>
+                    </div>
+
+                    {mergeMethod === 'phone_otp' ? (
+                      <div className="space-y-3">
+                        {!mergeOtpSent ? (
+                          <div className="flex gap-2">
+                            <div className="relative flex-1">
+                              <span className="absolute left-3 top-2 text-xs font-bold text-gray-600">🇮🇳 +91</span>
+                              <input
+                                type="tel"
+                                value={mergePhone}
+                                onChange={(e) => setMergePhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                                placeholder="98765 43210"
+                                className="w-full pl-16 pr-3 py-2 bg-white border border-gray-300 rounded-xl text-xs font-bold focus:ring-2 focus:ring-orange-500 focus:outline-none"
+                              />
+                            </div>
+                            <button
+                              type="button"
+                              onClick={handleRequestMergeOtp}
+                              disabled={mergeLoading || mergePhone.length < 10}
+                              className="px-3.5 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-xl text-xs font-bold transition disabled:opacity-50 cursor-pointer"
+                            >
+                              {mergeLoading ? t('pleaseWait') : t('sendOtp')}
+                            </button>
+                          </div>
+                        ) : (
+                          <form onSubmit={handleMergeSubmit} className="space-y-3">
+                            <div>
+                              <label className="block text-[11px] font-bold text-gray-700 mb-1">
+                                {t('step2OtpSubtitle')} +91 {mergePhone}
+                              </label>
+                              <input
+                                type="text"
+                                maxLength={6}
+                                value={mergeOtp}
+                                onChange={(e) => setMergeOtp(e.target.value.replace(/\D/g, ''))}
+                                placeholder="123456"
+                                className="w-full text-center tracking-widest px-3 py-2 bg-white border border-gray-300 rounded-xl text-sm font-mono font-bold focus:ring-2 focus:ring-orange-500 focus:outline-none"
+                                required
+                              />
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setMergeOtpSent(false);
+                                  setMergeOtp('');
+                                }}
+                                className="px-3 py-1.5 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-xl text-xs font-bold transition cursor-pointer"
+                              >
+                                {t('cancelBtn')}
+                              </button>
+                              <button
+                                type="submit"
+                                disabled={mergeLoading || mergeOtp.length !== 6}
+                                className="px-4 py-1.5 bg-orange-600 hover:bg-orange-700 text-white rounded-xl text-xs font-bold transition disabled:opacity-50 cursor-pointer"
+                              >
+                                {mergeLoading ? t('pleaseWait') : t('confirmMergeBtn')}
+                              </button>
+                            </div>
+                          </form>
+                        )}
+                      </div>
+                    ) : (
+                      <form onSubmit={handleMergeSubmit} className="space-y-3">
+                        <div>
+                          <label className="block text-[11px] font-bold text-gray-700 mb-1">
+                            {t('email')}
+                          </label>
+                          <input
+                            type="email"
+                            value={mergeEmail}
+                            onChange={(e) => setMergeEmail(e.target.value)}
+                            placeholder="secondary@example.com"
+                            className="w-full px-3 py-2 bg-white border border-gray-300 rounded-xl text-xs focus:ring-2 focus:ring-orange-500 focus:outline-none"
+                            required
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-bold text-gray-700 mb-1">
+                            {t('currentPasswordLabel')}
+                          </label>
+                          <input
+                            type="password"
+                            value={mergePassword}
+                            onChange={(e) => setMergePassword(e.target.value)}
+                            placeholder="••••••••"
+                            className="w-full px-3 py-2 bg-white border border-gray-300 rounded-xl text-xs focus:ring-2 focus:ring-orange-500 focus:outline-none"
+                            required
+                          />
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShowMergeSection(false);
+                              setMergeEmail('');
+                              setMergePassword('');
+                            }}
+                            className="px-3 py-1.5 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-xl text-xs font-bold transition cursor-pointer"
+                          >
+                            {t('cancelBtn')}
+                          </button>
+                          <button
+                            type="submit"
+                            disabled={mergeLoading || !mergeEmail || !mergePassword}
+                            className="px-4 py-1.5 bg-orange-600 hover:bg-orange-700 text-white rounded-xl text-xs font-bold transition disabled:opacity-50 cursor-pointer"
+                          >
+                            {mergeLoading ? t('pleaseWait') : t('confirmMergeBtn')}
                           </button>
                         </div>
                       </form>

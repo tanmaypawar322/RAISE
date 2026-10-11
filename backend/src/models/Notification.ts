@@ -13,7 +13,11 @@ export type NotificationType =
   | 'office_new_assignment'
   | 'office_sla_warning_75'
   | 'office_sla_breached'
-  | 'office_escalation_received';
+  | 'office_escalation_received'
+  | 'rep_asked'
+  | 'rep_taken_up'
+  | 'rep_update_posted'
+  | 'rep_report_published';
 
 export interface INotification extends Document {
   userId: mongoose.Types.ObjectId;
@@ -54,6 +58,10 @@ const NotificationSchema = new Schema<INotification>(
         'office_sla_warning_75',
         'office_sla_breached',
         'office_escalation_received',
+        'rep_asked',
+        'rep_taken_up',
+        'rep_update_posted',
+        'rep_report_published',
       ],
       index: true,
     },

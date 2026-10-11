@@ -1,14 +1,16 @@
 import { Router } from 'express';
 import { OfficesController } from './offices.controller.js';
-import { requireAuth, requireRole } from '../../middlewares/auth.middleware.js';
+import { requireAuth, requireRole, gateApiAccess, gateRecordPageAccess } from '../../middlewares/auth.middleware.js';
 
 const router = Router();
 
-router.get('/', OfficesController.getOffices);
-router.get('/suggest', OfficesController.suggestOffice);
-router.get('/:id', OfficesController.getOfficeById);
-router.get('/:id/reports', OfficesController.getReports);
+router.get('/', gateApiAccess, OfficesController.getOffices);
+router.get('/jurisdictions', gateApiAccess, OfficesController.getJurisdictions);
+router.get('/suggest', gateApiAccess, OfficesController.suggestOffice);
+router.get('/:id', gateRecordPageAccess, OfficesController.getOfficeById);
+router.get('/:id/reports', gateRecordPageAccess, OfficesController.getReports);
 
+router.post('/:id/correct', gateRecordPageAccess, OfficesController.submitCorrectionRequest);
 router.post('/:id/claim', requireAuth, OfficesController.claimOffice);
 router.post(
   '/:id/reports',
@@ -24,3 +26,4 @@ router.post(
 );
 
 export default router;
+

@@ -2,7 +2,7 @@ import mongoose, { Schema, Document } from 'mongoose';
 
 export interface IOfficeMembership {
   officeId: mongoose.Types.ObjectId;
-  memberRole: 'head' | 'officer' | 'contractor' | 'staff';
+  memberRole: 'head' | 'officer' | 'contractor' | 'staff' | 'office_admin';
   status: 'active' | 'pending' | 'revoked';
 }
 
@@ -53,7 +53,7 @@ export interface IUser extends Document {
 const OfficeMembershipSchema = new Schema<IOfficeMembership>(
   {
     officeId: { type: Schema.Types.ObjectId, ref: 'Office', required: true },
-    memberRole: { type: String, enum: ['head', 'officer', 'contractor', 'staff'], default: 'officer' },
+    memberRole: { type: String, enum: ['head', 'officer', 'contractor', 'staff', 'office_admin'], default: 'officer' },
     status: { type: String, enum: ['active', 'pending', 'revoked'], default: 'pending' },
   },
   { _id: false }
@@ -63,7 +63,13 @@ const UserSchema = new Schema<IUser>(
   {
     name: { type: String, required: true, trim: true, default: 'Citizen' },
     email: { type: String, lowercase: true, trim: true },
-    emailHash: { type: String, sparse: true, unique: true, index: true },
+    emailHash: {
+      type: String,
+      index: {
+        unique: true,
+        partialFilterExpression: { emailHash: { $type: 'string' } },
+      },
+    },
     emailEnc: { type: String },
     passwordHash: { type: String },
     emailVerified: { type: Boolean, default: false },
@@ -71,7 +77,13 @@ const UserSchema = new Schema<IUser>(
     verifiedMethods: { type: [String], default: [] },
     needsPasswordChange: { type: Boolean, default: false },
     phoneEnc: { type: String },
-    phoneHash: { type: String, sparse: true, unique: true, index: true },
+    phoneHash: {
+      type: String,
+      index: {
+        unique: true,
+        partialFilterExpression: { phoneHash: { $type: 'string' } },
+      },
+    },
     phoneMasked: { type: String },
     displayName: { type: String, required: true, trim: true, minlength: 2, maxlength: 40 },
     language: { type: String, enum: ['mr', 'hi', 'en'], default: 'mr' },

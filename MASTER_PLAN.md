@@ -190,7 +190,7 @@ RAISE/
 | **Database** | MongoDB (Atlas) | `2dsphere` index for geo queries, text index for search |
 | **Cache & Queue** | Redis + BullMQ | Fast rate limiting, duplicate checking, background tasks for media/SMS |
 | **Storage & CDN** | S3-compatible Object Storage | EXIF stripping, thumbnail generation, signed URLs |
-| **Maps** | OpenStreetMap + Leaflet | Free, no dependency on paid Google Maps APIs |
+| **Location** | Native Browser Geolocation + Ward Boundaries | Lightweight, privacy-first; no map libraries or external map API dependencies |
 | **i18n** | next-intl / react-i18next | English (EN), Marathi (MR), Hindi (HI) |
 | **Auth / SMS** | MSG91 / Fast2SMS (DLT registered) | Phone OTP + session/JWT |
 

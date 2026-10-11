@@ -1,13 +1,18 @@
 import { Request, Response, NextFunction } from 'express';
+import mongoose from 'mongoose';
 import { z } from 'zod';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import { User, IUser } from '../../models/User.js';
+import { Issue } from '../../models/Issue.js';
+import { Raise } from '../../models/Raise.js';
 import { Office } from '../../models/Office.js';
 import { OfficeClaim } from '../../models/OfficeClaim.js';
 import { OfficeInvite } from '../../models/OfficeInvite.js';
 import { PasswordResetToken } from '../../models/PasswordResetToken.js';
+import { RepresentativeProfile } from '../../models/RepresentativeProfile.js';
+import { Jurisdiction } from '../../models/Jurisdiction.js';
 import { OtpService } from '../../services/otp.service.js';
 import { StorageService } from '../../services/storage.service.js';
 import { SessionService } from '../../services/session.service.js';
@@ -98,6 +103,16 @@ export const VerifyOtpSchema = z
   })
   .strict();
 
+export const MergeAccountsSchema = z
+  .object({
+    method: z.enum(['phone_otp', 'email_password']),
+    phone: z.string().min(10).max(18).optional(),
+    otp: z.string().length(6).optional(),
+    email: z.string().email().optional(),
+    password: z.string().min(1).optional(),
+  })
+  .strict();
+
 export const UpdateProfileSchema = z
   .object({
     displayName: z.string().min(2).max(40).optional(),
@@ -119,8 +134,32 @@ export const ClaimOfficeSchema = z
     password: z.string().min(8).max(100),
     phone: z.string().min(10).max(18),
     otp: z.string().length(6),
-    officeId: z.string().min(1),
+    officeId: z.string().optional(),
     role: z.enum(['official', 'agency']).default('official'),
+    accountType: z
+      .enum(['department_official', 'agency_contractor', 'representative', 'representative_staff'])
+      .optional()
+      .default('department_official'),
+    representativeRole: z
+      .enum([
+        'ward_councillor',
+        'sarpanch',
+        'mla',
+        'mlc',
+        'mp_lok_sabha',
+        'mp_rajya_sabha',
+        'minister',
+        'chief_minister',
+        'prime_minister',
+        'other',
+      ])
+      .optional(),
+    jurisdictionId: z.string().optional(),
+    termStart: z.string().optional(),
+    termEnd: z.string().optional(),
+    officialSiteUrl: z.string().optional(),
+    isStaff: z.boolean().optional(),
+    linkedProfileId: z.string().optional(),
     designation: z.string().min(2).max(100),
     employeeId: z.string().max(50).optional(),
     claimNotes: z.string().max(1000).optional(),
@@ -323,9 +362,7 @@ export class AuthController {
         language: data.language || 'en',
         role: 'citizen',
         status: 'active',
-        phoneHash,
-        phoneEnc,
-        phoneMasked,
+        ...(phoneHash ? { phoneHash, phoneEnc, phoneMasked } : {}),
         isProfileComplete: false,
         tokenVersion: 0,
       });
@@ -536,32 +573,106 @@ export class AuthController {
       const phoneEnc = OtpService.encryptPhone(normalizedPhone);
       const phoneMasked = OtpService.maskPhone(normalizedPhone);
 
+      // 1. Session-aware linking: check if caller has a valid active Bearer token
+      let authenticatedUser: IUser | null = null;
+      const authHeader = req.headers.authorization;
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        const rawToken = authHeader.slice(7).trim();
+        try {
+          const decoded = jwt.verify(rawToken, config.jwtSecret) as any;
+          if (decoded && decoded.userId) {
+            authenticatedUser = await User.findById(decoded.userId);
+          }
+        } catch {
+          // Stale/invalid token, proceed unauthenticated
+        }
+      }
+
+      if (authenticatedUser) {
+        // Authenticated citizen is linking this phone to their account
+        const otherUser = await User.findOne({
+          phoneHash,
+          _id: { $ne: authenticatedUser._id },
+        });
+
+        if (otherUser) {
+          res.status(409).json({
+            success: false,
+            canMerge: true,
+            existingUserId: otherUser._id.toString(),
+            message: 'This mobile number is attached to another account. You can merge both accounts.',
+          });
+          return;
+        }
+
+        authenticatedUser.phoneHash = phoneHash;
+        authenticatedUser.phoneEnc = phoneEnc;
+        authenticatedUser.phoneMasked = phoneMasked;
+        if (!authenticatedUser.verifiedMethods) authenticatedUser.verifiedMethods = [];
+        if (!authenticatedUser.verifiedMethods.includes('phone')) {
+          authenticatedUser.verifiedMethods.push('phone');
+        }
+        authenticatedUser.lastLoginAt = new Date();
+        await authenticatedUser.save();
+
+        const session = await SessionService.createSession(authenticatedUser, Boolean(data.isPublicComputer), req);
+        SessionService.setRefreshCookie(res, session.rawRefreshToken, session.maxAgeMs);
+
+        res.json({
+          success: true,
+          token: session.accessToken,
+          isNewUser: false,
+          isLinked: true,
+          isProfileComplete: Boolean(authenticatedUser.isProfileComplete),
+          user: sanitizeUser(authenticatedUser),
+        });
+        return;
+      }
+
+      // 2. Unauthenticated user login or registration with concurrency protection
       let user = await User.findOne({ phoneHash });
       let isNewUser = false;
 
       if (!user) {
-        isNewUser = true;
         const lastDigits = normalizedPhone.slice(-4);
-        user = await User.create({
-          displayName: `Citizen ${lastDigits}`,
-          name: `Citizen ${lastDigits}`,
-          phoneHash,
-          phoneEnc,
-          phoneMasked,
-          language: data.language || 'mr',
-          role: 'citizen',
-          status: 'active',
-          tokenVersion: 0,
-          isProfileComplete: false,
-          lastLoginAt: new Date(),
-        });
-      } else {
-        user.lastLoginAt = new Date();
-        if (!user.phoneEnc) {
-          user.phoneEnc = phoneEnc;
+        try {
+          user = await User.create({
+            displayName: `Citizen ${lastDigits}`,
+            name: `Citizen ${lastDigits}`,
+            phoneHash,
+            phoneEnc,
+            phoneMasked,
+            language: data.language || 'mr',
+            role: 'citizen',
+            status: 'active',
+            tokenVersion: 0,
+            isProfileComplete: false,
+            lastLoginAt: new Date(),
+          });
+          isNewUser = true;
+        } catch (createErr: any) {
+          if (createErr.code === 11000) {
+            // Concurrent race condition handled gracefully
+            user = await User.findOne({ phoneHash });
+          } else {
+            throw createErr;
+          }
         }
-        await user.save();
       }
+
+      if (!user) {
+        res.status(500).json({ success: false, message: 'Failed to authenticate user.' });
+        return;
+      }
+
+      user.lastLoginAt = new Date();
+      if (!user.phoneEnc) {
+        user.phoneEnc = phoneEnc;
+      }
+      if (!user.phoneMasked) {
+        user.phoneMasked = phoneMasked;
+      }
+      await user.save();
 
       const session = await SessionService.createSession(user, Boolean(data.isPublicComputer), req);
       SessionService.setRefreshCookie(res, session.rawRefreshToken, session.maxAgeMs);
@@ -572,6 +683,162 @@ export class AuthController {
         isNewUser,
         isProfileComplete: Boolean(user.isProfileComplete),
         user: sanitizeUser(user),
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  /**
+   * Account Merging: Consolidate two separate citizen accounts (e.g. Email + Phone OTP)
+   * into a single canonical account with full history preservation.
+   */
+  static async mergeAccounts(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      if (!req.user) {
+        res.status(401).json({ success: false, message: 'Authentication required' });
+        return;
+      }
+
+      const data = MergeAccountsSchema.parse(req.body);
+      const primaryUser = await User.findById(req.user.userId);
+      if (!primaryUser) {
+        res.status(404).json({ success: false, message: 'Primary user account not found.' });
+        return;
+      }
+
+      let secondaryUser: IUser | null = null;
+
+      if (data.method === 'phone_otp') {
+        if (!data.phone || !data.otp) {
+          res.status(400).json({ success: false, message: 'Phone number and OTP code required.' });
+          return;
+        }
+
+        const normPhone = OtpService.normalizePhone(data.phone);
+        const verification = await OtpService.verifyOtp(normPhone, data.otp, 'auth');
+        if (!verification.valid) {
+          res.status(400).json({ success: false, message: verification.reason || 'Invalid OTP code.' });
+          return;
+        }
+
+        const phoneHash = OtpService.hashPhone(normPhone);
+        secondaryUser = await User.findOne({ phoneHash, _id: { $ne: primaryUser._id } });
+        if (!secondaryUser) {
+          // No secondary user with this phone; simply attach phone to primaryUser!
+          primaryUser.phoneHash = phoneHash;
+          primaryUser.phoneEnc = OtpService.encryptPhone(normPhone);
+          primaryUser.phoneMasked = OtpService.maskPhone(normPhone);
+          if (!primaryUser.verifiedMethods) primaryUser.verifiedMethods = [];
+          if (!primaryUser.verifiedMethods.includes('phone')) primaryUser.verifiedMethods.push('phone');
+          await primaryUser.save();
+
+          res.json({
+            success: true,
+            message: 'Phone number attached to your account.',
+            user: sanitizeUser(primaryUser),
+          });
+          return;
+        }
+      } else if (data.method === 'email_password') {
+        if (!data.email || !data.password) {
+          res.status(400).json({ success: false, message: 'Email and password required.' });
+          return;
+        }
+
+        const normEmail = EmailUtil.normalize(data.email);
+        const emailHash = EmailUtil.hash(normEmail, config.emailHashSecret);
+        secondaryUser = await User.findOne({
+          $or: [{ emailHash }, { email: normEmail }],
+          _id: { $ne: primaryUser._id },
+        });
+
+        if (!secondaryUser || !secondaryUser.passwordHash) {
+          res.status(400).json({ success: false, message: 'Invalid email or password for secondary account.' });
+          return;
+        }
+
+        const passValid = await bcrypt.compare(data.password, secondaryUser.passwordHash);
+        if (!passValid) {
+          res.status(400).json({ success: false, message: 'Invalid password for secondary account.' });
+          return;
+        }
+      }
+
+      if (!secondaryUser) {
+        res.status(404).json({ success: false, message: 'Target account to merge not found.' });
+        return;
+      }
+
+      // Reassign all Issues created by secondaryUser to primaryUser
+      await Issue.updateMany(
+        { authorId: secondaryUser._id },
+        { $set: { authorId: primaryUser._id } }
+      );
+
+      // Reassign all Raises created by secondaryUser to primaryUser (avoiding duplicate key violations)
+      const primaryRaises = await Raise.find({ userId: primaryUser._id }).select('issueId');
+      const primaryIssueIds = new Set(primaryRaises.map((r) => r.issueId.toString()));
+      const secondaryRaises = await Raise.find({ userId: secondaryUser._id });
+
+      for (const sr of secondaryRaises) {
+        if (primaryIssueIds.has(sr.issueId.toString())) {
+          await Raise.deleteOne({ _id: sr._id });
+        } else {
+          sr.userId = primaryUser._id as any;
+          await sr.save();
+        }
+      }
+
+      // Consolidate profile attributes
+      if (secondaryUser.phoneHash && !primaryUser.phoneHash) {
+        primaryUser.phoneHash = secondaryUser.phoneHash;
+        primaryUser.phoneEnc = secondaryUser.phoneEnc;
+        primaryUser.phoneMasked = secondaryUser.phoneMasked;
+      }
+      if (secondaryUser.email && !primaryUser.email) {
+        primaryUser.email = secondaryUser.email;
+        primaryUser.emailHash = secondaryUser.emailHash;
+        primaryUser.emailEnc = secondaryUser.emailEnc;
+        primaryUser.passwordHash = secondaryUser.passwordHash;
+      }
+      if (secondaryUser.homeWard && !primaryUser.homeWard) {
+        primaryUser.homeWard = secondaryUser.homeWard;
+      }
+
+      if (!primaryUser.verifiedMethods) primaryUser.verifiedMethods = [];
+      if (secondaryUser.verifiedMethods) {
+        for (const m of secondaryUser.verifiedMethods) {
+          if (!primaryUser.verifiedMethods.includes(m)) primaryUser.verifiedMethods.push(m);
+        }
+      }
+
+      // Decommission secondary account and clear unique credentials
+      secondaryUser.status = 'deleted';
+      secondaryUser.email = undefined;
+      secondaryUser.emailHash = undefined;
+      secondaryUser.phoneHash = undefined;
+      secondaryUser.tokenVersion = (secondaryUser.tokenVersion || 0) + 1;
+      await secondaryUser.save();
+      await SessionService.revokeAllUserSessions(secondaryUser._id);
+
+      await primaryUser.save();
+
+      await AuditService.log({
+        actorId: primaryUser._id,
+        actorRole: primaryUser.role,
+        action: 'account_merge',
+        targetType: 'user',
+        targetId: primaryUser._id,
+        ip: req.ip,
+        userAgent: req.headers['user-agent'],
+        details: { mergedUserId: secondaryUser._id.toString() },
+      });
+
+      res.json({
+        success: true,
+        message: 'Accounts merged successfully. All your civic grievances and raises are now unified.',
+        user: sanitizeUser(primaryUser),
       });
     } catch (err) {
       next(err);
@@ -595,10 +862,77 @@ export class AuthController {
         return;
       }
 
-      const office = await Office.findById(data.officeId);
+      let office: any = null;
+      if (data.officeId) {
+        office = await Office.findById(data.officeId);
+      } else if (data.accountType === 'representative' || data.accountType === 'representative_staff') {
+        if (data.linkedProfileId) {
+          const profile = await RepresentativeProfile.findById(data.linkedProfileId);
+          if (profile?.officeId) {
+            office = await Office.findById(profile.officeId);
+          }
+        }
+        if (!office && data.jurisdictionId) {
+          const jur = await Jurisdiction.findById(data.jurisdictionId);
+          const officeName = `Office of ${data.name} (${(data.representativeRole || 'rep').toUpperCase()}, ${jur?.name || 'Constituency'})`;
+          office = await Office.findOne({
+            kind: 'representative_office',
+            jurisdictionId: data.jurisdictionId,
+            name: officeName,
+          });
+          if (!office) {
+            office = await Office.create({
+              name: officeName,
+              kind: 'representative_office',
+              level: jur?.level || jur?.type || 'ward',
+              department: 'general',
+              jurisdiction: {
+                city: jur?.name || 'Constituency',
+                district: 'District',
+                state: 'Maharashtra',
+              },
+              jurisdictionId: jur?._id,
+              claimStatus: 'pending_verification',
+              reports: [],
+              stats: { issuesTotal: 0, issuesAcknowledged: 0, issuesResolved: 0, avgResponseHours: 0 },
+            });
+          }
+        }
+      }
+
       if (!office) {
         res.status(400).json({ success: false, message: 'Designated public office not found.' });
         return;
+      }
+
+      // Seat duplicate / conflict detection for representative claims
+      let conflictFlag = false;
+      let conflictDetails: string | undefined;
+
+      if (data.accountType === 'representative' || data.accountType === 'representative_staff') {
+        if (data.jurisdictionId && data.representativeRole) {
+          const existingVerified = await RepresentativeProfile.findOne({
+            jurisdictionId: data.jurisdictionId,
+            role: data.representativeRole,
+            status: 'verified',
+          });
+          if (existingVerified) {
+            conflictFlag = true;
+            conflictDetails = `Seat already held by verified representative: ${existingVerified.displayName}`;
+          }
+
+          const existingPendingClaim = await OfficeClaim.findOne({
+            jurisdictionId: data.jurisdictionId,
+            representativeRole: data.representativeRole,
+            status: 'pending',
+          });
+          if (existingPendingClaim) {
+            conflictFlag = true;
+            conflictDetails = conflictDetails
+              ? `${conflictDetails}; Another pending claim exists for this seat.`
+              : 'Another pending claim exists for this seat.';
+          }
+        }
       }
 
       let normalizedPhone: string;
@@ -637,16 +971,21 @@ export class AuthController {
       }
 
       const passwordHash = await bcrypt.hash(data.password, 10);
-      const memberRole = data.role === 'agency' ? 'contractor' : 'officer';
+      let memberRole: 'head' | 'officer' | 'contractor' | 'staff' | 'office_admin' = 'officer';
+      if (data.accountType === 'representative') {
+        memberRole = 'office_admin';
+      } else if (data.accountType === 'representative_staff' || data.isStaff) {
+        memberRole = 'staff';
+      } else if (data.role === 'agency' || data.accountType === 'agency_contractor') {
+        memberRole = 'contractor';
+      }
 
       const user = await User.create({
         name: data.name,
         displayName: data.name,
         email: normalizedEmail,
         passwordHash,
-        phoneHash,
-        phoneEnc,
-        phoneMasked,
+        ...(phoneHash ? { phoneHash, phoneEnc, phoneMasked } : {}),
         role: data.role,
         status: 'pending',
         isOfficialVerified: false,
@@ -669,6 +1008,16 @@ export class AuthController {
         userId: user._id,
         officeId: office._id,
         role: data.role,
+        accountType: data.accountType || 'department_official',
+        representativeRole: data.representativeRole,
+        jurisdictionId: data.jurisdictionId ? new mongoose.Types.ObjectId(data.jurisdictionId) : undefined,
+        representativeProfileId: data.linkedProfileId ? new mongoose.Types.ObjectId(data.linkedProfileId) : undefined,
+        termStart: data.termStart ? new Date(data.termStart) : undefined,
+        termEnd: data.termEnd ? new Date(data.termEnd) : undefined,
+        officialSiteUrl: data.officialSiteUrl,
+        isStaff: Boolean(data.isStaff || data.accountType === 'representative_staff'),
+        conflictFlag,
+        conflictDetails,
         designation: data.designation,
         employeeId: data.employeeId,
         workEmail: normalizedEmail,
@@ -682,6 +1031,20 @@ export class AuthController {
         office.claimStatus = 'pending_verification';
         await office.save();
       }
+
+      await AuditService.log({
+        actorId: user._id,
+        actorRole: user.role,
+        action: 'office_claim_submitted',
+        targetType: 'office',
+        targetId: office._id.toString(),
+        details: {
+          accountType: data.accountType,
+          representativeRole: data.representativeRole,
+          jurisdictionId: data.jurisdictionId,
+          conflictFlag,
+        },
+      });
 
       const session = await SessionService.createSession(user, Boolean(data.isPublicComputer), req);
       SessionService.setRefreshCookie(res, session.rawRefreshToken, session.maxAgeMs);
@@ -743,9 +1106,7 @@ export class AuthController {
         displayName: data.name,
         email: invite.email,
         passwordHash,
-        phoneHash,
-        phoneEnc,
-        phoneMasked,
+        ...(phoneHash ? { phoneHash, phoneEnc, phoneMasked } : {}),
         role: invite.role,
         status: 'active',
         isOfficialVerified: true,

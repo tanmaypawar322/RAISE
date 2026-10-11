@@ -4,11 +4,15 @@ import { config } from './config/env.js';
 import { connectDB } from './config/db.js';
 import { StorageService } from './services/storage.service.js';
 import { EscalationService } from './services/escalation.service.js';
+import { RepresentativeTermService } from './services/representative-term.service.js';
+import { MonthlyReportService } from './services/monthly-report.service.js';
 
 async function bootstrap() {
   await StorageService.init();
   await connectDB();
   EscalationService.startScheduler();
+  RepresentativeTermService.startScheduler();
+  MonthlyReportService.startScheduler();
 
   const server = app.listen(config.port, () => {
     console.log(`\n=================================================`);
@@ -24,6 +28,8 @@ async function bootstrap() {
     console.log(`\n[SHUTDOWN] Received ${signal}. Starting graceful shutdown...`);
     try {
       EscalationService.stopScheduler();
+      RepresentativeTermService.stopScheduler();
+      MonthlyReportService.stopScheduler();
       server.close(async () => {
         console.log('[SHUTDOWN] HTTP listener terminated.');
         try {

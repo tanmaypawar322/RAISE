@@ -9,10 +9,13 @@ export interface IOfficeReport {
   createdAt: Date;
 }
 
+export type OfficeKind = 'department' | 'ward_office' | 'representative_office' | 'ministry' | 'executive_office';
+
 export interface IOffice extends Document {
   name: string;
   nameMr?: string;
   nameHi?: string;
+  kind: OfficeKind;
   level: 'gram_panchayat' | 'ward' | 'taluka' | 'corporation' | 'district' | 'state';
   department: 'roads' | 'water' | 'sanitation' | 'health' | 'education' | 'electricity' | 'general';
   jurisdiction: {
@@ -28,6 +31,8 @@ export interface IOffice extends Document {
   claimStatus: 'unclaimed' | 'pending_verification' | 'claimed';
   claimedBy?: mongoose.Types.ObjectId;
   jurisdictionId?: mongoose.Types.ObjectId;
+  jurisdictionScope?: mongoose.Types.ObjectId[];
+  departmentScope?: string[];
   parentOfficeId?: mongoose.Types.ObjectId;
   escalatesToOfficeId?: mongoose.Types.ObjectId;
   supportedCategories?: string[];
@@ -61,6 +66,12 @@ const OfficeSchema = new Schema<IOffice>(
     name: { type: String, required: true, index: true },
     nameMr: { type: String },
     nameHi: { type: String },
+    kind: {
+      type: String,
+      enum: ['department', 'ward_office', 'representative_office', 'ministry', 'executive_office'],
+      default: 'department',
+      index: true,
+    },
     level: {
       type: String,
       enum: ['gram_panchayat', 'ward', 'taluka', 'corporation', 'district', 'state'],
@@ -89,6 +100,8 @@ const OfficeSchema = new Schema<IOffice>(
     },
     claimedBy: { type: Schema.Types.ObjectId, ref: 'User' },
     jurisdictionId: { type: Schema.Types.ObjectId, ref: 'Jurisdiction', index: true },
+    jurisdictionScope: [{ type: Schema.Types.ObjectId, ref: 'Jurisdiction' }],
+    departmentScope: [{ type: String }],
     parentOfficeId: { type: Schema.Types.ObjectId, ref: 'Office' },
     escalatesToOfficeId: { type: Schema.Types.ObjectId, ref: 'Office' },
     supportedCategories: { type: [String], default: [] },

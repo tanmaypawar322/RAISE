@@ -11,7 +11,15 @@ import { AuditService } from '../../services/audit.service.js';
 import { Jurisdiction } from '../../models/Jurisdiction.js';
 import { EscalationService } from '../../services/escalation.service.js';
 import { Raise } from '../../models/Raise.js';
+import { RepresentativeProfile } from '../../models/RepresentativeProfile.js';
+import { OutreachRecord } from '../../models/OutreachRecord.js';
+import { CorrectionRequest } from '../../models/CorrectionRequest.js';
+import { RepresentativeUpdate } from '../../models/RepresentativeUpdate.js';
+import { FreezeWindow } from '../../models/FreezeWindow.js';
+import { MetricsService } from '../../services/metrics.service.js';
+import { MonthlyReportService } from '../../services/monthly-report.service.js';
 import { config } from '../../config/env.js';
+import { z } from 'zod';
 
 export class AdminController {
   /**
@@ -28,13 +36,20 @@ export class AdminController {
 
       const claims = await OfficeClaim.find(filter)
         .populate('userId', 'displayName name email phoneMasked role status createdAt')
-        .populate('officeId', 'name nameMr department level jurisdiction claimStatus')
+        .populate('officeId', 'name nameMr department level jurisdiction kind claimStatus')
+        .populate('jurisdictionId', 'name code level type')
+        .populate('representativeProfileId', 'displayName role status')
         .populate('reviewedBy', 'displayName email')
         .sort({ createdAt: -1 });
+
+      const unclaimedProfiles = await RepresentativeProfile.find({ status: 'unclaimed' })
+        .populate('jurisdictionId', 'name code level')
+        .sort({ displayName: 1 });
 
       res.json({
         success: true,
         claims,
+        unclaimedProfiles,
       });
     } catch (err) {
       next(err);
@@ -42,11 +57,12 @@ export class AdminController {
   }
 
   /**
-   * Approve claim: activates user, assigns office membership, and updates office claim status
+   * Approve claim: activates user, assigns office membership, updates profile and office claim status
    */
   static async approveClaim(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { id } = req.params;
+      const { linkProfileId } = req.body || {};
       const claim = await OfficeClaim.findById(id);
 
       if (!claim) {
@@ -62,19 +78,31 @@ export class AdminController {
       claim.status = 'approved';
       claim.reviewedBy = new mongoose.Types.ObjectId(req.user?.userId);
       claim.reviewedAt = new Date();
+      if (linkProfileId) {
+        claim.representativeProfileId = new mongoose.Types.ObjectId(linkProfileId);
+      }
       await claim.save();
 
       // Activate user account and grant office privileges
       const user = await User.findById(claim.userId);
-      if (user) {
+      let memberRole: 'head' | 'officer' | 'contractor' | 'staff' | 'office_admin' = 'officer';
+
+      if (claim.accountType === 'representative') {
+        memberRole = 'office_admin';
+      } else if (claim.accountType === 'representative_staff' || claim.isStaff) {
+        memberRole = 'staff';
+      } else if (claim.role === 'agency' || claim.accountType === 'agency_contractor') {
+        memberRole = 'contractor';
+      }
+
+      if (user && claim.officeId) {
         user.status = 'active';
         user.isOfficialVerified = true;
-        user.role = claim.role;
+        user.role = 'official';
         user.officialOfficeId = claim.officeId;
 
-        const memberRole = claim.role === 'agency' ? 'contractor' : 'officer';
         const existingIdx = user.officeMemberships.findIndex(
-          (m) => m.officeId.toString() === claim.officeId.toString()
+          (m) => m.officeId.toString() === claim.officeId!.toString()
         );
 
         if (existingIdx >= 0) {
@@ -91,16 +119,113 @@ export class AdminController {
         await user.save();
       }
 
-      // Update office record
-      const office = await Office.findById(claim.officeId);
-      if (office) {
-        office.claimStatus = 'claimed';
-        office.claimedBy = claim.userId;
-        await office.save();
+      // Handle RepresentativeProfile verification & linking
+      if (claim.accountType === 'representative' || claim.accountType === 'representative_staff') {
+        const targetProfileId = linkProfileId || claim.representativeProfileId;
+        let profile = targetProfileId ? await RepresentativeProfile.findById(targetProfileId) : null;
+
+        if (!profile && claim.accountType === 'representative' && claim.jurisdictionId && claim.representativeRole) {
+          profile = await RepresentativeProfile.findOne({
+            jurisdictionId: claim.jurisdictionId,
+            role: claim.representativeRole as any,
+            status: 'unclaimed',
+          });
+        }
+
+        if (profile) {
+          profile.status = 'verified';
+          if (claim.officeId) {
+            profile.officeId = claim.officeId;
+          }
+          if (user && claim.accountType === 'representative') {
+            profile.displayName = user.name;
+          }
+          profile.verification = {
+            method: 'document_certificate',
+            evidenceFileIds: claim.documentUrl ? [claim.documentUrl] : [],
+            reviewedBy: new mongoose.Types.ObjectId(req.user?.userId),
+            reviewedAt: new Date(),
+            notes: 'Verified and approved by platform administrator',
+          };
+          await profile.save();
+
+          // Update OutreachRecord if exists
+          await OutreachRecord.findOneAndUpdate(
+            { targetType: 'representative', targetId: profile._id },
+            {
+              status: 'joined',
+              notes: `Claim verified for ${user?.name || 'Representative'} (${claim.workEmail})`,
+              lastContactedAt: new Date(),
+            }
+          );
+        } else if (claim.accountType === 'representative' && claim.jurisdictionId && claim.representativeRole && claim.officeId) {
+          const newProfile = await RepresentativeProfile.create({
+            officeId: claim.officeId,
+            role: claim.representativeRole as any,
+            titleText: claim.designation,
+            jurisdictionId: claim.jurisdictionId,
+            termStart: claim.termStart || new Date(),
+            termEnd: claim.termEnd || new Date(Date.now() + 5 * 365 * 24 * 3600 * 1000),
+            status: 'verified',
+            displayName: user?.name || claim.designation,
+            officialSiteUrl: claim.officialSiteUrl,
+            verification: {
+              method: 'document_certificate',
+              evidenceFileIds: claim.documentUrl ? [claim.documentUrl] : [],
+              reviewedBy: new mongoose.Types.ObjectId(req.user?.userId),
+              reviewedAt: new Date(),
+              notes: 'Created and verified on claim approval',
+            },
+          });
+
+          await OutreachRecord.findOneAndUpdate(
+            { targetType: 'representative', targetId: newProfile._id },
+            {
+              status: 'joined',
+              notes: `Representative onboarded directly (${claim.workEmail})`,
+              lastContactedAt: new Date(),
+            },
+            { upsert: true }
+          );
+        }
       }
 
+      // Update office record
+      if (claim.officeId) {
+        const office = await Office.findById(claim.officeId);
+        if (office) {
+          office.claimStatus = 'claimed';
+          office.claimedBy = claim.userId;
+          await office.save();
+
+          // Update office outreach record
+          await OutreachRecord.findOneAndUpdate(
+            { targetType: 'office', targetId: office._id },
+            {
+              status: 'joined',
+              notes: `Office claimed and approved (${claim.workEmail})`,
+              lastContactedAt: new Date(),
+            }
+          );
+        }
+      }
+
+      await AuditService.log({
+        actorId: req.user?.userId,
+        actorRole: req.user?.role,
+        action: 'claim_approved',
+        targetType: 'claim',
+        targetId: claim._id.toString(),
+        details: {
+          userId: claim.userId.toString(),
+          officeId: claim.officeId?.toString(),
+          accountType: claim.accountType,
+          memberRole,
+        },
+      });
+
       console.info(
-        `[AUDIT] Admin ${req.user?.email || req.user?.userId} approved claim ${claim._id} for user ${claim.userId} at office ${claim.officeId}`
+        `[AUDIT] Admin ${req.user?.email || req.user?.userId} approved claim ${claim._id} for user ${claim.userId}`
       );
 
       res.json({
@@ -507,6 +632,559 @@ export class AdminController {
         success: true,
         jurisdictions,
         offices,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  /**
+   * Helper to retrieve and aggregate outreach items
+   */
+  private static async fetchOutreachData(targetType?: string, status?: string, search?: string) {
+    const openStatuses = ['submitted', 'acknowledged', 'under_review', 'in_progress'];
+    const outreachRecords = await OutreachRecord.find();
+    const outreachMap = new Map<string, any>();
+    for (const r of outreachRecords) {
+      outreachMap.set(`${r.targetType}_${r.targetId.toString()}`, r);
+    }
+
+    const items: any[] = [];
+
+    // 1. Process Representatives
+    if (!targetType || targetType === 'all' || targetType === 'representative') {
+      const reps = await RepresentativeProfile.find({ status: 'unclaimed' }).populate('jurisdictionId');
+      
+      // Calculate open issues per jurisdiction
+      const repJurIds = reps.map((r) => r.jurisdictionId?._id).filter(Boolean);
+      const repIssueCounts = await Issue.aggregate([
+        { $match: { jurisdictionIds: { $in: repJurIds }, status: { $in: openStatuses } } },
+        { $unwind: '$jurisdictionIds' },
+        { $match: { jurisdictionIds: { $in: repJurIds } } },
+        { $group: { _id: '$jurisdictionIds', count: { $sum: 1 } } },
+      ]);
+      const repCountMap = new Map<string, number>();
+      for (const c of repIssueCounts) {
+        repCountMap.set(c._id.toString(), c.count);
+      }
+
+      for (const rep of reps) {
+        const jur = rep.jurisdictionId as any;
+        const jurIdStr = jur?._id ? jur._id.toString() : '';
+        const openIssues = repCountMap.get(jurIdStr) || 0;
+        const key = `representative_${rep._id.toString()}`;
+        const record = outreachMap.get(key);
+
+        items.push({
+          id: record?._id?.toString() || key,
+          targetType: 'representative',
+          targetId: rep._id.toString(),
+          name: rep.displayName,
+          role: rep.role,
+          titleText: rep.titleText,
+          jurisdictionName: jur?.name || 'Constituency',
+          jurisdictionCode: jur?.code || '',
+          jurisdictionLevel: jur?.level || jur?.type || '',
+          openIssuesCount: openIssues,
+          outreachStatus: record?.status || 'not_contacted',
+          lastContactedAt: record?.lastContactedAt || null,
+          notes: record?.notes || '',
+          owner: record?.owner || '',
+          officialSiteUrl: rep.officialSiteUrl || '',
+        });
+      }
+    }
+
+    // 2. Process Offices (excluding representative offices)
+    if (!targetType || targetType === 'all' || targetType === 'office') {
+      const offices = await Office.find({
+        claimStatus: 'unclaimed',
+        kind: { $ne: 'representative_office' },
+      }).populate('jurisdictionId');
+
+      const officeIds = offices.map((o) => o._id);
+      const officeIssueCounts = await Issue.aggregate([
+        { $match: { officeId: { $in: officeIds }, status: { $in: openStatuses } } },
+        { $group: { _id: '$officeId', count: { $sum: 1 } } },
+      ]);
+      const officeCountMap = new Map<string, number>();
+      for (const c of officeIssueCounts) {
+        officeCountMap.set(c._id.toString(), c.count);
+      }
+
+      for (const off of offices) {
+        const jur = off.jurisdictionId as any;
+        const openIssues = officeCountMap.get(off._id.toString()) || 0;
+        const key = `office_${off._id.toString()}`;
+        const record = outreachMap.get(key);
+
+        items.push({
+          id: record?._id?.toString() || key,
+          targetType: 'office',
+          targetId: off._id.toString(),
+          name: off.name,
+          role: off.department,
+          titleText: off.name,
+          jurisdictionName: jur?.name || off.jurisdiction?.city || off.jurisdiction?.district || 'Administrative Area',
+          jurisdictionCode: jur?.code || off.jurisdiction?.ward || '',
+          jurisdictionLevel: off.level || off.kind || '',
+          openIssuesCount: openIssues,
+          outreachStatus: record?.status || 'not_contacted',
+          lastContactedAt: record?.lastContactedAt || null,
+          notes: record?.notes || '',
+          owner: record?.owner || '',
+          officialEmail: off.officialEmail || '',
+        });
+      }
+    }
+
+    // Filter by outreach status
+    let filtered = items;
+    if (status && status !== 'all') {
+      filtered = filtered.filter((i) => i.outreachStatus === status);
+    }
+
+    // Filter by search query
+    if (search && search.trim()) {
+      const q = search.trim().toLowerCase();
+      filtered = filtered.filter(
+        (i) =>
+          i.name.toLowerCase().includes(q) ||
+          i.role.toLowerCase().includes(q) ||
+          i.titleText.toLowerCase().includes(q) ||
+          i.jurisdictionName.toLowerCase().includes(q) ||
+          i.jurisdictionCode.toLowerCase().includes(q) ||
+          (i.notes && i.notes.toLowerCase().includes(q))
+      );
+    }
+
+    // Sort by open issues descending
+    filtered.sort((a, b) => b.openIssuesCount - a.openIssuesCount);
+
+    return filtered;
+  }
+
+  /**
+   * Outreach queue listing unclaimed offices and representatives sorted by open issues
+   */
+  static async getOutreachQueue(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { targetType, status, search } = req.query as {
+        targetType?: string;
+        status?: string;
+        search?: string;
+      };
+
+      const items = await AdminController.fetchOutreachData(targetType, status, search);
+
+      res.json({
+        success: true,
+        total: items.length,
+        items,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  /**
+   * Update or create OutreachRecord
+   */
+  static async updateOutreachRecord(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { targetType, targetId } = req.params;
+      const { status, notes, lastContactedAt, owner } = req.body;
+
+      if (!['office', 'representative'].includes(targetType)) {
+        res.status(400).json({ success: false, message: 'Invalid targetType' });
+        return;
+      }
+
+      const user = (req as any).user;
+      const effectiveOwner = owner || user?.displayName || user?.email || 'admin';
+      const effectiveLastContactedAt = lastContactedAt
+        ? new Date(lastContactedAt)
+        : status !== 'not_contacted'
+        ? new Date()
+        : null;
+
+      const record = await OutreachRecord.findOneAndUpdate(
+        { targetType, targetId: new mongoose.Types.ObjectId(targetId) },
+        {
+          targetType,
+          targetId: new mongoose.Types.ObjectId(targetId),
+          status: status || 'not_contacted',
+          notes: notes !== undefined ? notes : '',
+          lastContactedAt: effectiveLastContactedAt,
+          owner: effectiveOwner,
+        },
+        { new: true, upsert: true }
+      );
+
+      await AuditService.log({
+        actorId: user?._id,
+        actorRole: user?.role,
+        action: 'outreach_record_updated',
+        targetType,
+        targetId,
+        details: {
+          status: record.status,
+          notes: record.notes,
+          owner: record.owner,
+        },
+      });
+
+      res.json({
+        success: true,
+        record,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  /**
+   * Export outreach queue as CSV
+   */
+  static async exportOutreachCsv(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { targetType, status, search } = req.query as {
+        targetType?: string;
+        status?: string;
+        search?: string;
+      };
+
+      const items = await AdminController.fetchOutreachData(targetType, status, search);
+
+      let csv = 'Target Type,Name,Role / Dept,Jurisdiction,Open Issues,Outreach Status,Last Contacted,Notes,Owner\n';
+
+      for (const item of items) {
+        const cleanName = `"${(item.name || '').replace(/"/g, '""')}"`;
+        const cleanRole = `"${(item.role || '').replace(/"/g, '""')}"`;
+        const cleanJur = `"${(`${item.jurisdictionCode ? `[${item.jurisdictionCode}] ` : ''}${item.jurisdictionName}`).replace(/"/g, '""')}"`;
+        const cleanNotes = `"${(item.notes || '').replace(/"/g, '""')}"`;
+        const cleanOwner = `"${(item.owner || '').replace(/"/g, '""')}"`;
+        const lastContact = item.lastContactedAt ? new Date(item.lastContactedAt).toISOString() : '';
+
+        csv += `${item.targetType},${cleanName},${cleanRole},${cleanJur},${item.openIssuesCount},${item.outreachStatus},${lastContact},${cleanNotes},${cleanOwner}\n`;
+      }
+
+      const today = new Date().toISOString().split('T')[0];
+      res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+      res.setHeader('Content-Disposition', `attachment; filename="raise-outreach-queue-${today}.csv"`);
+      res.status(200).send(csv);
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  /**
+   * List correction requests
+   */
+  static async getCorrections(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { status } = req.query;
+      const filter: any = {};
+      if (status && status !== 'all') {
+        filter.status = status;
+      }
+      const corrections = await CorrectionRequest.find(filter)
+        .sort({ createdAt: -1 })
+        .populate('reviewedBy', 'displayName email');
+      res.json({ success: true, corrections });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  /**
+   * Review and resolve or reject a correction request
+   */
+  static async updateCorrection(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { id } = req.params;
+      const { status, adminNotes, outcome, recomputeMetrics } = req.body;
+
+      const correction = await CorrectionRequest.findById(id);
+      if (!correction) {
+        res.status(404).json({ success: false, message: 'Correction request not found.' });
+        return;
+      }
+
+      correction.status = status;
+      correction.adminNotes = adminNotes;
+      correction.outcome = outcome;
+      correction.reviewedBy = new mongoose.Types.ObjectId(req.user!.userId);
+      correction.reviewedAt = new Date();
+      await correction.save();
+
+      // If resolved and metric recompute requested, trigger calculation
+      if (recomputeMetrics) {
+        if (correction.targetType === 'office') {
+          await MetricsService.computeOfficeMetrics(correction.targetId);
+        } else if (correction.targetType === 'representative') {
+          await MetricsService.computeRepresentativeMetrics(correction.targetId);
+        }
+      }
+
+      await AuditService.log({
+        actorId: req.user!.userId,
+        actorRole: req.user!.role,
+        action: 'correction_request_reviewed',
+        targetType: correction.targetType,
+        targetId: correction.targetId.toString(),
+        details: { status, outcome, recomputeMetrics },
+      });
+
+      res.json({ success: true, message: 'Correction request updated.', correction });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  /**
+   * List representative updates for pre-moderation queue
+   */
+  static async getRepresentativeUpdates(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { status } = req.query;
+      const filter: any = {};
+      if (status && status !== 'all') {
+        filter.status = status;
+      }
+
+      const updates = await RepresentativeUpdate.find(filter)
+        .populate('representativeProfileId', 'displayName role titleText photoUrl')
+        .populate('authorId', 'displayName email')
+        .populate('jurisdictionId', 'name code level')
+        .populate('moderatedBy', 'displayName email')
+        .sort({ createdAt: -1 });
+
+      res.json({ success: true, updates });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  /**
+   * Approve a representative update (Rule 6 Pre-moderation)
+   */
+  static async approveRepresentativeUpdate(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { id } = req.params;
+      const update = await RepresentativeUpdate.findById(id);
+      if (!update) {
+        res.status(404).json({ success: false, message: 'Representative update not found.' });
+        return;
+      }
+
+      update.status = 'published';
+      update.moderatedBy = new mongoose.Types.ObjectId(req.user!.userId);
+      update.moderatedAt = new Date();
+      update.moderationReason = undefined;
+      await update.save();
+
+      await AuditService.log({
+        actorId: req.user!.userId,
+        actorRole: req.user!.role,
+        action: 'representative_update_approved',
+        targetType: 'representative_update',
+        targetId: update._id.toString(),
+      });
+
+      res.json({ success: true, message: 'Representative update approved and published.', update });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  /**
+   * Reject a representative update
+   */
+  static async rejectRepresentativeUpdate(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { id } = req.params;
+      const { reason } = z.object({ reason: z.string().min(5, 'Rejection reason must be at least 5 characters').max(500) }).parse(req.body);
+
+      const update = await RepresentativeUpdate.findById(id);
+      if (!update) {
+        res.status(404).json({ success: false, message: 'Representative update not found.' });
+        return;
+      }
+
+      update.status = 'rejected';
+      update.moderatedBy = new mongoose.Types.ObjectId(req.user!.userId);
+      update.moderatedAt = new Date();
+      update.moderationReason = reason;
+      await update.save();
+
+      await AuditService.log({
+        actorId: req.user!.userId,
+        actorRole: req.user!.role,
+        action: 'representative_update_rejected',
+        targetType: 'representative_update',
+        targetId: update._id.toString(),
+        details: { reason },
+      });
+
+      res.json({ success: true, message: 'Representative update rejected.', update });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  /**
+   * List all election freeze windows
+   */
+  static async getFreezeWindows(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const windows = await FreezeWindow.find()
+        .populate('jurisdictionId', 'name code level')
+        .populate('createdBy', 'displayName email')
+        .sort({ freezeStart: -1 });
+
+      res.json({ success: true, windows });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  /**
+   * Create an election freeze window
+   */
+  static async createFreezeWindow(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const schema = z.object({
+        jurisdictionId: z.string(),
+        roles: z.array(z.string()).default([]),
+        freezeStart: z.string(),
+        freezeEnd: z.string(),
+        reason: z.string().min(5, 'Reason must be at least 5 characters'),
+      });
+      const data = schema.parse(req.body);
+
+      const window = await FreezeWindow.create({
+        jurisdictionId: new mongoose.Types.ObjectId(data.jurisdictionId),
+        roles: data.roles,
+        freezeStart: new Date(data.freezeStart),
+        freezeEnd: new Date(data.freezeEnd),
+        reason: data.reason,
+        createdBy: new mongoose.Types.ObjectId(req.user!.userId),
+        isActive: true,
+      });
+
+      await AuditService.log({
+        actorId: req.user!.userId,
+        actorRole: req.user!.role,
+        action: 'election_freeze_window_created',
+        targetType: 'freeze_window',
+        targetId: window._id.toString(),
+        details: { jurisdictionId: data.jurisdictionId, reason: data.reason },
+      });
+
+      res.status(201).json({ success: true, message: 'Freeze window established.', window });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  /**
+   * Update an election freeze window
+   */
+  static async updateFreezeWindow(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { id } = req.params;
+      const schema = z.object({
+        roles: z.array(z.string()).optional(),
+        freezeStart: z.string().optional(),
+        freezeEnd: z.string().optional(),
+        reason: z.string().min(5).optional(),
+        isActive: z.boolean().optional(),
+      });
+      const data = schema.parse(req.body);
+
+      const window = await FreezeWindow.findById(id);
+      if (!window) {
+        res.status(404).json({ success: false, message: 'Freeze window not found.' });
+        return;
+      }
+
+      if (data.roles !== undefined) window.roles = data.roles;
+      if (data.freezeStart !== undefined) window.freezeStart = new Date(data.freezeStart);
+      if (data.freezeEnd !== undefined) window.freezeEnd = new Date(data.freezeEnd);
+      if (data.reason !== undefined) window.reason = data.reason;
+      if (data.isActive !== undefined) window.isActive = data.isActive;
+      await window.save();
+
+      await AuditService.log({
+        actorId: req.user!.userId,
+        actorRole: req.user!.role,
+        action: 'election_freeze_window_updated',
+        targetType: 'freeze_window',
+        targetId: window._id.toString(),
+      });
+
+      res.json({ success: true, message: 'Freeze window updated.', window });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  /**
+   * Delete an election freeze window
+   */
+  static async deleteFreezeWindow(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { id } = req.params;
+      const window = await FreezeWindow.findByIdAndDelete(id);
+      if (!window) {
+        res.status(404).json({ success: false, message: 'Freeze window not found.' });
+        return;
+      }
+
+      await AuditService.log({
+        actorId: req.user!.userId,
+        actorRole: req.user!.role,
+        action: 'election_freeze_window_deleted',
+        targetType: 'freeze_window',
+        targetId: id,
+      });
+
+      res.json({ success: true, message: 'Freeze window removed.' });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  /**
+   * Admin trigger to generate draft monthly reports for a specified target month or previous month
+   */
+  static async triggerGenerateMonthlyReports(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { targetMonthDate } = req.body || {};
+      const date = targetMonthDate ? new Date(targetMonthDate) : undefined;
+      const result = await MonthlyReportService.generateMonthlyReports(date);
+
+      res.json({
+        success: true,
+        message: `Draft monthly reports generated for period ${result.period}. 5-day right of reply window active.`,
+        result,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  /**
+   * Admin trigger to publish all due monthly reports
+   */
+  static async triggerPublishDueReports(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const publishedCount = await MonthlyReportService.publishDueReports();
+      res.json({
+        success: true,
+        message: `Published ${publishedCount} monthly reports whose right-of-reply window has concluded.`,
+        publishedCount,
       });
     } catch (err) {
       next(err);

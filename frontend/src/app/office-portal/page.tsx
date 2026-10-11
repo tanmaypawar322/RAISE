@@ -26,6 +26,12 @@ import {
   FileText,
   LogOut,
   Info,
+  BarChart3,
+  CreditCard,
+  Download,
+  ExternalLink,
+  AlertCircle,
+  ArrowUpRight,
 } from 'lucide-react';
 
 export default function OfficePortalPage() {
@@ -42,8 +48,11 @@ export default function OfficePortalPage() {
   } = useAuth();
   const { t, language } = useLanguage();
 
-  const [activeTab, setActiveTab] = useState<'queue' | 'reports' | 'scorecard'>('queue');
+  const [activeTab, setActiveTab] = useState<'queue' | 'reports' | 'scorecard' | 'billing'>('queue');
   const [officeScorecard, setOfficeScorecard] = useState<any | null>(null);
+  const [billingData, setBillingData] = useState<any | null>(null);
+  const [billingLoading, setBillingLoading] = useState(false);
+  const [exportLoading, setExportLoading] = useState(false);
   const [authTab, setAuthTab] = useState<'login' | 'claim' | 'invite'>('login');
   const [selectedIssue, setSelectedIssue] = useState<any | null>(null);
   const [statusUpdate, setStatusUpdate] = useState<'acknowledged' | 'in_progress' | 'resolved' | 'rejected'>('acknowledged');
@@ -205,9 +214,50 @@ export default function OfficePortalPage() {
       } catch {
         // Keep fallback
       }
+
+      // Fetch office billing details
+      try {
+        const billRes = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/billing/office/${officeId}`,
+          { headers: token ? { Authorization: `Bearer ${token}` } : {} }
+        );
+        const billData = await billRes.json();
+        if (billData.success) {
+          setBillingData(billData);
+        }
+      } catch {
+        // Feature flag may be off
+      }
     };
     fetchIssues();
-  }, [user]);
+  }, [user, token]);
+
+  const handleExportData = async () => {
+    const officeId = user?.officialOfficeId || '67aa00000000000000000001';
+    setExportLoading(true);
+    try {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/billing/office/${officeId}/export`,
+        {
+          method: 'POST',
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        }
+      );
+      if (!res.ok) throw new Error('Export failed');
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `office-export-${officeId}-${Date.now()}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    } catch {
+      alert('Data export failed. Please try again.');
+    } finally {
+      setExportLoading(false);
+    }
+  };
 
   const handleOfficerLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -959,6 +1009,13 @@ export default function OfficePortalPage() {
             </div>
 
             <div className="flex items-center gap-2">
+              <Link
+                href="/office-portal/analysis"
+                className="flex items-center gap-1.5 px-3 py-2 bg-purple-600/40 hover:bg-purple-600/60 border border-purple-400/30 rounded-xl text-xs font-bold text-white transition shadow-xs"
+              >
+                <BarChart3 className="w-3.5 h-3.5 text-purple-200" />
+                <span>Executive Analysis</span>
+              </Link>
               {/* Invite Colleague Button (Only for verified officials / admin) */}
               {!isPending && !isContractor && (
                 <button
@@ -1049,6 +1106,18 @@ export default function OfficePortalPage() {
           >
             <Building2 className="w-3.5 h-3.5" />
             <span>Public Scorecard</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('billing')}
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition ${
+              activeTab === 'billing'
+                ? 'bg-blue-900 text-white shadow-xs'
+                : 'text-gray-600 bg-white border border-gray-200 hover:bg-gray-100'
+            }`}
+          >
+            <CreditCard className="w-3.5 h-3.5" />
+            <span>{t('billingTab') || 'Billing & Plan'}</span>
           </button>
         </div>
 
@@ -1321,6 +1390,187 @@ export default function OfficePortalPage() {
                   </p>
                 </div>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 4: BILLING & SUBSCRIPTIONS */}
+        {activeTab === 'billing' && (
+          <div className="space-y-6">
+            {/* Current Plan Overview Card */}
+            <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-xs">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-gray-100">
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-xs font-bold uppercase tracking-wider text-blue-700 bg-blue-50 px-2.5 py-1 rounded-full border border-blue-200">
+                      {billingData?.planKey === 'office_pro' ? 'Office Pro (प्रगत)' : 'Office Basic (मूलभूत - विनामूल्य)'}
+                    </span>
+                    <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                      {billingData?.subscription?.status || 'Active'}
+                    </span>
+                  </div>
+                  <h3 className="text-lg font-bold text-gray-900 mt-1">
+                    {billingData?.currentPlan?.name || 'Office Basic (मूलभूत कार्यालय)'}
+                  </h3>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    {billingData?.currentPlan?.description || 'Free civic response tier for all statutory administrative offices.'}
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <Link
+                    href="/pricing"
+                    className="px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-xs"
+                  >
+                    <span>{billingData?.planKey === 'office_pro' ? 'Manage Plan' : 'Explore Office Pro'}</span>
+                    <ArrowUpRight className="w-3.5 h-3.5" />
+                  </Link>
+                </div>
+              </div>
+
+              {/* Seats and Usage Matrix */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-6">
+                <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
+                  <span className="text-xs text-slate-500 block mb-1">Active Team Seats</span>
+                  <div className="flex items-baseline gap-1.5">
+                    <span className="text-2xl font-extrabold text-slate-900">
+                      {billingData?.seats?.currentMembers || 1}
+                    </span>
+                    <span className="text-xs text-slate-500">
+                      / {billingData?.seats?.seatLimit || 5} allocated
+                    </span>
+                  </div>
+                  {billingData?.seats?.allowed === false && (
+                    <span className="text-[11px] text-amber-700 font-semibold block mt-1 flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3" /> Seat limit reached
+                    </span>
+                  )}
+                </div>
+
+                <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
+                  <span className="text-xs text-slate-500 block mb-1">Monthly Export Quota</span>
+                  <div className="flex items-baseline gap-1.5">
+                    <span className="text-2xl font-extrabold text-slate-900">Always Free</span>
+                  </div>
+                  <span className="text-[11px] text-slate-500 block mt-1">
+                    Rule 4: Unlimited office export
+                  </span>
+                </div>
+
+                <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
+                  <span className="text-xs text-slate-500 block mb-1">Billing Currency & Mode</span>
+                  <div className="flex items-baseline gap-1.5">
+                    <span className="text-lg font-bold text-slate-900">INR (₹)</span>
+                    <span className="text-xs text-slate-500">
+                      • {billingData?.subscription?.billingMode === 'invoice' ? 'Govt Purchase Order' : 'Self-Serve / Free'}
+                    </span>
+                  </div>
+                  <span className="text-[11px] text-slate-500 block mt-1">
+                    Tax SAC 998313 (GST compliant)
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Guaranteed Free Data Export Card */}
+            <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div>
+                <h4 className="text-sm font-bold text-gray-900 flex items-center gap-2">
+                  <Download className="w-4 h-4 text-blue-700" />
+                  {t('exportOfficeData') || 'Export Office Data (CSV)'}
+                </h4>
+                <p className="text-xs text-gray-500 mt-1 max-w-xl">
+                  Non-negotiable civic guarantee: Your office's grievance response history, status timeline, and public actions are always exportable for free on every tier. Data is never locked or held hostage.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleExportData}
+                disabled={exportLoading}
+                className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shrink-0 disabled:opacity-50"
+              >
+                <Download className="w-4 h-4 text-slate-600" />
+                <span>{exportLoading ? 'Exporting...' : 'Download Full CSV'}</span>
+              </button>
+            </div>
+
+            {/* Neutral Pro Features Notice */}
+            {billingData?.planKey !== 'office_pro' && (
+              <div className="p-4 rounded-2xl bg-indigo-50/70 border border-indigo-200 flex items-start gap-3">
+                <Info className="w-5 h-5 text-indigo-700 shrink-0 mt-0.5" />
+                <div>
+                  <h4 className="text-xs font-bold text-indigo-950 mb-0.5">
+                    Internal workflow features on Office Pro
+                  </h4>
+                  <p className="text-xs text-indigo-900/90 leading-relaxed">
+                    Municipal corporations and larger ward offices can subscribe to Office Pro to unlock team ticket assignment, automated breach escalation alert bots, advanced cross-ward analysis dashboards, and 25 team seats. Public citizen scorecards and complaint rankings remain strictly identical across all plans.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Invoices & Receipts Section */}
+            <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-xs">
+              <h4 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
+                <FileText className="w-4 h-4 text-gray-600" />
+                {t('invoicesTitle') || 'Invoices & Receipts'}
+              </h4>
+
+              {billingData?.invoices && billingData.invoices.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs text-left">
+                    <thead>
+                      <tr className="border-b border-gray-200 text-gray-500">
+                        <th className="py-2.5 px-3 font-semibold">Invoice No</th>
+                        <th className="py-2.5 px-3 font-semibold">Date</th>
+                        <th className="py-2.5 px-3 font-semibold">Amount</th>
+                        <th className="py-2.5 px-3 font-semibold">Status</th>
+                        <th className="py-2.5 px-3 font-semibold text-right">Receipt</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {billingData.invoices.map((inv: any) => (
+                        <tr key={inv._id} className="hover:bg-gray-50">
+                          <td className="py-2.5 px-3 font-mono font-medium text-slate-800">{inv.number}</td>
+                          <td className="py-2.5 px-3 text-gray-600">
+                            {new Date(inv.issuedAt).toLocaleDateString('en-IN')}
+                          </td>
+                          <td className="py-2.5 px-3 font-semibold text-slate-900">
+                            ₹{(inv.totalPaise / 100).toLocaleString('en-IN')}
+                          </td>
+                          <td className="py-2.5 px-3">
+                            <span
+                              className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                inv.status === 'paid'
+                                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                  : 'bg-amber-50 text-amber-700 border border-amber-200'
+                              }`}
+                            >
+                              {inv.status.toUpperCase()}
+                            </span>
+                          </td>
+                          <td className="py-2.5 px-3 text-right">
+                            <a
+                              href={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/billing/office/${inv.officeId}/invoices/${inv._id}/pdf`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-blue-700 hover:text-blue-900 font-semibold inline-flex items-center gap-1"
+                            >
+                              <span>View Tax Invoice</span>
+                              <ExternalLink className="w-3 h-3" />
+                            </a>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="text-center py-8 text-xs text-gray-400">
+                  <CreditCard className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                  No paid invoices on file. Your office is operating on the free Office Basic tier.
+                </div>
+              )}
             </div>
           </div>
         )}

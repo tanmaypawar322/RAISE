@@ -47,7 +47,7 @@ export default function GrievanceRedressalPage() {
                   </p>
                   <p className="flex items-center gap-2">
                     <MapPin className="w-3.5 h-3.5 text-orange-700" />
-                    <strong>पत्ता:</strong> लोकआवाज तक्रार कक्ष, पिंपरी-चिंचवड, पुणे - ४११०४४, महाराष्ट्र.
+                    <strong>पत्ता:</strong> RAISE तक्रार निवारण कक्ष, पिंपरी-चिंचवड, पुणे - ४११०४४, महाराष्ट्र.
                   </p>
                 </div>
               </section>
@@ -102,7 +102,7 @@ export default function GrievanceRedressalPage() {
                   </p>
                   <p className="flex items-center gap-2">
                     <MapPin className="w-3.5 h-3.5 text-orange-700" />
-                    <strong>पता:</strong> लोकआवाज शिकायत प्रकोष्ठ, पिंपरी-चिंचवड, पुणे - 411044, महाराष्ट्र।
+                    <strong>पता:</strong> RAISE शिकायत निवारण प्रकोष्ठ, पिंपरी-चिंचवड, पुणे - 411044, महाराष्ट्र।
                   </p>
                 </div>
               </section>

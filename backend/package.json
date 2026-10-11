@@ -13,6 +13,8 @@
     "reset-user-password": "tsx src/scripts/reset-user-password.ts",
     "import:jurisdictions": "tsx src/scripts/import-jurisdictions.ts",
     "import:offices": "tsx src/scripts/import-offices.ts",
+    "import:representatives": "tsx src/scripts/import-representatives.ts",
+    "migrate:containment": "tsx src/scripts/backfill-jurisdiction-containment.ts",
     "test": "tsx --test \"src/**/*.test.ts\""
   },
   "keywords": [

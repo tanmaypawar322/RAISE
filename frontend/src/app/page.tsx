@@ -14,7 +14,6 @@ import {
   Plus,
   Flame,
   MapPin,
-  Building2,
   Sparkles,
   FileText,
   ThumbsUp,
@@ -32,22 +31,12 @@ import {
   Search,
   X,
   Grid,
-  Map as MapIcon,
   SlidersHorizontal,
   ArrowUpDown,
   RefreshCw,
   Wifi,
+  Navigation,
 } from 'lucide-react';
-
-const IssueMapView = dynamic(() => import('../components/IssueMapView'), {
-  ssr: false,
-  loading: () => (
-    <div className="h-[540px] w-full rounded-2xl bg-slate-100 flex flex-col items-center justify-center animate-pulse text-slate-500 gap-2 border border-slate-200">
-      <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
-      <span className="text-xs font-semibold">Loading Map View...</span>
-    </div>
-  ),
-});
 
 const initialSampleIssues: IssueItem[] = [
   {
@@ -61,8 +50,10 @@ const initialSampleIssues: IssueItem[] = [
     category: 'roads',
     location: {
       ward: 'Ward 10 (Akurdi)',
+      landmark: 'Near Akurdi Railway Station East Gate',
       city: 'Pimpri-Chinchwad',
       address: 'Near Akurdi Railway Station East Gate',
+      coordinates: [73.774, 18.648],
     },
     office: {
       name: 'PCMC Road Maintenance & Civil Department',
@@ -90,8 +81,10 @@ const initialSampleIssues: IssueItem[] = [
     category: 'water',
     location: {
       ward: 'Ward 12 (Nigdi Pradhikaran)',
+      landmark: 'Near Sambhaji Chowk, Sector 24',
       city: 'Pimpri-Chinchwad',
       address: 'Sector 24, Nigdi',
+      coordinates: [73.7842, 18.6508],
     },
     office: {
       name: 'PCMC Water Supply & Drainage Department',
@@ -119,8 +112,10 @@ const initialSampleIssues: IssueItem[] = [
     category: 'sanitation',
     location: {
       ward: 'Ward 18 (Chinchwad)',
+      landmark: 'Vegetable Market Road, Near Chinchwad Station',
       city: 'Pimpri-Chinchwad',
       address: 'Vegetable Market Road, Chinchwad',
+      coordinates: [73.789, 18.628],
     },
     office: {
       name: 'PCMC Health & Sanitation Department',
@@ -133,6 +128,19 @@ const initialSampleIssues: IssueItem[] = [
     createdAt: '2026-10-05T12:00:00.000Z',
   },
 ];
+
+function calculateDistanceMeters(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371e3;
+  const φ1 = (lat1 * Math.PI) / 180;
+  const φ2 = (lat2 * Math.PI) / 180;
+  const Δφ = ((lat2 - lat1) * Math.PI) / 180;
+  const Δλ = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+    Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
 
 const pilotOfficesList = [
   {
@@ -210,7 +218,9 @@ export default function HomePage() {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [sortOption, setSortOption] = useState<string>('trending');
-  const [viewMode, setViewMode] = useState<'feed' | 'map'>('feed');
+  const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [isLocating, setIsLocating] = useState(false);
+  const [geoNotice, setGeoNotice] = useState<string | null>(null);
   const [dataSaver, setDataSaver] = useState(false);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
@@ -272,7 +282,7 @@ export default function HomePage() {
     if (debouncedSearch.trim()) params.append('q', debouncedSearch.trim());
     if (selectedCategory !== 'all') params.append('category', selectedCategory);
     if (selectedStatus !== 'all') params.append('status', selectedStatus);
-    params.append('sort', sortOption);
+    params.append('sort', sortOption === 'nearest' ? 'trending' : sortOption);
     params.append('limit', '20');
 
     fetch(
@@ -288,7 +298,7 @@ export default function HomePage() {
             title: it.title,
             description: it.description,
             category: it.category,
-            location: it.location,
+            location: it.location || {},
             office: it.officeId,
             media: it.media,
             status: it.status,
@@ -312,6 +322,54 @@ export default function HomePage() {
     };
   }, [debouncedSearch, selectedCategory, selectedStatus, sortOption]);
 
+  const handleSortChange = (newSort: string) => {
+    if (newSort === 'nearest') {
+      if (typeof window === 'undefined' || !navigator.geolocation) {
+        setGeoNotice(t('locationPermissionDenied'));
+        setSortOption('trending');
+        return;
+      }
+      setIsLocating(true);
+      setGeoNotice(null);
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          setIsLocating(false);
+          setUserCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+          setSortOption('nearest');
+        },
+        () => {
+          setIsLocating(false);
+          setGeoNotice(t('locationPermissionDenied'));
+          setSortOption('trending');
+        },
+        { enableHighAccuracy: true, timeout: 8000 }
+      );
+    } else {
+      setGeoNotice(null);
+      setSortOption(newSort);
+    }
+  };
+
+  const displayedIssues = React.useMemo(() => {
+    if (sortOption === 'nearest' && userCoords) {
+      return [...issues]
+        .map((it) => {
+          const coords = it.location?.coordinates;
+          const dist =
+            coords && coords[0] && coords[1]
+              ? calculateDistanceMeters(userCoords.lat, userCoords.lng, coords[1], coords[0])
+              : 9999999;
+          return { item: it, dist };
+        })
+        .sort((a, b) => a.dist - b.dist)
+        .map((obj) => ({
+          ...obj.item,
+          _calculatedDist: obj.dist < 9999999 ? obj.dist : undefined,
+        }));
+    }
+    return issues;
+  }, [issues, sortOption, userCoords]);
+
   const handleLoadMore = async () => {
     if (!nextCursor || isLoadingMore) return;
     setIsLoadingMore(true);
@@ -320,7 +378,7 @@ export default function HomePage() {
     if (debouncedSearch.trim()) params.append('q', debouncedSearch.trim());
     if (selectedCategory !== 'all') params.append('category', selectedCategory);
     if (selectedStatus !== 'all') params.append('status', selectedStatus);
-    params.append('sort', sortOption);
+    params.append('sort', sortOption === 'nearest' ? 'trending' : sortOption);
     params.append('limit', '20');
     params.append('cursor', nextCursor);
 
@@ -402,42 +460,9 @@ export default function HomePage() {
         {/* ============================================================ */}
         {activeTab === 'home' && (
           <div>
-            {/* Hero Quick Action Card */}
-            <section className="bg-gradient-to-r from-orange-600 to-amber-600 rounded-3xl p-5 sm:p-7 text-white shadow-md mb-6">
-              <div className="max-w-xl">
-                <div className="inline-flex items-center gap-1.5 text-[11px] uppercase font-bold tracking-wider bg-white/20 px-3 py-1 rounded-full mb-2">
-                  <span className="font-extrabold text-orange-200">RAISE</span>
-                  <span>&bull;</span>
-                  <span>Report &bull; Amplify &bull; Inform &bull; Solve &bull; Escalate</span>
-                </div>
-                <h1 className="text-xl sm:text-2xl font-black leading-tight mb-2">
-                  {t('feedHeroTitle')}
-                </h1>
-                <p className="text-xs sm:text-sm text-orange-100 mb-4 leading-relaxed">
-                  {t('feedHeroSubtitle')}
-                </p>
-                <div className="flex flex-wrap items-center gap-2">
-                  <button
-                    onClick={handleRaiseIssueClick}
-                    className="flex items-center gap-2 bg-white text-orange-700 hover:bg-orange-50 px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm shadow-sm transition cursor-pointer"
-                  >
-                    <Plus className="w-4 h-4 stroke-[3]" />
-                    <span>{t('raiseIssueBtn')}</span>
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('offices')}
-                    className="flex items-center gap-1.5 bg-orange-700/60 hover:bg-orange-700 text-white px-3.5 py-2.5 rounded-xl font-semibold text-xs transition cursor-pointer"
-                  >
-                    <Building2 className="w-4 h-4" />
-                    <span>{t('viewOffices')}</span>
-                  </button>
-                </div>
-              </div>
-            </section>
-
             {/* Search Bar */}
             <div className="mb-4">
-              <div className="relative w-full">
+              <div className="relative">
                 <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                 <input
                   type="text"
@@ -458,86 +483,87 @@ export default function HomePage() {
               </div>
             </div>
 
-            {/* View Mode Toggle, Status Filter & Sorting Bar */}
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 pb-3 mb-4">
-              {/* View Switcher: Feed Grid vs Interactive Map */}
-              <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
-                <button
-                  onClick={() => setViewMode('feed')}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition ${
-                    viewMode === 'feed'
-                      ? 'bg-white text-slate-900 shadow-xs'
-                      : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  <Grid className="w-3.5 h-3.5" />
-                  <span>{t('viewFeedGrid')}</span>
-                </button>
-                <button
-                  onClick={() => setViewMode('map')}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition ${
-                    viewMode === 'map'
-                      ? 'bg-white text-blue-700 shadow-xs'
-                      : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  <MapIcon className="w-3.5 h-3.5 text-blue-600" />
-                  <span>{t('viewMapView')}</span>
-                </button>
-              </div>
-
-              {/* Status, Sort & Data Saver Controls */}
-              <div className="flex items-center gap-2 flex-wrap">
-                {/* Data Saver Mode Toggle */}
-                <button
-                  type="button"
-                  onClick={() => setDataSaver(!dataSaver)}
-                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold transition border cursor-pointer ${
-                    dataSaver
-                      ? 'bg-amber-500 text-white border-amber-600 shadow-xs'
-                      : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
-                  }`}
-                  title="Data Saver: Hide photos by default for low-bandwidth 2G/3G connections"
-                >
-                  <Wifi className="w-3.5 h-3.5" />
-                  <span>{dataSaver ? 'Data Saver: ON' : 'Data Saver'}</span>
-                </button>
-
-                {/* Status Filter Dropdown */}
-                <div className="relative">
-                  <select
-                    aria-label={t('filterStatus')}
-                    value={selectedStatus}
-                    onChange={(e) => setSelectedStatus(e.target.value)}
-                    className="text-xs bg-white text-slate-700 border border-slate-200 rounded-xl px-2.5 py-1.5 font-semibold focus:outline-none focus:ring-1 focus:ring-orange-500 cursor-pointer shadow-xs"
+            {/* Status Filter, Sort & Data Saver Controls Bar */}
+            <div className="border-b border-gray-200 pb-3 mb-4 space-y-2">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                {/* Status, Sort & Data Saver Controls */}
+                <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
+                  {/* Data Saver Mode Toggle */}
+                  <button
+                    type="button"
+                    onClick={() => setDataSaver(!dataSaver)}
+                    className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold transition border cursor-pointer ${
+                      dataSaver
+                        ? 'bg-amber-500 text-white border-amber-600 shadow-xs'
+                        : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                    }`}
+                    title="Data Saver: Hide photos by default for low-bandwidth 2G/3G connections"
                   >
-                    <option value="all">{t('filterAll')}</option>
-                    <option value="open">{t('filterOpen')}</option>
-                    <option value="in_progress">{t('filterInProgress')}</option>
-                    <option value="resolved">{t('filterResolved')}</option>
-                    <option value="disputed">{t('filterDisputed')}</option>
-                  </select>
-                </div>
+                    <Wifi className="w-3.5 h-3.5" />
+                    <span>{dataSaver ? 'Data Saver: ON' : 'Data Saver'}</span>
+                  </button>
 
-                {/* Sort Dropdown */}
-                <div className="relative">
-                  <select
-                    aria-label={t('sortBy')}
-                    value={sortOption}
-                    onChange={(e) => setSortOption(e.target.value)}
-                    className="text-xs bg-white text-slate-700 border border-slate-200 rounded-xl px-2.5 py-1.5 font-semibold focus:outline-none focus:ring-1 focus:ring-orange-500 cursor-pointer shadow-xs"
-                  >
-                    <option value="trending">{t('sortTrending')}</option>
-                    <option value="newest">{t('sortNewest')}</option>
-                    <option value="overdue">{t('sortUrgent')}</option>
-                    <option value="recently_updated">{t('sortRecentlyUpdated')}</option>
-                  </select>
+                  {/* Status Filter Dropdown */}
+                  <div className="relative">
+                    <select
+                      aria-label={t('filterStatus')}
+                      value={selectedStatus}
+                      onChange={(e) => setSelectedStatus(e.target.value)}
+                      className="text-xs bg-white text-slate-700 border border-slate-200 rounded-xl px-2.5 py-1.5 font-semibold focus:outline-none focus:ring-1 focus:ring-orange-500 cursor-pointer shadow-xs"
+                    >
+                      <option value="all">{t('filterAll')}</option>
+                      <option value="open">{t('filterOpen')}</option>
+                      <option value="in_progress">{t('filterInProgress')}</option>
+                      <option value="resolved">{t('filterResolved')}</option>
+                      <option value="disputed">{t('filterDisputed')}</option>
+                    </select>
+                  </div>
+
+                  {/* Sort Dropdown */}
+                  <div className="relative">
+                    <select
+                      aria-label={t('sortBy')}
+                      value={sortOption}
+                      onChange={(e) => handleSortChange(e.target.value)}
+                      className="text-xs bg-white text-slate-700 border border-slate-200 rounded-xl px-2.5 py-1.5 font-semibold focus:outline-none focus:ring-1 focus:ring-orange-500 cursor-pointer shadow-xs"
+                    >
+                      <option value="trending">{t('sortTrending')}</option>
+                      <option value="nearest">📍 {t('sortNearest')}</option>
+                      <option value="newest">{t('sortNewest')}</option>
+                      <option value="overdue">{t('sortUrgent')}</option>
+                      <option value="recently_updated">{t('sortRecentlyUpdated')}</option>
+                    </select>
+                  </div>
+
+                  {isLocating && (
+                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-semibold animate-pulse">
+                      <Navigation className="w-3.5 h-3.5 animate-spin" />
+                      <span>{t('locatingMessage')}</span>
+                    </div>
+                  )}
                 </div>
 
                 <div className="text-xs text-gray-500 font-medium pl-1 hidden sm:block">
                   {totalCount} {t('showingIssuesCount')}
                 </div>
               </div>
+
+              {/* Geo Permission Notice (non-blocking fallback banner) */}
+              {geoNotice && (
+                <div className="p-2.5 bg-blue-50 border border-blue-200 rounded-xl text-xs text-blue-900 flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <Navigation className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                    <span>{geoNotice}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setGeoNotice(null)}
+                    className="text-blue-700 hover:text-blue-950 font-bold text-xs cursor-pointer p-0.5"
+                  >
+                    ✕
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Category Pill Filters */}
@@ -569,72 +595,73 @@ export default function HomePage() {
               )}
             </div>
 
-            {/* Main Discovery View: Map vs Feed */}
-            {viewMode === 'map' ? (
-              <div className="mb-8">
-                <IssueMapView
-                  issues={issues.map((it) => ({
-                    _id: it._id,
-                    title: it.title,
-                    category: it.category,
-                    status: it.status,
-                    raiseCount: it.raiseCount,
-                    location: it.location as any,
-                    office: it.office ? { name: it.office.name, nameMr: it.office.nameMr } : undefined,
-                  }))}
-                />
-              </div>
-            ) : (
-              <div>
-                {/* Empty State */}
-                {issues.length === 0 && !isInitialLoading && (
-                  <div className="p-12 text-center bg-white rounded-2xl border border-slate-200 shadow-xs mb-8">
-                    <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-3 text-slate-400">
-                      <Search className="w-6 h-6" />
-                    </div>
-                    <h3 className="text-base font-bold text-slate-800 mb-1">
-                      {t('noIssuesFound')}
-                    </h3>
-                    <p className="text-xs text-slate-500 mb-4">
-                      Try adjusting your keywords, category, or status filters.
-                    </p>
-                    <button
-                      onClick={() => {
-                        setSearchQuery('');
-                        setSelectedCategory('all');
-                        setSelectedStatus('all');
-                      }}
-                      className="px-4 py-2 bg-orange-600 text-white text-xs font-bold rounded-xl hover:bg-orange-700 transition"
-                    >
-                      {t('clearSearch')}
-                    </button>
+            {/* Discovery Feed Grid View */}
+            <div>
+              {/* Empty State */}
+              {displayedIssues.length === 0 && !isInitialLoading && (
+                <div className="p-12 text-center bg-white rounded-2xl border border-slate-200 shadow-xs mb-8">
+                  <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-3 text-slate-400">
+                    <Search className="w-6 h-6" />
                   </div>
-                )}
-
-                {/* 2-Column Responsive Feed Grid */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                  {issues.map((issue) => (
-                    <IssueCard key={issue._id} issue={issue} dataSaver={dataSaver} />
-                  ))}
+                  <h3 className="text-base font-bold text-slate-800 mb-1">
+                    {t('noIssuesFound')}
+                  </h3>
+                  <p className="text-xs text-slate-500 mb-4">
+                    Try adjusting your keywords, category, or status filters.
+                  </p>
+                  <button
+                    onClick={() => {
+                      setSearchQuery('');
+                      setSelectedCategory('all');
+                      setSelectedStatus('all');
+                    }}
+                    className="px-4 py-2 bg-orange-600 text-white text-xs font-bold rounded-xl hover:bg-orange-700 transition"
+                  >
+                    {t('clearSearch')}
+                  </button>
                 </div>
+              )}
 
-                {/* Cursor Pagination: Load More Grievances */}
-                {hasMore && (
-                  <div className="mt-8 text-center">
-                    <button
-                      onClick={handleLoadMore}
-                      disabled={isLoadingMore}
-                      className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-white border border-slate-300 text-slate-800 font-bold text-xs sm:text-sm hover:bg-slate-50 hover:border-slate-400 transition shadow-xs disabled:opacity-50"
-                    >
-                      {isLoadingMore && <RefreshCw className="w-4 h-4 animate-spin text-orange-600" />}
-                      <span>
-                        {isLoadingMore ? t('loadingIssues') : t('loadMoreIssues')}
-                      </span>
-                    </button>
-                  </div>
-                )}
+              {/* 2-Column Responsive Feed Grid */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {displayedIssues.map((issue) => (
+                  <IssueCard
+                    key={issue._id}
+                    issue={issue}
+                    dataSaver={dataSaver}
+                    distanceMeters={(issue as any)._calculatedDist}
+                  />
+                ))}
               </div>
-            )}
+
+              {/* Cursor Pagination: Load More Grievances */}
+              {hasMore && (
+                <div className="mt-8 text-center">
+                  <button
+                    onClick={handleLoadMore}
+                    disabled={isLoadingMore}
+                    className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-white border border-slate-300 text-slate-800 font-bold text-xs sm:text-sm hover:bg-slate-50 hover:border-slate-400 transition shadow-xs disabled:opacity-50"
+                  >
+                    {isLoadingMore && <RefreshCw className="w-4 h-4 animate-spin text-orange-600" />}
+                    <span>
+                      {isLoadingMore ? t('loadingIssues') : t('loadMoreIssues')}
+                    </span>
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Floating Action Button (FAB) for Quick Grievance Submission */}
+            <button
+              type="button"
+              onClick={handleRaiseIssueClick}
+              aria-label={t('raiseIssueBtn')}
+              title={t('raiseIssueBtn')}
+              className="fixed bottom-20 sm:bottom-8 right-5 sm:right-8 z-40 bg-orange-600 hover:bg-orange-700 active:bg-orange-800 text-white px-5 py-3.5 sm:px-6 sm:py-4 rounded-full font-bold text-xs sm:text-sm shadow-2xl hover:shadow-orange-600/40 flex items-center gap-2.5 transition-all transform hover:scale-105 active:scale-95 cursor-pointer ring-4 ring-orange-500/20 tracking-wide"
+            >
+              <Plus className="w-5 h-5 stroke-[3]" />
+              <span>{t('raiseIssueBtn')}</span>
+            </button>
           </div>
         )}
 

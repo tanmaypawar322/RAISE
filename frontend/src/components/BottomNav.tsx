@@ -113,7 +113,7 @@ export function BottomNav({ activeTab, onTabChange, onOpenRaiseModal }: BottomNa
         <button
           onClick={() => {
             if (!user) {
-              openAuthModal();
+              window.location.href = '/sign-in';
             } else {
               onTabChange('profile');
             }

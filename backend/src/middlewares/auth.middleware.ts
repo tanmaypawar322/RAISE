@@ -28,14 +28,24 @@ declare global {
   }
 }
 
-export async function requireAuth(req: Request, res: Response, next: NextFunction): Promise<void> {
+function extractToken(req: Request): string | undefined {
   const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    return authHeader.split(' ')[1];
+  }
+  if (req.cookies && (req.cookies.raise_token || req.cookies.accessToken)) {
+    return req.cookies.raise_token || req.cookies.accessToken;
+  }
+  return undefined;
+}
+
+export async function requireAuth(req: Request, res: Response, next: NextFunction): Promise<void> {
+  const token = extractToken(req);
+  if (!token) {
     res.status(401).json({ success: false, message: 'Authentication required. Please log in.' });
     return;
   }
 
-  const token = authHeader.split(' ')[1];
   try {
     const decoded = jwt.verify(token, config.jwtSecret) as AuthUserPayload;
 
@@ -95,9 +105,8 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
 }
 
 export async function optionalAuth(req: Request, res: Response, next: NextFunction): Promise<void> {
-  const authHeader = req.headers.authorization;
-  if (authHeader && authHeader.startsWith('Bearer ')) {
-    const token = authHeader.split(' ')[1];
+  const token = extractToken(req);
+  if (token) {
     try {
       const decoded = jwt.verify(token, config.jwtSecret) as AuthUserPayload;
 
@@ -114,6 +123,47 @@ export async function optionalAuth(req: Request, res: Response, next: NextFuncti
     }
   }
   next();
+}
+
+/**
+ * Gates API access when config.appRequireLogin is true.
+ * If APP_REQUIRE_LOGIN is false, allows unauthenticated requests.
+ * If APP_REQUIRE_LOGIN is true, enforces requireAuth.
+ */
+export async function gateApiAccess(req: Request, res: Response, next: NextFunction): Promise<void> {
+  if (!config.appRequireLogin) {
+    await optionalAuth(req, res, next);
+    return;
+  }
+  await requireAuth(req, res, next);
+}
+
+/**
+ * Gates issue detail endpoint based on APP_REQUIRE_LOGIN and PUBLIC_ISSUE_PAGES.
+ * If PUBLIC_ISSUE_PAGES is true, allows unauthenticated read-only access via optionalAuth.
+ * If PUBLIC_ISSUE_PAGES is false and APP_REQUIRE_LOGIN is true, enforces requireAuth.
+ * If APP_REQUIRE_LOGIN is false, allows unauthenticated access via optionalAuth.
+ */
+export async function gateIssueDetailAccess(req: Request, res: Response, next: NextFunction): Promise<void> {
+  if (config.publicIssuePages || !config.appRequireLogin) {
+    await optionalAuth(req, res, next);
+    return;
+  }
+  await requireAuth(req, res, next);
+}
+
+/**
+ * Gates representative / office record pages and published monthly reports.
+ * If PUBLIC_RECORD_PAGES is true, allows unauthenticated read-only access via optionalAuth.
+ * If PUBLIC_RECORD_PAGES is false and APP_REQUIRE_LOGIN is true, enforces requireAuth.
+ * If APP_REQUIRE_LOGIN is false, allows unauthenticated access via optionalAuth.
+ */
+export async function gateRecordPageAccess(req: Request, res: Response, next: NextFunction): Promise<void> {
+  if (config.publicRecordPages || !config.appRequireLogin) {
+    await optionalAuth(req, res, next);
+    return;
+  }
+  await requireAuth(req, res, next);
 }
 
 /**

@@ -1,27 +1,28 @@
 import { Router } from 'express';
 import multer from 'multer';
 import { IssuesController } from './issues.controller.js';
-import { requireAuth, optionalAuth, requireRole } from '../../middlewares/auth.middleware.js';
+import { requireAuth, optionalAuth, requireRole, gateApiAccess, gateIssueDetailAccess } from '../../middlewares/auth.middleware.js';
 
 const router = Router();
 const upload = multer({
   limits: {
-    fileSize: 10 * 1024 * 1024,
+    fileSize: 50 * 1024 * 1024,
   },
 });
 
 // Citizen personalized feeds (placed before /:id)
 router.get('/my-issues', requireAuth, IssuesController.getMyIssues);
 router.get('/my-supported', requireAuth, IssuesController.getMySupportedIssues);
-router.get('/office/:officeId', IssuesController.getOfficeIssues);
+router.get('/supported-by-me', requireAuth, IssuesController.getMySupportedIssues);
+router.get('/office/:officeId', gateApiAccess, IssuesController.getOfficeIssues);
 
-// Public issues feed
-router.get('/', IssuesController.getIssues);
-router.post('/suggest-office', IssuesController.suggestOffice);
-router.get('/similar', IssuesController.getSimilarIssues);
-router.get('/map-bounds', IssuesController.getMapBounds);
-router.get('/:id', optionalAuth, IssuesController.getIssueById);
-router.post('/', optionalAuth, upload.array('media', 4), IssuesController.createIssue);
+// Public issues feed (gated when APP_REQUIRE_LOGIN=true)
+router.get('/', gateApiAccess, IssuesController.getIssues);
+router.post('/suggest-office', gateApiAccess, IssuesController.suggestOffice);
+router.get('/similar', gateApiAccess, IssuesController.getSimilarIssues);
+router.post('/assisted', requireAuth, upload.array('media', 10), IssuesController.createAssistedIssue);
+router.get('/:id', gateIssueDetailAccess, IssuesController.getIssueById);
+router.post('/', gateApiAccess, upload.array('media', 10), IssuesController.createIssue);
 
 // Citizen Actions
 router.post('/:id/raise', requireAuth, IssuesController.raiseIssue);

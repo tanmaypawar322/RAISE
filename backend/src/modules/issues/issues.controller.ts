@@ -5,6 +5,7 @@ import { User } from '../../models/User.js';
 import { Issue, IMediaItem } from '../../models/Issue.js';
 import { Raise } from '../../models/Raise.js';
 import { Office } from '../../models/Office.js';
+import { Jurisdiction } from '../../models/Jurisdiction.js';
 import { StorageService } from '../../services/storage.service.js';
 import { OtpService } from '../../services/otp.service.js';
 import { OfficeRoutingService } from '../../services/office-routing.service.js';
@@ -82,20 +83,66 @@ export function serializeIssue(issue: any): any {
   return obj;
 }
 
+export const WARD_CENTROIDS: Record<string, [number, number]> = {
+  'Ward 12': [73.7842, 18.6508],
+  'Ward 12 (Nigdi - Pradhikaran)': [73.7842, 18.6508],
+  'Ward 10': [73.774, 18.648],
+  'Ward 10 (Akurdi)': [73.774, 18.648],
+  'Ward 18': [73.789, 18.628],
+  'Ward 18 (Chinchwad Station)': [73.789, 18.628],
+  'Ward 22': [73.805, 18.625],
+  'Ward 22 (Pimpri Market)': [73.805, 18.625],
+  'Ward 8': [73.845, 18.627],
+  'Ward 8 (Bhosari)': [73.845, 18.627],
+};
+
 const CreateIssueSchema = z.object({
   title: z.string().min(5).max(150),
   description: z.string().min(10).max(2000),
   category: z.enum(['roads', 'water', 'sanitation', 'health', 'education', 'electricity', 'other']),
   officeId: z.string(),
   isAnonymous: z.preprocess((val) => val === 'true' || val === true, z.boolean()).default(false),
-  latitude: z.preprocess((val) => parseFloat(val as string), z.number().min(-90).max(90)),
-  longitude: z.preprocess((val) => parseFloat(val as string), z.number().min(-180).max(180)),
+  landmark: z
+    .string()
+    .min(5, 'Landmark description must be at least 5 characters')
+    .max(120, 'Landmark description cannot exceed 120 characters')
+    .optional()
+    .default('Near ward center'),
+  latitude: z.preprocess(
+    (val) => (val !== undefined && val !== null && val !== '' ? parseFloat(val as string) : undefined),
+    z.number().min(8.0, 'Latitude must be within India bounds (min 8.0)').max(37.5, 'Latitude must be within India bounds (max 37.5)').optional()
+  ),
+  longitude: z.preprocess(
+    (val) => (val !== undefined && val !== null && val !== '' ? parseFloat(val as string) : undefined),
+    z.number().min(68.0, 'Longitude must be within India bounds (min 68.0)').max(97.5, 'Longitude must be within India bounds (max 97.5)').optional()
+  ),
   address: z.string().optional(),
-  ward: z.string().optional(),
+  ward: z.string().optional().default('Ward 12'),
   city: z.string().default('Pimpri-Chinchwad'),
   phone: z.string().optional(),
   otp: z.string().optional(),
   possibleDuplicateOf: z.string().optional(),
+});
+
+const CreateAssistedIssueSchema = z.object({
+  title: z.string().min(5).max(150),
+  description: z.string().min(10).max(2000),
+  category: z.enum(['roads', 'water', 'sanitation', 'health', 'education', 'electricity', 'other']),
+  officeId: z.string(),
+  settlementType: z.enum(['rural_panchayat', 'urban_municipal']).default('rural_panchayat'),
+  citizenName: z.string().min(2, 'Citizen name must be at least 2 characters').max(100),
+  citizenPhone: z.string().min(10, 'Mobile number must be at least 10 digits').max(15),
+  villageOrWard: z.string().optional().default('Gram Panchayat'),
+  landmark: z.string().optional().default('Village center'),
+  latitude: z.preprocess(
+    (val) => (val !== undefined && val !== null && val !== '' ? parseFloat(val as string) : undefined),
+    z.number().min(8.0).max(37.5).optional()
+  ),
+  longitude: z.preprocess(
+    (val) => (val !== undefined && val !== null && val !== '' ? parseFloat(val as string) : undefined),
+    z.number().min(68.0).max(97.5).optional()
+  ),
+  address: z.string().optional(),
 });
 
 export class IssuesController {
@@ -259,6 +306,15 @@ export class IssuesController {
               mimeType: processed.mimeType,
               sizeBytes: processed.sizeBytes,
             });
+          } else if (file.mimetype.startsWith('video/')) {
+            const processed = await StorageService.saveVideo(file.buffer, file.originalname, file.mimetype);
+            mediaItems.push({
+              type: 'video',
+              url: processed.url,
+              filename: processed.filename,
+              mimeType: processed.mimeType,
+              sizeBytes: processed.sizeBytes,
+            });
           } else if (file.mimetype.startsWith('audio/')) {
             const processed = await StorageService.saveVoiceNote(file.buffer, file.originalname.split('.').pop());
             mediaItems.push({
@@ -290,6 +346,34 @@ export class IssuesController {
       const initialStatus = modResult.decision === 'review' ? 'under_review' : 'published';
       const initialModState = modResult.decision === 'review' ? 'flagged' : 'clean';
 
+      let finalLng = data.longitude;
+      let finalLat = data.latitude;
+      if (finalLng === undefined || finalLat === undefined) {
+        const centroid = WARD_CENTROIDS[data.ward || 'Ward 12'] || [73.7842, 18.6508];
+        finalLng = centroid[0];
+        finalLat = centroid[1];
+      }
+
+      // Denormalize containment: find all containing jurisdiction polygons via $geoIntersects
+      const containingJurisdictions = await Jurisdiction.find({
+        boundary: {
+          $geoIntersects: {
+            $geometry: {
+              type: 'Point',
+              coordinates: [finalLng, finalLat],
+            },
+          },
+        },
+        active: true,
+      }).select('_id');
+
+      const jurisdictionIds: mongoose.Types.ObjectId[] = containingJurisdictions.map(
+        (j) => j._id as mongoose.Types.ObjectId
+      );
+      if (office.jurisdictionId && !jurisdictionIds.some((id) => id.equals(office.jurisdictionId))) {
+        jurisdictionIds.push(office.jurisdictionId as mongoose.Types.ObjectId);
+      }
+
       const issue = await Issue.create({
         authorId: authorUserId,
         isAnonymous: isAnon,
@@ -298,14 +382,16 @@ export class IssuesController {
         category: data.category,
         officeId: office._id,
         jurisdictionId: office.jurisdictionId,
+        jurisdictionIds,
         slaHours,
         slaDeadline,
         escalationLevel: 0,
         escalationHistory: [],
         location: {
           type: 'Point',
-          coordinates: [data.longitude, data.latitude],
+          coordinates: [finalLng, finalLat],
           address: data.address,
+          landmark: data.landmark,
           ward: data.ward,
           city: data.city,
         },
@@ -367,7 +453,173 @@ export class IssuesController {
     } catch (err) {
       next(err);
     }
+  }
 
+  static async createAssistedIssue(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      if (!req.user) {
+        res.status(401).json({ success: false, message: 'Authentication required for assisted reporting' });
+        return;
+      }
+
+      const data = CreateAssistedIssueSchema.parse(req.body);
+      const files = req.files as Express.Multer.File[] | undefined;
+
+      const office = await Office.findById(data.officeId);
+      if (!office) {
+        res.status(400).json({ success: false, message: 'Designated office not found.' });
+        return;
+      }
+
+      const normalizedPhone = OtpService.normalizePhone(data.citizenPhone);
+      const phoneMasked = OtpService.maskPhone(normalizedPhone);
+      const phoneEnc = OtpService.encryptPhone(normalizedPhone);
+      const trackingToken = `RAISE-GP-${Math.floor(100000 + Math.random() * 900000)}`;
+
+      // Upload media if present
+      const mediaItems: IMediaItem[] = [];
+      if (files && files.length > 0) {
+        for (const file of files) {
+          if (file.mimetype.startsWith('image/')) {
+            const processed = await StorageService.saveImage(file.buffer, file.originalname);
+            mediaItems.push({
+              type: 'photo',
+              url: processed.url,
+              filename: processed.filename,
+              mimeType: processed.mimeType,
+              sizeBytes: processed.sizeBytes,
+            });
+          } else if (file.mimetype.startsWith('audio/')) {
+            const processed = await StorageService.saveVoiceNote(file.buffer);
+            mediaItems.push({
+              type: 'voice_note',
+              url: processed.url,
+              filename: processed.filename,
+              mimeType: processed.mimeType,
+              sizeBytes: processed.sizeBytes,
+            });
+          }
+        }
+      }
+
+      const slaHours = OfficeRoutingService.resolveSlaHours(office, data.category, 48);
+      const slaDeadline = EscalationService.calculateSlaDeadline(new Date(), slaHours);
+
+      const { getModerationProvider } = await import('../../services/moderation/moderation-provider.js');
+      const modResult = await getModerationProvider().checkText(`${data.title} ${data.description}`);
+
+      if (modResult.decision === 'block') {
+        res.status(422).json({
+          success: false,
+          message: modResult.reason || 'Content rejected: Violates civic safety policies.',
+        });
+        return;
+      }
+
+      const initialStatus = modResult.decision === 'review' ? 'under_review' : 'published';
+      const initialModState = modResult.decision === 'review' ? 'flagged' : 'clean';
+
+      let finalLng = data.longitude;
+      let finalLat = data.latitude;
+      if (finalLng === undefined || finalLat === undefined) {
+        const centroid = WARD_CENTROIDS[data.villageOrWard] || [73.7842, 18.6508];
+        finalLng = centroid[0];
+        finalLat = centroid[1];
+      }
+
+      const containingJurisdictions = await Jurisdiction.find({
+        boundary: {
+          $geoIntersects: {
+            $geometry: {
+              type: 'Point',
+              coordinates: [finalLng, finalLat],
+            },
+          },
+        },
+        active: true,
+      }).select('_id');
+
+      const jurisdictionIds: mongoose.Types.ObjectId[] = containingJurisdictions.map(
+        (j) => j._id as mongoose.Types.ObjectId
+      );
+      if (office.jurisdictionId && !jurisdictionIds.some((id) => id.equals(office.jurisdictionId))) {
+        jurisdictionIds.push(office.jurisdictionId as mongoose.Types.ObjectId);
+      }
+
+      const issue = await Issue.create({
+        authorId: new mongoose.Types.ObjectId(req.user.userId),
+        isAnonymous: false,
+        title: data.title,
+        description: data.description,
+        category: data.category,
+        officeId: office._id,
+        jurisdictionId: office.jurisdictionId,
+        jurisdictionIds,
+        slaHours,
+        slaDeadline,
+        escalationLevel: 1,
+        escalationTier: 1,
+        settlementType: data.settlementType,
+        isCommunityVerified: false,
+        assistedReporting: {
+          isAssisted: true,
+          assistedByUserId: new mongoose.Types.ObjectId(req.user.userId),
+          citizenName: data.citizenName,
+          citizenPhoneEnc: phoneEnc,
+          citizenPhoneMasked: phoneMasked,
+        },
+        escalationHistory: [],
+        location: {
+          type: 'Point',
+          coordinates: [finalLng, finalLat],
+          address: data.address,
+          landmark: data.landmark,
+          ward: data.villageOrWard,
+          city: office.jurisdiction?.district || office.jurisdiction?.city || 'Rural / District',
+        },
+        media: mediaItems,
+        status: initialStatus,
+        moderationState: initialModState,
+        moderationLabels: modResult.labels,
+        raiseCount: 1,
+        statusTimeline: [
+          {
+            status: initialStatus === 'under_review' ? 'under_review' : 'submitted',
+            note: `Grievance registered in Assisted Mode by Sahayak (${req.user.displayName || 'Volunteer'}) for ${data.citizenName}. SMS Token: ${trackingToken}.`,
+            updatedBy: new mongoose.Types.ObjectId(req.user.userId),
+            updatedAt: new Date(),
+          },
+        ],
+      });
+
+      await Raise.create({
+        userId: new mongoose.Types.ObjectId(req.user.userId),
+        issueId: issue._id,
+        weight: 1.0,
+      }).catch(() => {});
+
+      await Office.findByIdAndUpdate(office._id, { $inc: { 'stats.issuesTotal': 1 } });
+
+      await AuditService.log({
+        action: 'assisted_issue_created',
+        targetType: 'issue',
+        targetId: issue._id.toString(),
+        actorId: req.user.userId,
+        details: {
+          citizenName: data.citizenName,
+          trackingToken,
+          settlementType: data.settlementType,
+        },
+      });
+
+      res.status(201).json({
+        success: true,
+        issue: serializeIssue(issue),
+        trackingToken,
+      });
+    } catch (err) {
+      next(err);
+    }
   }
 
   static async getIssues(req: Request, res: Response, next: NextFunction): Promise<void> {
@@ -556,84 +808,6 @@ export class IssuesController {
         hasMore,
         nextCursor,
         issues: issues.map(serializeIssue),
-      });
-    } catch (err) {
-      next(err);
-    }
-  }
-
-  static async getMapBounds(req: Request, res: Response, next: NextFunction): Promise<void> {
-    try {
-      const { minLng, minLat, maxLng, maxLat, category, status, limit = 200 } = req.query;
-
-      if (!minLng || !minLat || !maxLng || !maxLat) {
-        res.status(400).json({
-          success: false,
-          message: 'Bounding box coordinates (minLng, minLat, maxLng, maxLat) are required.',
-        });
-        return;
-      }
-
-      const minX = parseFloat(minLng as string);
-      const minY = parseFloat(minLat as string);
-      const maxX = parseFloat(maxLng as string);
-      const maxY = parseFloat(maxLat as string);
-
-      if (isNaN(minX) || isNaN(minY) || isNaN(maxX) || isNaN(maxY)) {
-        res.status(400).json({ success: false, message: 'Invalid coordinates provided.' });
-        return;
-      }
-
-      const filter: any = {
-        moderationState: { $ne: 'hidden' },
-        status: {
-          $in: [
-            'published',
-            'acknowledged',
-            'in_progress',
-            'resolved_pending_confirmation',
-            'resolved',
-            'disputed',
-          ],
-        },
-        'location.coordinates.0': { $gte: minX, $lte: maxX },
-        'location.coordinates.1': { $gte: minY, $lte: maxY },
-      };
-
-      if (category && category !== 'all') filter.category = category;
-      if (status && status !== 'all') filter.status = status;
-
-      const maxPins = Math.min(parseInt(limit as string, 10) || 200, 300);
-
-      const pins = await Issue.find(filter)
-        .select('_id title category status raiseCount location createdAt slaDeadline slaHours')
-        .populate('officeId', 'name nameMr department')
-        .limit(maxPins)
-        .lean();
-
-      const formattedPins = pins.map((p: any) => ({
-        _id: p._id,
-        title: p.title,
-        category: p.category,
-        status: p.status,
-        raiseCount: p.raiseCount,
-        coordinates: p.location?.coordinates || [0, 0],
-        address: p.location?.address || '',
-        ward: p.location?.ward || '',
-        office: p.officeId
-          ? {
-              name: p.officeId.name,
-              nameMr: p.officeId.nameMr,
-              department: p.officeId.department,
-            }
-          : undefined,
-        createdAt: p.createdAt,
-      }));
-
-      res.json({
-        success: true,
-        count: formattedPins.length,
-        pins: formattedPins,
       });
     } catch (err) {
       next(err);

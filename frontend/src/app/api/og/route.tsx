@@ -53,7 +53,7 @@ export async function GET(req: NextRequest) {
                   fontWeight: 600,
                 }}
               >
-                लोकआवाज • Citizen Grievance Dossier
+                RAISE • National Citizen Grievance Dossier
               </div>
             </div>
 

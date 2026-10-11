@@ -6,6 +6,11 @@ import { Office } from '../../models/Office.js';
 import { User } from '../../models/User.js';
 import { OfficeInvite } from '../../models/OfficeInvite.js';
 import { Issue } from '../../models/Issue.js';
+import { Jurisdiction } from '../../models/Jurisdiction.js';
+import { CorrectionRequest } from '../../models/CorrectionRequest.js';
+import { MonthlyReport } from '../../models/MonthlyReport.js';
+import { MetricsService } from '../../services/metrics.service.js';
+import { AuditService } from '../../services/audit.service.js';
 
 const PublishReportSchema = z.object({
   title: z.string().min(5).max(120),
@@ -113,9 +118,21 @@ export class OfficesController {
             ) / 10
           : 0;
 
+      // Compute fair scorecard snapshot via MetricsService
+      const metricSnapshot = await MetricsService.computeOfficeMetrics(office._id);
+
+      // Published monthly reports archive
+      const reports = await MonthlyReport.find({
+        targetType: 'office',
+        targetId: office._id,
+        status: 'published',
+      }).sort({ month: -1 });
+
       res.json({
         success: true,
         office,
+        metricSnapshot,
+        reports,
         scorecard: {
           totalIssuesReceived: totalIssues,
           percentAcknowledgedOnTime,
@@ -123,12 +140,60 @@ export class OfficesController {
           medianResolutionDays,
           openIssuesCount,
           overdueCount,
+          isSampleTooSmall: metricSnapshot?.isSampleTooSmall ?? (totalIssues < 10),
           methodology: {
             title: 'How scorecard metrics are calculated',
             explanation:
-              'Total Issues Received is all civic grievances assigned to this jurisdiction. % Acknowledged On Time measures grievances where officials acknowledged before statutory SLA expiry. % Resolved is grievances completed with proof of resolution. Median Resolution Days is the typical elapsed time from submission to verification. Open and Overdue counts track active grievance backlog and SLA compliance.',
+              'Total Issues Received is all civic grievances assigned to this jurisdiction (excluding issues rerouted within 48h). Sample sizes under 10 display counts only to ensure fair statistical representation.',
           },
         },
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  static async submitCorrectionRequest(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { id } = req.params;
+      const data = z
+        .object({
+          itemOrMetric: z.string().min(2).max(120),
+          explanation: z.string().min(10).max(3000),
+          contactEmail: z.string().email(),
+          evidenceFileIds: z.array(z.string()).default([]),
+        })
+        .parse(req.body);
+
+      const office = await Office.findById(id);
+      if (!office) {
+        res.status(404).json({ success: false, message: 'Office not found' });
+        return;
+      }
+
+      const correction = await CorrectionRequest.create({
+        targetType: 'office',
+        targetId: office._id,
+        itemOrMetric: data.itemOrMetric,
+        explanation: data.explanation,
+        contactEmail: data.contactEmail,
+        evidenceFileIds: data.evidenceFileIds || [],
+        status: 'pending',
+      });
+
+      await AuditService.log({
+        actorId: req.user?.userId || 'anonymous_public',
+        actorRole: req.user?.role || 'public',
+        action: 'office_correction_requested',
+        targetType: 'office',
+        targetId: office._id.toString(),
+        details: { itemOrMetric: data.itemOrMetric },
+      });
+
+      res.status(201).json({
+        success: true,
+        message: 'Correction request submitted for administrative audit.',
+        correction,
       });
     } catch (err) {
       next(err);
@@ -341,6 +406,29 @@ export class OfficesController {
       }
 
       res.json({ success: true, reports: office.reports });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  static async getJurisdictions(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { level, type, search } = req.query;
+      const filter: any = {};
+      if (level) filter.level = level;
+      if (type) filter.type = type;
+      if (search) {
+        filter.$or = [
+          { name: { $regex: search as string, $options: 'i' } },
+          { nameMr: { $regex: search as string, $options: 'i' } },
+          { code: { $regex: search as string, $options: 'i' } },
+        ];
+      }
+      const jurisdictions = await Jurisdiction.find(filter)
+        .select('name nameMr nameHi code level type')
+        .sort({ level: 1, name: 1 })
+        .limit(200);
+      res.json({ success: true, jurisdictions });
     } catch (err) {
       next(err);
     }

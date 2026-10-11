@@ -212,7 +212,7 @@ export function Header({ activeTab = 'home', onTabChange, onSignInClick }: Heade
             <button
               onClick={() => {
                 if (onSignInClick) onSignInClick();
-                else openAuthModal();
+                else router.push('/sign-in');
               }}
               className="flex items-center gap-1 px-3.5 py-2 bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold rounded-xl shadow-xs transition cursor-pointer"
             >

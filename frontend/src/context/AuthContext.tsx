@@ -117,6 +117,13 @@ interface AuthContextType {
   resetPassword: (token: string, newPassword: string) => Promise<{ success: boolean; message: string }>;
   changePassword: (currentPassword: string, newPassword: string) => Promise<{ success: boolean; message: string }>;
   addVerifiedPhone: (phone: string, otp: string) => Promise<{ success: boolean; message: string }>;
+  mergeAccounts: (payload: {
+    method: 'phone_otp' | 'email_password';
+    phone?: string;
+    otp?: string;
+    email?: string;
+    password?: string;
+  }) => Promise<{ success: boolean; message?: string }>;
   getRoleRedirectPath: (role?: string) => string;
 }
 
@@ -139,9 +146,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setPendingAction(null);
   };
 
+  const setSessionCookie = (sessionToken: string) => {
+    if (typeof document !== 'undefined') {
+      const isSecure = typeof window !== 'undefined' && window.location.protocol === 'https:';
+      document.cookie = `raise_token=${encodeURIComponent(sessionToken)}; path=/; max-age=604800; SameSite=Lax; ${isSecure ? 'Secure;' : ''}`;
+    }
+  };
+
+  const clearSessionCookie = () => {
+    if (typeof document !== 'undefined') {
+      document.cookie = 'raise_token=; path=/; max-age=0; SameSite=Lax;';
+    }
+  };
+
   const login = (newToken: string, newUser: UserProfile) => {
     setToken(newToken);
     setUser(newUser);
+    setSessionCookie(newToken);
     // Clean any legacy localStorage keys to ensure memory-only storage
     if (typeof window !== 'undefined') {
       localStorage.removeItem('raise_token');
@@ -160,10 +181,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (res.ok && data.success && data.token) {
         setToken(data.token);
         setUser(data.user);
+        setSessionCookie(data.token);
         return data.token;
       } else {
         setToken(null);
         setUser(null);
+        clearSessionCookie();
         return null;
       }
     } catch {
@@ -191,6 +214,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (isMounted && res.ok && data.success && data.token) {
           setToken(data.token);
           setUser(data.user);
+          setSessionCookie(data.token);
+        } else if (isMounted && (!res.ok || !data.success)) {
+          clearSessionCookie();
         }
       } catch {
         // Unauthenticated visitor
@@ -238,6 +264,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     setToken(null);
     setUser(null);
+    clearSessionCookie();
     if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
     if (typeof window !== 'undefined') {
       localStorage.removeItem('raise_token');
@@ -260,6 +287,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     setToken(null);
     setUser(null);
+    clearSessionCookie();
     if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
     if (typeof window !== 'undefined') {
       localStorage.removeItem('raise_token');
@@ -429,9 +457,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const verifyPhoneOtp = async (phone: string, otp: string, isPublicComputer = false) => {
     try {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/auth/otp/verify`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         credentials: 'include',
         body: JSON.stringify({ phone, otp, isPublicComputer }),
       });
@@ -729,6 +760,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const mergeAccounts = async (payload: {
+    method: 'phone_otp' | 'email_password';
+    phone?: string;
+    otp?: string;
+    email?: string;
+    password?: string;
+  }) => {
+    try {
+      let currentToken = token;
+      if (!currentToken) {
+        currentToken = await refreshSession();
+      }
+      if (!currentToken) {
+        return { success: false, message: 'Authentication required.' };
+      }
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/auth/merge-accounts`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${currentToken}`,
+        },
+        credentials: 'include',
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        if (data.user) {
+          setUser(data.user);
+        }
+        return { success: true, message: data.message || 'Accounts successfully merged.' };
+      }
+      return { success: false, message: data.message || 'Failed to merge accounts.' };
+    } catch {
+      return { success: false, message: 'Network error during account merge.' };
+    }
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -761,6 +829,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         resetPassword,
         changePassword,
         addVerifiedPhone,
+        mergeAccounts,
         getRoleRedirectPath,
       }}
     >

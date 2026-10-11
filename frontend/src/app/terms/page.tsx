@@ -30,7 +30,7 @@ export default function TermsPage() {
               नियम, अटी व व्यासपीठ सनद
             </h1>
             <p className="text-xs text-gray-500 mb-8 font-medium leading-relaxed">
-              अंतिम अद्यतन: ऑक्टोबर २०२६ • लोकआवाज (RAISE) व्यासपीठ
+              अंतिम अद्यतन: ऑक्टोबर २०२६ • RAISE व्यासपीठ
             </p>
 
             <div className="space-y-6 text-sm text-gray-700 leading-relaxed">
@@ -79,7 +79,7 @@ export default function TermsPage() {
               नियम, शर्तें एवं नागरिक आचार संहिता
             </h1>
             <p className="text-xs text-gray-500 mb-8 font-medium leading-relaxed">
-              अंतिम अद्यतन: अक्टूबर 2026 • लोकआवाज (RAISE)
+              अंतिम अद्यतन: अक्टूबर 2026 • RAISE
             </p>
 
             <div className="space-y-6 text-sm text-gray-700 leading-relaxed">

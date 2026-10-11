@@ -121,8 +121,8 @@ describe('Phase 3 Rules: Discovery, Search, Filters, Keyset Pagination, Neutrali
     });
   });
 
-  describe('4. Bounding Box Geo Filter for Map Pins', () => {
-    it('filters pins strictly within minLng, minLat, maxLng, maxLat boundaries', () => {
+  describe('4. Proximity & Geo Boundary Logic', () => {
+    it('determines coordinates strictly within pilot ward boundaries', () => {
       // Nigdi Ward 12 Bounding Box roughly: lng [73.76, 73.80], lat [18.64, 18.68]
       const minLng = 73.76;
       const maxLng = 73.80;

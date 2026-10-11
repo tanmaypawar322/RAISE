@@ -40,6 +40,7 @@ router.post('/2fa/disable', requireAuth, AuthController.disable2Fa);
 router.get('/me', requireAuth, AuthController.getMe);
 router.patch('/profile', requireAuth, AuthController.updateProfile);
 router.post('/profile/phone', requireAuth, AuthController.addPhone);
+router.post('/merge-accounts', requireAuth, AuthController.mergeAccounts);
 router.post('/delete-account', requireAuth, AuthController.deleteAccount);
 router.get('/export-data', requireAuth, AuthController.exportData);
 

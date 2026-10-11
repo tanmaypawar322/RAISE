@@ -15,6 +15,16 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const [language, setLanguageState] = useState<Language>('en');
 
   useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const urlLang = params.get('lang') as Language;
+      if (urlLang && (urlLang === 'mr' || urlLang === 'hi' || urlLang === 'en')) {
+        setLanguageState(urlLang);
+        localStorage.setItem('raise_lang', urlLang);
+        return;
+      }
+    }
+
     const saved = localStorage.getItem('raise_lang') as Language;
     if (saved && (saved === 'mr' || saved === 'hi' || saved === 'en')) {
       setLanguageState(saved);

@@ -100,5 +100,28 @@ export class StorageService {
       sizeBytes: buffer.length,
     };
   }
+
+  /**
+   * Save video file (mp4, webm, mov, max 50MB)
+   */
+  static async saveVideo(buffer: Buffer, originalname: string = 'video.mp4', mimeType: string = 'video/mp4'): Promise<ProcessedFile> {
+    await this.init();
+    const id = crypto.randomUUID();
+    let ext = 'mp4';
+    if (mimeType.includes('webm') || originalname.endsWith('.webm')) ext = 'webm';
+    else if (mimeType.includes('quicktime') || originalname.endsWith('.mov')) ext = 'mov';
+    else if (mimeType.includes('ogg') || originalname.endsWith('.ogv')) ext = 'ogv';
+    const filename = `video_${id}.${ext}`;
+    const targetPath = path.join(this.uploadDir, filename);
+
+    await fs.writeFile(targetPath, buffer);
+
+    return {
+      url: `/uploads/${filename}`,
+      filename,
+      mimeType: mimeType || (ext === 'webm' ? 'video/webm' : 'video/mp4'),
+      sizeBytes: buffer.length,
+    };
+  }
 }
 

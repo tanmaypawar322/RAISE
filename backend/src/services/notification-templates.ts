@@ -214,6 +214,74 @@ const TEMPLATES: Record<
       body: `समय सीमा समाप्त होने के कारण अधीनस्थ कार्यालय से "${v.issueTitle || 'शिकायत'}" आपके कार्यालय को प्राप्त हुई है।`,
     }),
   },
+  rep_asked: {
+    en: (v) => ({
+      title: 'Representative Requested',
+      body: `A citizen asked you to look into "${v.issueTitle || 'Issue'}". Statutory response SLA is 72 hours.`,
+      smsText: `RAISE: Citizen asked your office to look into issue: ${v.issueTitle || 'Issue'}. Response SLA: 72h. Track: ${v.linkUrl || 'https://raise.org'}`,
+    }),
+    mr: (v) => ({
+      title: 'लोकप्रतिनिधींना लक्ष घालण्याची विनंती',
+      body: `नागरिकाने "${v.issueTitle || 'तक्रार'}" मध्ये लक्ष घालण्याची विनंती केली आहे. प्रतिसाद कालमर्यादा ७२ तास आहे.`,
+      smsText: `RAISE: नागरिकाने तक्रारीकडे लक्ष देण्याची विनंती केली: ${v.issueTitle || 'तक्रार'}. मुदत: ७२ तास. पहा: ${v.linkUrl || 'https://raise.org'}`,
+    }),
+    hi: (v) => ({
+      title: 'प्रतिनिधि से संज्ञान का अनुरोध',
+      body: `नागरिक ने "${v.issueTitle || 'शिकायत'}" पर संज्ञान लेने का अनुरोध किया है। प्रतिक्रिया SLA 72 घंटे है।`,
+      smsText: `RAISE: नागरिक ने शिकायत पर संज्ञान लेने का अनुरोध किया: ${v.issueTitle || 'शिकायत'}. SLA: 72 घंटे. स्थिति: ${v.linkUrl || 'https://raise.org'}`,
+    }),
+  },
+  rep_taken_up: {
+    en: (v) => ({
+      title: 'Issue Taken Up by Representative',
+      body: `${v.officeName || 'Elected representative'} has officially taken up "${v.issueTitle || 'Issue'}".`,
+      smsText: `RAISE: Your issue "${v.issueTitle || 'Issue'}" has been officially taken up by representative ${v.officeName || ''}. Track: ${v.linkUrl || 'https://raise.org'}`,
+    }),
+    mr: (v) => ({
+      title: 'लोकप्रतिनिधींनी तक्रार हाती घेतली',
+      body: `${v.officeName || 'लोकप्रतिनिधींनी'} "${v.issueTitle || 'तक्रार'}" अधिकृतपणे पाठपुराव्यासाठी हाती घेतली आहे.`,
+      smsText: `RAISE: तुमची तक्रार "${v.issueTitle || 'तक्रार'}" लोकप्रतिनिधींनी पाठपुराव्यासाठी हाती घेतली आहे. पहा: ${v.linkUrl || 'https://raise.org'}`,
+    }),
+    hi: (v) => ({
+      title: 'प्रतिनिधि द्वारा मुद्दा संज्ञान में लिया गया',
+      body: `${v.officeName || 'जनप्रतिनिधि'} ने आधिकारिक तौर पर "${v.issueTitle || 'शिकायत'}" को संज्ञान में लेकर कार्रवाई शुरू की है।`,
+      smsText: `RAISE: आपकी शिकायत "${v.issueTitle || 'शिकायत'}" को जनप्रतिनिधि ने संज्ञान में ले लिया है। स्थिति: ${v.linkUrl || 'https://raise.org'}`,
+    }),
+  },
+  rep_update_posted: {
+    en: (v) => ({
+      title: 'Representative Published Update',
+      body: `An update was published regarding "${v.issueTitle || 'Issue'}". Labelled: Self-reported.`,
+      smsText: `RAISE: Update posted on issue "${v.issueTitle || 'Issue'}". View: ${v.linkUrl || 'https://raise.org'}`,
+    }),
+    mr: (v) => ({
+      title: 'लोकप्रतिनिधींचे कामकाज अद्यतन',
+      body: `"${v.issueTitle || 'तक्रार'}" बाबत लोकप्रतिनिधींचे अद्यतन प्रसिद्ध झाले आहे. लेबल: स्वयं-नोंदणीकृत.`,
+      smsText: `RAISE: तक्रारीवर नवीन अद्यतन प्रसिद्ध झाले: ${v.linkUrl || 'https://raise.org'}`,
+    }),
+    hi: (v) => ({
+      title: 'प्रतिनिधि द्वारा अपडेट प्रकाशित',
+      body: `"${v.issueTitle || 'शिकायत'}" पर प्रतिनिधि द्वारा अपडेट प्रकाशित किया गया है। लेबल: स्व-प्रतिवेदित।`,
+      smsText: `RAISE: शिकायत पर नया अपडेट प्रकाशित हुआ: ${v.linkUrl || 'https://raise.org'}`,
+    }),
+  },
+  rep_report_published: {
+    en: (v) => ({
+      title: 'Monthly Governance Report Published',
+      body: `Monthly record report for ${v.officeName || 'representative'} is now publicly published.`,
+      smsText: `RAISE: Monthly report published for ${v.officeName || 'office'}. View: ${v.linkUrl || 'https://raise.org'}`,
+    }),
+    mr: (v) => ({
+      title: 'मासिक कामकाज अहवाल प्रसिद्ध',
+      body: `${v.officeName || 'लोकप्रतिनिधींचे'} मासिक कामकाज अहवाल सार्वजनिकरीत्या प्रसिद्ध झाला आहे.`,
+      smsText: `RAISE: मासिक अहवाल प्रसिद्ध झाला आहे. पहा: ${v.linkUrl || 'https://raise.org'}`,
+    }),
+    hi: (v) => ({
+      title: 'मासिक प्रगति रिपोर्ट प्रकाशित',
+      body: `${v.officeName || 'प्रतिनिधि'} की मासिक रिपोर्ट सार्वजनिक रूप से प्रकाशित कर दी गई है।`,
+      smsText: `RAISE: मासिक रिपोर्ट प्रकाशित हुई। देखें: ${v.linkUrl || 'https://raise.org'}`,
+    }),
+  },
 };
 
 export class NotificationTemplates {

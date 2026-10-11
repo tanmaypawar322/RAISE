@@ -13,6 +13,16 @@ import officesRoutes from './modules/offices/offices.routes.js';
 import moderationRoutes from './modules/moderation/moderation.routes.js';
 import adminRoutes from './modules/admin/admin.routes.js';
 import notificationsRoutes from './modules/notifications/notifications.routes.js';
+import representativesRoutes from './modules/representatives/representatives.routes.js';
+import reportsRoutes from './modules/reports/reports.routes.js';
+import analysisRoutes from './modules/analysis/analysis.routes.js';
+import paymentsRoutes from './modules/billing/payments.routes.js';
+import billingRoutes from './modules/billing/billing.routes.js';
+import donationsRoutes from './modules/donations/donations.routes.js';
+import financeRoutes from './modules/finance/finance.routes.js';
+import directivesRoutes from './modules/escalations/directive.routes.js';
+import townhallRoutes from './modules/townhalls/townhall.routes.js';
+import { BillingController } from './modules/billing/billing.controller.js';
 import { errorHandler } from './middlewares/errorHandler.js';
 
 const app = express();
@@ -99,7 +109,13 @@ if (config.nodeEnv === 'production') {
   app.use(morgan(':method :url :status :res[content-length] - :response-time ms [reqId: :res[x-request-id]]'));
 }
 
-app.use(express.json());
+app.use(
+  express.json({
+    verify: (req: any, _res, buf) => {
+      req.rawBody = buf;
+    },
+  })
+);
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
@@ -174,6 +190,16 @@ app.use('/api/offices', officesRoutes);
 app.use('/api/moderation', moderationRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/notifications', notificationsRoutes);
+app.use('/api/representatives', representativesRoutes);
+app.use('/api/reports', reportsRoutes);
+app.use('/api/analysis', analysisRoutes);
+app.use('/api/payments', paymentsRoutes);
+app.get('/api/plans', BillingController.getPlans);
+app.use('/api/billing', billingRoutes);
+app.use('/api/donations', donationsRoutes);
+app.use('/api/finance', financeRoutes);
+app.use('/api/escalations/directives', directivesRoutes);
+app.use('/api/townhalls', townhallRoutes);
 
 // Error Handler
 app.use(errorHandler);

@@ -37,17 +37,20 @@ export class EscalationService {
    */
   static async runEscalationCheck(): Promise<EscalationRunResult> {
     const now = new Date();
-    const maxEscalationLevel = 3;
+    const maxEscalationLevel = 5;
 
-    // Find active grievances that are not resolved/rejected and haven't hit maximum escalation tier
+    // Find active grievances that are not resolved/rejected and haven't hit maximum escalation tier (5)
     const candidates = await Issue.find({
       status: { $in: ['submitted', 'acknowledged', 'under_review', 'published', 'in_progress'] },
-      escalationLevel: { $lt: maxEscalationLevel },
+      escalationTier: { $lt: maxEscalationLevel },
     });
 
     const escalatedIssues: EscalationRunResult['escalatedIssues'] = [];
 
     for (const issue of candidates) {
+      // 1. Check & update population-adaptive community verification
+      await this.checkCommunityVerification(issue);
+
       // Determine SLA deadline
       let deadline = issue.slaDeadline;
       if (!deadline) {
@@ -69,52 +72,57 @@ export class EscalationService {
         ).catch((err) => console.warn('[Escalation] Failed to notify 75% SLA warning:', err.message));
       }
 
-      // Check if SLA has breached
-      if (now > deadline) {
+      const isSlaBreached = now > deadline;
+      const { targetTier, trigger } = this.getRequiredTier(issue, isSlaBreached);
+
+      // If an escalation trigger is active and advances the tier
+      if (trigger !== 'none' && targetTier > (issue.escalationTier || issue.escalationLevel || 1)) {
         const currentOfficeId = issue.officeId;
         const currentOffice = await Office.findById(currentOfficeId);
+        const isRural = issue.settlementType === 'rural_panchayat';
 
         let targetOfficeId: mongoose.Types.ObjectId | null = null;
 
-        // 1. Check office's configured escalation target
-        if (currentOffice?.escalatesToOfficeId) {
-          targetOfficeId = currentOffice.escalatesToOfficeId as mongoose.Types.ObjectId;
-        } else if (currentOffice?.parentOfficeId) {
-          targetOfficeId = currentOffice.parentOfficeId as mongoose.Types.ObjectId;
-        } else if (currentOffice?.jurisdictionId) {
-          // 2. Fallback: Find office in parent jurisdiction
-          const currentJurisdiction = await Jurisdiction.findById(currentOffice.jurisdictionId);
-          if (currentJurisdiction?.parentJurisdictionId) {
-            const parentOffice = await Office.findOne({
-              jurisdictionId: currentJurisdiction.parentJurisdictionId,
-              $or: [
-                { supportedCategories: issue.category },
-                { department: issue.category },
-                { department: 'general' },
-              ],
-            });
-            if (parentOffice) {
-              targetOfficeId = parentOffice._id as mongoose.Types.ObjectId;
-            }
-          }
+        // Resolve target office by tier and track
+        if (targetTier === 2) {
+          // Taluka / Corporation level
+          const nextOffice = await Office.findOne({
+            $or: [
+              { _id: currentOffice?.escalatesToOfficeId },
+              { _id: currentOffice?.parentOfficeId },
+              { level: isRural ? 'taluka' : 'corporation' },
+              { department: issue.category },
+            ],
+            _id: { $ne: currentOfficeId },
+          });
+          targetOfficeId = (nextOffice?._id as mongoose.Types.ObjectId) || currentOfficeId;
+        } else if (targetTier === 3) {
+          // District level (District Collector / Zilla Parishad)
+          const distOffice = await Office.findOne({
+            level: 'district',
+          });
+          targetOfficeId = (distOffice?._id as mongoose.Types.ObjectId) || currentOffice?.escalatesToOfficeId as any || currentOfficeId;
+        } else if (targetTier === 4) {
+          // State level (State Ministry / CM Office)
+          const stateOffice = await Office.findOne({
+            $or: [{ level: 'state' }, { kind: 'ministry' }],
+          });
+          targetOfficeId = (stateOffice?._id as mongoose.Types.ObjectId) || currentOfficeId;
+        } else if (targetTier >= 5) {
+          // National level (PMO / Central Executive)
+          const execOffice = await Office.findOne({
+            kind: 'executive_office',
+          });
+          targetOfficeId = (execOffice?._id as mongoose.Types.ObjectId) || currentOfficeId;
         }
 
-        // 3. Fallback: Central Headquarters Office
         if (!targetOfficeId) {
-          const hqOffice =
-            (await Office.findOne({
-              $or: [{ level: 'corporation' }, { department: 'general' }],
-            })) || (await Office.findOne({ _id: { $ne: currentOfficeId } }));
-          if (hqOffice) {
-            targetOfficeId = hqOffice._id as mongoose.Types.ObjectId;
-          } else {
-            // Keep at current office if no other office exists
-            targetOfficeId = currentOfficeId;
-          }
+          targetOfficeId = currentOfficeId;
         }
 
-        // Advance level and record escalation event
-        const newLevel = (issue.escalationLevel || 0) + 1;
+        // Advance tier and record escalation event
+        const newLevel = targetTier;
+        issue.escalationTier = newLevel;
         issue.escalationLevel = newLevel;
         issue.escalatedAt = now;
         issue.officeId = targetOfficeId;
@@ -129,16 +137,20 @@ export class EscalationService {
         issue.slaHours = nextSlaHours;
         issue.slaDeadline = this.calculateSlaDeadline(now, nextSlaHours);
 
+        const reasonText = trigger === 'raise_threshold'
+          ? `citizen raise threshold (${issue.raiseCount} citizen backers)`
+          : 'statutory SLA clock breach';
+
         issue.escalationHistory.push({
           fromOfficeId: currentOfficeId,
           toOfficeId: targetOfficeId,
           escalatedAt: now,
-          reason: 'sla_breach',
+          reason: trigger === 'raise_threshold' ? 'raise_threshold' : 'sla_breach',
         });
 
         issue.statusTimeline.push({
           status: issue.status,
-          note: `Automatically escalated to ${targetOffice?.name || 'Supervisory Authority'} due to SLA breach (Escalation Tier ${newLevel}/3).`,
+          note: `Escalated to Tier ${newLevel}/5 (${targetOffice?.name || 'Supervisory Authority'}) due to ${reasonText}.`,
           updatedAt: now,
         });
 
@@ -284,6 +296,68 @@ export class EscalationService {
     if (this.timer.unref) {
       this.timer.unref();
     }
+  }
+
+  /**
+   * Evaluates population-adaptive community verification.
+   * Rural Panchayats: 5 citizen raises activate statutory SLA clock.
+   * Urban Municipalities: 25 citizen raises verify local consensus.
+   */
+  static async checkCommunityVerification(issue: IIssue): Promise<boolean> {
+    if (issue.isCommunityVerified) {
+      return true;
+    }
+
+    const isRural = issue.settlementType === 'rural_panchayat';
+    const threshold = isRural ? 5 : 25;
+
+    if ((issue.raiseCount || 0) >= threshold) {
+      issue.isCommunityVerified = true;
+      issue.communityVerifiedAt = new Date();
+      issue.statusTimeline.push({
+        status: issue.status,
+        note: `Community-verified by local citizens (${issue.raiseCount || 0}/${threshold} raises). SLA clock activated.`,
+        updatedAt: new Date(),
+      });
+      await issue.save();
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Calculates required administrative tier (1-5) and trigger reason.
+   */
+  static getRequiredTier(
+    issue: IIssue,
+    isSlaBreached: boolean
+  ): { targetTier: number; trigger: 'raise_threshold' | 'sla_breach' | 'none' } {
+    const isRural = issue.settlementType === 'rural_panchayat';
+    const currentTier = issue.escalationTier || issue.escalationLevel || 1;
+    const count = issue.raiseCount || 0;
+
+    // Check raise threshold qualifications first (highest tier wins)
+    let raiseTargetTier = currentTier;
+    if (isRural) {
+      if (count >= 250) raiseTargetTier = 4;
+      else if (count >= 50) raiseTargetTier = 3;
+      else if (count >= 15) raiseTargetTier = 2;
+    } else {
+      if (count >= 2500) raiseTargetTier = 4;
+      else if (count >= 500) raiseTargetTier = 3;
+      else if (count >= 100) raiseTargetTier = 2;
+    }
+
+    // Check SLA breach progression
+    const slaTargetTier = isSlaBreached && currentTier < 5 ? currentTier + 1 : currentTier;
+
+    if (raiseTargetTier > currentTier && raiseTargetTier >= slaTargetTier) {
+      return { targetTier: raiseTargetTier, trigger: 'raise_threshold' };
+    } else if (slaTargetTier > currentTier) {
+      return { targetTier: slaTargetTier, trigger: 'sla_breach' };
+    }
+
+    return { targetTier: currentTier, trigger: 'none' };
   }
 
   static stopScheduler(): void {

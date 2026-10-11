@@ -1,6 +1,20 @@
 import type { Metadata } from 'next';
+import { Inter, Noto_Sans_Devanagari } from 'next/font/google';
 import './globals.css';
 import { Providers } from './providers';
+
+const inter = Inter({
+  subsets: ['latin'],
+  variable: '--font-sans',
+  display: 'swap',
+});
+
+const notoSansDevanagari = Noto_Sans_Devanagari({
+  subsets: ['devanagari'],
+  variable: '--font-devanagari',
+  weight: ['400', '500', '600', '700', '800'],
+  display: 'swap',
+});
 
 export const metadata: Metadata = {
   title: 'RAISE — Report • Amplify • Inform • Solve • Escalate',
@@ -20,8 +34,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className="h-full bg-gray-50">
-      <body className="min-h-full flex flex-col font-sans text-gray-900 bg-gray-50">
+    <html lang="en" className={`h-full bg-gray-50 ${inter.variable} ${notoSansDevanagari.variable}`}>
+      <body className="min-h-full flex flex-col text-gray-900 bg-gray-50 font-sans antialiased">
         <Providers>{children}</Providers>
       </body>
     </html>

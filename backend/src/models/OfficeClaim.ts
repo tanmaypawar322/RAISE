@@ -2,8 +2,18 @@ import mongoose, { Schema, Document } from 'mongoose';
 
 export interface IOfficeClaim extends Document {
   userId: mongoose.Types.ObjectId;
-  officeId: mongoose.Types.ObjectId;
+  officeId?: mongoose.Types.ObjectId;
   role: 'official' | 'agency';
+  accountType: 'department_official' | 'agency_contractor' | 'representative' | 'representative_staff';
+  representativeRole?: string;
+  jurisdictionId?: mongoose.Types.ObjectId;
+  representativeProfileId?: mongoose.Types.ObjectId;
+  termStart?: Date;
+  termEnd?: Date;
+  officialSiteUrl?: string;
+  isStaff?: boolean;
+  conflictFlag?: boolean;
+  conflictDetails?: string;
   designation: string;
   employeeId?: string;
   workEmail: string;
@@ -22,8 +32,23 @@ export interface IOfficeClaim extends Document {
 const OfficeClaimSchema = new Schema<IOfficeClaim>(
   {
     userId: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
-    officeId: { type: Schema.Types.ObjectId, ref: 'Office', required: true, index: true },
+    officeId: { type: Schema.Types.ObjectId, ref: 'Office', index: true },
     role: { type: String, enum: ['official', 'agency'], required: true, default: 'official' },
+    accountType: {
+      type: String,
+      enum: ['department_official', 'agency_contractor', 'representative', 'representative_staff'],
+      default: 'department_official',
+      index: true,
+    },
+    representativeRole: { type: String },
+    jurisdictionId: { type: Schema.Types.ObjectId, ref: 'Jurisdiction', index: true },
+    representativeProfileId: { type: Schema.Types.ObjectId, ref: 'RepresentativeProfile', index: true },
+    termStart: { type: Date },
+    termEnd: { type: Date },
+    officialSiteUrl: { type: String },
+    isStaff: { type: Boolean, default: false },
+    conflictFlag: { type: Boolean, default: false },
+    conflictDetails: { type: String },
     designation: { type: String, required: true, trim: true },
     employeeId: { type: String, trim: true },
     workEmail: { type: String, required: true, trim: true, lowercase: true },

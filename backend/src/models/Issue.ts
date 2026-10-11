@@ -1,7 +1,7 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
 export interface IMediaItem {
-  type: 'photo' | 'voice_note' | 'document';
+  type: 'photo' | 'video' | 'voice_note' | 'document';
   url: string;
   filename: string;
   mimeType: string;
@@ -62,6 +62,7 @@ export interface IIssue extends Document {
   category: 'roads' | 'water' | 'sanitation' | 'health' | 'education' | 'electricity' | 'other';
   officeId: mongoose.Types.ObjectId;
   jurisdictionId?: mongoose.Types.ObjectId;
+  jurisdictionIds?: mongoose.Types.ObjectId[];
   slaHours?: number;
   slaDeadline?: Date;
   escalationLevel: number;
@@ -71,6 +72,7 @@ export interface IIssue extends Document {
     type: 'Point';
     coordinates: [number, number]; // [longitude, latitude]
     address?: string;
+    landmark?: string;
     ward?: string;
     city?: string;
     district?: string;
@@ -117,13 +119,37 @@ export interface IIssue extends Document {
   mergedBy?: mongoose.Types.ObjectId;
   canUnmergeUntil?: Date;
 
+  // Representatives & Citizen Credit
+  takenUpByRepIds: mongoose.Types.ObjectId[];
+  repActionHistory: Array<{
+    repId: mongoose.Types.ObjectId;
+    action: string;
+    note?: string;
+    timestamp: Date;
+  }>;
+  thankedUserIds: mongoose.Types.ObjectId[];
+  thanksCount: number;
+
+  // Grassroots Rural & Multi-Tier Escalation
+  settlementType?: 'rural_panchayat' | 'urban_municipal';
+  escalationTier: number; // 1 to 5
+  isCommunityVerified: boolean;
+  communityVerifiedAt?: Date;
+  activeDirectiveId?: mongoose.Types.ObjectId;
+  assistedReporting?: {
+    isAssisted: boolean;
+    assistedByUserId?: mongoose.Types.ObjectId;
+    citizenName?: string;
+    citizenPhoneMasked?: string;
+  };
+
   createdAt: Date;
   updatedAt: Date;
 }
 
 const MediaItemSchema = new Schema<IMediaItem>(
   {
-    type: { type: String, enum: ['photo', 'voice_note', 'document'], required: true },
+    type: { type: String, enum: ['photo', 'video', 'voice_note', 'document'], required: true },
     url: { type: String, required: true },
     filename: { type: String, required: true },
     mimeType: { type: String, required: true },
@@ -157,6 +183,7 @@ const IssueSchema = new Schema<IIssue>(
     },
     officeId: { type: Schema.Types.ObjectId, ref: 'Office', required: true, index: true },
     jurisdictionId: { type: Schema.Types.ObjectId, ref: 'Jurisdiction', index: true },
+    jurisdictionIds: [{ type: Schema.Types.ObjectId, ref: 'Jurisdiction', index: true }],
     slaHours: { type: Number, default: 48 },
     slaDeadline: { type: Date, index: true },
     escalationLevel: { type: Number, default: 0, index: true },
@@ -182,6 +209,7 @@ const IssueSchema = new Schema<IIssue>(
         index: '2dsphere',
       },
       address: { type: String },
+      landmark: { type: String },
       ward: { type: String },
       city: { type: String, default: 'Pimpri-Chinchwad' },
       district: { type: String, default: 'Pune' },
@@ -280,6 +308,37 @@ const IssueSchema = new Schema<IIssue>(
     mergedAt: { type: Date },
     mergedBy: { type: Schema.Types.ObjectId, ref: 'User' },
     canUnmergeUntil: { type: Date },
+
+    // Representatives & Citizen Credit
+    takenUpByRepIds: [{ type: Schema.Types.ObjectId, ref: 'RepresentativeProfile', index: true }],
+    repActionHistory: [
+      {
+        repId: { type: Schema.Types.ObjectId, ref: 'RepresentativeProfile', required: true },
+        action: { type: String, required: true },
+        note: { type: String },
+        timestamp: { type: Date, default: Date.now },
+      },
+    ],
+    thankedUserIds: [{ type: Schema.Types.ObjectId, ref: 'User' }],
+    thanksCount: { type: Number, default: 0 },
+
+    // Grassroots Rural & Multi-Tier Escalation
+    settlementType: {
+      type: String,
+      enum: ['rural_panchayat', 'urban_municipal'],
+      default: 'urban_municipal',
+      index: true,
+    },
+    escalationTier: { type: Number, default: 1, index: true },
+    isCommunityVerified: { type: Boolean, default: false, index: true },
+    communityVerifiedAt: { type: Date },
+    activeDirectiveId: { type: Schema.Types.ObjectId, ref: 'EscalationDirective' },
+    assistedReporting: {
+      isAssisted: { type: Boolean, default: false },
+      assistedByUserId: { type: Schema.Types.ObjectId, ref: 'User' },
+      citizenName: { type: String, trim: true },
+      citizenPhoneMasked: { type: String, trim: true },
+    },
   },
   { timestamps: true }
 );

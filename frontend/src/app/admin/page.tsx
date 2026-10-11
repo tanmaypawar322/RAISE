@@ -29,7 +29,28 @@ import {
   BarChart3,
   RefreshCw,
   TrendingUp,
+  Scale,
+  CreditCard,
+  Wallet,
 } from 'lucide-react';
+
+const PILOT_WARD_METRICS = [
+  { id: 'Ward 12 (Nigdi - Pradhikaran)', name: 'Ward 12 (Nigdi)', nameMr: 'प्रभाग १२ (निगडी)', nameHi: 'वार्ड १२ (निगडी)', total: 42, open: 15, resolved: 24, overdue: 3 },
+  { id: 'Ward 10 (Akurdi)', name: 'Ward 10 (Akurdi)', nameMr: 'प्रभाग १० (आकुर्डी)', nameHi: 'वार्ड १० (आकुर्डी)', total: 28, open: 9, resolved: 17, overdue: 2 },
+  { id: 'Ward 18 (Chinchwad Station)', name: 'Ward 18 (Chinchwad)', nameMr: 'प्रभाग १८ (चिंचवड)', nameHi: 'वार्ड १८ (चिंचवड)', total: 19, open: 7, resolved: 11, overdue: 1 },
+  { id: 'Ward 22 (Pimpri Market)', name: 'Ward 22 (Pimpri)', nameMr: 'प्रभाग २२ (पिंपरी)', nameHi: 'वार्ड २२ (पिंपरी)', total: 14, open: 4, resolved: 10, overdue: 0 },
+  { id: 'Ward 8 (Bhosari)', name: 'Ward 8 (Bhosari)', nameMr: 'प्रभाग ८ (भोसरी)', nameHi: 'वार्ड ८ (भोसरी)', total: 11, open: 5, resolved: 6, overdue: 0 },
+];
+
+const PILOT_CATEGORY_METRICS: Array<{ id: string; key: 'roads' | 'water' | 'sanitation' | 'health' | 'electricity' | 'education' | 'other'; total: number; open: number; resolved: number; overdue: number }> = [
+  { id: 'roads', key: 'roads', total: 38, open: 14, resolved: 21, overdue: 3 },
+  { id: 'water', key: 'water', total: 31, open: 10, resolved: 19, overdue: 2 },
+  { id: 'sanitation', key: 'sanitation', total: 24, open: 7, resolved: 16, overdue: 1 },
+  { id: 'health', key: 'health', total: 9, open: 3, resolved: 6, overdue: 0 },
+  { id: 'electricity', key: 'electricity', total: 7, open: 3, resolved: 4, overdue: 0 },
+  { id: 'education', key: 'education', total: 3, open: 2, resolved: 1, overdue: 0 },
+  { id: 'other', key: 'other', total: 2, open: 1, resolved: 1, overdue: 0 },
+];
 
 export default function AdminPanelPage() {
   const {
@@ -47,6 +68,8 @@ export default function AdminPanelPage() {
 
   const [activeTab, setActiveTab] = useState<'claims' | 'moderation' | 'escalation' | 'security' | 'jurisdictions' | 'metrics'>('claims');
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [unclaimedProfiles, setUnclaimedProfiles] = useState<any[]>([]);
+  const [selectedLinkProfileMap, setSelectedLinkProfileMap] = useState<Record<string, string>>({});
 
   // Pilot Metrics State (Phase 7)
   const [pilotMetrics, setPilotMetrics] = useState<any | null>(null);
@@ -155,6 +178,9 @@ export default function AdminPanelPage() {
       const data = await res.json();
       if (data.success && data.claims) {
         setClaimsList(data.claims);
+        if (data.unclaimedProfiles) {
+          setUnclaimedProfiles(data.unclaimedProfiles);
+        }
         setStats((prev) => ({ ...prev, pendingClaims: data.claims.filter((c: any) => c.status === 'pending').length }));
       }
     } catch {
@@ -394,14 +420,18 @@ export default function AdminPanelPage() {
     }
   };
 
-  const handleApproveClaim = async (claimId: string) => {
+  const handleApproveClaim = async (claimId: string, linkProfileId?: string) => {
     if (!token) return;
     try {
       const res = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/admin/claims/${claimId}/approve`,
         {
           method: 'POST',
-          headers: { Authorization: `Bearer ${token}` },
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ linkProfileId }),
         }
       );
       const data = await res.json();
@@ -802,6 +832,62 @@ export default function AdminPanelPage() {
             <BarChart3 className="w-3.5 h-3.5 text-amber-400" />
             <span>Pilot Metrics & Standup</span>
           </button>
+
+          <Link
+            href="/admin/outreach"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition text-purple-700 bg-purple-50 border border-purple-200 hover:bg-purple-100"
+          >
+            <Users className="w-3.5 h-3.5" />
+            <span>Outreach Queue</span>
+          </Link>
+
+          <Link
+            href="/admin/corrections"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition text-purple-700 bg-purple-50 border border-purple-200 hover:bg-purple-100"
+          >
+            <Scale className="w-3.5 h-3.5" />
+            <span>Dispute Audits</span>
+          </Link>
+
+          <Link
+            href="/admin/rep-updates"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition text-purple-700 bg-purple-50 border border-purple-200 hover:bg-purple-100"
+          >
+            <FileText className="w-3.5 h-3.5" />
+            <span>Rep Updates</span>
+          </Link>
+
+          <Link
+            href="/admin/freeze-windows"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition text-purple-700 bg-purple-50 border border-purple-200 hover:bg-purple-100"
+          >
+            <ShieldAlert className="w-3.5 h-3.5" />
+            <span>Election Freeze</span>
+          </Link>
+
+          <Link
+            href="/admin/billing"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition text-purple-700 bg-purple-50 border border-purple-200 hover:bg-purple-100"
+          >
+            <CreditCard className="w-3.5 h-3.5" />
+            <span>Billing & Plans</span>
+          </Link>
+
+          <Link
+            href="/admin/finance"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition text-purple-700 bg-purple-50 border border-purple-200 hover:bg-purple-100"
+          >
+            <Wallet className="w-3.5 h-3.5" />
+            <span>Finance & Ledger</span>
+          </Link>
+
+          <Link
+            href="/office-portal/analysis"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition text-purple-700 bg-purple-50 border border-purple-200 hover:bg-purple-100"
+          >
+            <BarChart3 className="w-3.5 h-3.5" />
+            <span>Executive Analysis</span>
+          </Link>
         </div>
 
         {/* TAB 1: OFFICIAL CLAIMS QUEUE */}
@@ -819,18 +905,26 @@ export default function AdminPanelPage() {
               claimsList.map((claim) => (
                 <div key={claim._id} className="bg-white rounded-2xl border border-gray-200 p-5 shadow-xs">
                   <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 mb-3">
-                    <div>
-                      <div className="flex items-center gap-2 mb-1">
+                    <div className="flex-1">
+                      <div className="flex flex-wrap items-center gap-2 mb-1">
                         <span className="text-[10px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded uppercase">
                           {claim.officeId?.name || t('requestedOffice')}
                         </span>
-                        <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded uppercase ${
-                          claim.role === 'agency'
-                            ? 'bg-amber-100 text-amber-900'
-                            : 'bg-emerald-100 text-emerald-900'
-                        }`}>
-                          {claim.role === 'agency' ? t('agencyRoleTitle') : t('officialRoleTitle')}
-                        </span>
+
+                        {claim.accountType === 'representative' || claim.accountType === 'representative_staff' ? (
+                          <span className="text-[10px] font-extrabold px-2 py-0.5 rounded uppercase bg-purple-100 text-purple-900 border border-purple-200">
+                            {claim.accountType === 'representative' ? 'Elected Representative' : 'Representative Staff'} ({claim.representativeRole?.toUpperCase() || 'REP'})
+                          </span>
+                        ) : (
+                          <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded uppercase ${
+                            claim.role === 'agency'
+                              ? 'bg-amber-100 text-amber-900'
+                              : 'bg-emerald-100 text-emerald-900'
+                          }`}>
+                            {claim.role === 'agency' ? t('agencyRoleTitle') : t('officialRoleTitle')}
+                          </span>
+                        )}
+
                         <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase ${
                           claim.status === 'approved'
                             ? 'bg-emerald-50 text-emerald-700'
@@ -854,6 +948,39 @@ export default function AdminPanelPage() {
                         Phone: <span className="font-mono">{claim.userId?.phoneMasked || 'Verified OTP'}</span>
                       </p>
 
+                      {claim.jurisdictionId && (
+                        <p className="text-xs text-purple-900 font-medium mt-1">
+                          Constituency: <strong>{claim.jurisdictionId.code ? `[${claim.jurisdictionId.code}] ` : ''}{claim.jurisdictionId.name}</strong> ({claim.jurisdictionId.level})
+                        </p>
+                      )}
+
+                      {claim.termStart && claim.termEnd && (
+                        <p className="text-[11px] text-gray-500 mt-0.5">
+                          Term: <span className="font-mono">{new Date(claim.termStart).toLocaleDateString()}</span> to{' '}
+                          <span className="font-mono">{new Date(claim.termEnd).toLocaleDateString()}</span>
+                        </p>
+                      )}
+
+                      {claim.officialSiteUrl && (
+                        <p className="text-[11px] text-blue-700 mt-0.5">
+                          <a href={claim.officialSiteUrl} target="_blank" rel="noopener noreferrer" className="hover:underline flex items-center gap-1">
+                            <ExternalLink className="w-3 h-3" />
+                            <span>Official Public Page: {claim.officialSiteUrl}</span>
+                          </a>
+                        </p>
+                      )}
+
+                      {/* Conflict / Duplicate Seat Alert */}
+                      {claim.conflictFlag && (
+                        <div className="mt-2.5 p-2.5 bg-red-50 border border-red-300 rounded-xl text-red-800 text-xs font-semibold flex items-start gap-2">
+                          <AlertTriangle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+                          <div>
+                            <span className="font-bold">⚠️ Seat Conflict / Duplicate Claim Detected:</span>{' '}
+                            {claim.conflictDetails || 'Another active representative or claim already exists for this seat.'}
+                          </div>
+                        </div>
+                      )}
+
                       {claim.employeeId && (
                         <p className="text-xs text-gray-500 mt-0.5">
                           {t('employeeIdLabel')}: <span className="font-mono">{claim.employeeId}</span>
@@ -875,39 +1002,66 @@ export default function AdminPanelPage() {
                             className="inline-flex items-center gap-1 text-xs font-bold text-blue-700 hover:text-blue-900 underline"
                           >
                             <FileText className="w-3.5 h-3.5" />
-                            <span>{t('reviewDocumentBtn')}</span>
+                            <span>{t('reviewDocumentBtn')} {claim.documentFilename ? `(${claim.documentFilename})` : ''}</span>
                           </a>
                         </div>
                       )}
                     </div>
 
                     {claim.status === 'pending' && (
-                      <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 shrink-0">
-                        <button
-                          type="button"
-                          onClick={() => handleApproveClaim(claim._id)}
-                          className="flex items-center gap-1 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition shadow-xs cursor-pointer"
-                        >
-                          <CheckCircle className="w-3.5 h-3.5" />
-                          <span>{t('approveClaimBtn')}</span>
-                        </button>
+                      <div className="flex flex-col items-end gap-2 shrink-0 pt-2 sm:pt-0">
+                        {/* Link to unclaimed profile dropdown if applicable */}
+                        {(claim.accountType === 'representative' || claim.accountType === 'representative_staff') &&
+                          unclaimedProfiles.length > 0 && (
+                            <div className="flex flex-col items-end gap-1 mb-1">
+                              <label className="text-[10px] font-bold text-gray-500">Link Unclaimed Profile:</label>
+                              <select
+                                value={selectedLinkProfileMap[claim._id] || ''}
+                                onChange={(e) =>
+                                  setSelectedLinkProfileMap((prev) => ({
+                                    ...prev,
+                                    [claim._id]: e.target.value,
+                                  }))
+                                }
+                                className="text-xs bg-gray-50 border border-gray-300 rounded-lg p-1.5 font-medium max-w-[220px]"
+                              >
+                                <option value="">-- Auto-create / Match --</option>
+                                {unclaimedProfiles.map((p) => (
+                                  <option key={p._id} value={p._id}>
+                                    {p.displayName} ({p.role}) - {p.jurisdictionId?.code || p.jurisdictionId?.name || ''}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                          )}
 
-                        <button
-                          type="button"
-                          onClick={() => handleRejectClaim(claim._id)}
-                          className="flex items-center gap-1 px-3 py-2 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 rounded-xl text-xs font-bold transition cursor-pointer"
-                        >
-                          <XCircle className="w-3.5 h-3.5" />
-                          <span>{t('rejectClaimBtn')}</span>
-                        </button>
+                        <div className="flex flex-wrap sm:flex-nowrap items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleApproveClaim(claim._id, selectedLinkProfileMap[claim._id])}
+                            className="flex items-center gap-1 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition shadow-xs cursor-pointer"
+                          >
+                            <CheckCircle className="w-3.5 h-3.5" />
+                            <span>{selectedLinkProfileMap[claim._id] ? 'Link & Approve' : t('approveClaimBtn')}</span>
+                          </button>
 
-                        <button
-                          type="button"
-                          onClick={() => handleRequestInfo(claim._id)}
-                          className="px-2.5 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-xs font-bold transition cursor-pointer"
-                        >
-                          {t('requestInfoBtn')}
-                        </button>
+                          <button
+                            type="button"
+                            onClick={() => handleRejectClaim(claim._id)}
+                            className="flex items-center gap-1 px-3 py-2 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 rounded-xl text-xs font-bold transition cursor-pointer"
+                          >
+                            <XCircle className="w-3.5 h-3.5" />
+                            <span>{t('rejectClaimBtn')}</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleRequestInfo(claim._id)}
+                            className="px-2.5 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-xs font-bold transition cursor-pointer"
+                          >
+                            {t('requestInfoBtn')}
+                          </button>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -1186,91 +1340,183 @@ export default function AdminPanelPage() {
               </div>
             )}
 
-            {/* Ward 12 Boundary Card & SVG Map */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="lg:col-span-1 bg-white p-5 rounded-2xl border border-gray-200 shadow-xs space-y-4">
-                <div className="flex items-center gap-2">
-                  <MapPin className="w-4 h-4 text-orange-600" />
-                  <h4 className="font-bold text-sm text-gray-900">{t('pilotWardBoundaryTitle')}</h4>
+            {/* High-Density Ward & Category Breakdown Tables */}
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+              {/* Table 1: Ward Breakdown */}
+              <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-xs space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <MapPin className="w-4 h-4 text-orange-600" />
+                    <h4 className="font-bold text-sm text-gray-900">{t('wardBreakdownTitle')}</h4>
+                  </div>
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wide bg-slate-100 px-2 py-0.5 rounded-full">
+                    Pilot Zones
+                  </span>
                 </div>
 
-                <div className="relative aspect-4/3 bg-slate-900 rounded-xl p-3 border border-slate-800 flex flex-col justify-between overflow-hidden shadow-inner">
-                  {/* SVG Map of Ward 12 Boundary */}
-                  <svg viewBox="0 0 300 250" className="w-full h-full">
-                    {/* Background Grid */}
-                    <defs>
-                      <pattern id="grid" width="30" height="25" patternUnits="userSpaceOnUse">
-                        <path d="M 30 0 L 0 0 0 25" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="0.5" />
-                      </pattern>
-                    </defs>
-                    <rect width="300" height="250" fill="url(#grid)" />
-
-                    {/* Zone A Outer Box representation */}
-                    <rect
-                      x="15"
-                      y="15"
-                      width="270"
-                      height="220"
-                      fill="rgba(59, 130, 246, 0.05)"
-                      stroke="rgba(59, 130, 246, 0.4)"
-                      strokeWidth="1.5"
-                      strokeDasharray="4 4"
-                      rx="8"
-                    />
-                    <text x="25" y="32" fill="#93c5fd" fontSize="9" fontWeight="bold">
-                      Zone A (Pradhikaran - Akurdi)
-                    </text>
-
-                    {/* Ward 12 Pilot Polygon (73.765, 18.650 to 73.795, 18.675) */}
-                    <polygon
-                      points="60,60 240,60 240,190 60,190"
-                      fill="rgba(249, 115, 22, 0.25)"
-                      stroke="#f97316"
-                      strokeWidth="2.5"
-                    />
-                    <text x="75" y="80" fill="#fed7aa" fontSize="11" fontWeight="bold">
-                      Ward 12 (Nigdi)
-                    </text>
-
-                    {/* Centroid marker */}
-                    <circle cx="150" cy="125" r="4" fill="#ef4444" stroke="#ffffff" strokeWidth="1.5" />
-                    <text x="158" y="128" fill="#ffffff" fontSize="9" fontWeight="bold">
-                      Centroid
-                    </text>
-                  </svg>
-
-                  <div className="flex items-center justify-between text-[10px] text-slate-400 border-t border-slate-800 pt-1.5 mt-1">
-                    <span>Boundary: [73.765, 18.650] - [73.795, 18.675]</span>
-                    <span className="text-orange-400 font-bold">2dsphere indexed</span>
-                  </div>
-                </div>
-
-                <div className="space-y-2 text-xs">
-                  <div className="flex justify-between py-1 border-b border-gray-100">
-                    <span className="text-gray-500">Centroid Coordinates:</span>
-                    <span className="font-mono font-semibold text-gray-800">18.6625° N, 73.7800° E</span>
-                  </div>
-                  <div className="flex justify-between py-1 border-b border-gray-100">
-                    <span className="text-gray-500">Approximate Area:</span>
-                    <span className="font-semibold text-gray-800">~8.78 km²</span>
-                  </div>
-                  <div className="flex justify-between py-1 border-b border-gray-100">
-                    <span className="text-gray-500">Jurisdiction Tier:</span>
-                    <span className="font-semibold text-purple-700">Ward (Level 1)</span>
-                  </div>
-                  <div className="flex justify-between py-1 border-b border-gray-100">
-                    <span className="text-gray-500">Parent Zone:</span>
-                    <span className="font-semibold text-gray-800">Zone A (Pradhikaran - Akurdi)</span>
-                  </div>
-                  <div className="flex justify-between py-1">
-                    <span className="text-gray-500">{t('defaultSlaHoursLabel')}:</span>
-                    <span className="font-bold text-orange-600">48h SLA</span>
-                  </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr className="border-b border-gray-200 text-gray-500 font-semibold bg-gray-50/75">
+                        <th className="py-2.5 px-3">{t('wardCol')}</th>
+                        <th className="py-2.5 px-3 text-center">{t('totalIssuesCol')}</th>
+                        <th className="py-2.5 px-3 text-center">{t('openIssuesCol')}</th>
+                        <th className="py-2.5 px-3 text-center">{t('resolvedIssuesCol')}</th>
+                        <th className="py-2.5 px-3 text-center">{t('slaBreachedCol')}</th>
+                        <th className="py-2.5 px-3 text-right">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {PILOT_WARD_METRICS.map((w) => (
+                        <tr key={w.id} className="hover:bg-orange-50/40 transition">
+                          <td className="py-2 px-3 font-semibold text-gray-900">
+                            {language === 'mr' ? w.nameMr : language === 'hi' ? w.nameHi : w.name}
+                          </td>
+                          <td className="py-2 px-3 text-center font-bold text-gray-800">{w.total}</td>
+                          <td className="py-2 px-3 text-center">
+                            <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
+                              {w.open}
+                            </span>
+                          </td>
+                          <td className="py-2 px-3 text-center">
+                            <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                              {w.resolved}
+                            </span>
+                          </td>
+                          <td className="py-2 px-3 text-center">
+                            <span
+                              className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
+                                w.overdue > 0
+                                  ? 'bg-red-50 text-red-700 border border-red-200'
+                                  : 'bg-gray-50 text-gray-500'
+                              }`}
+                            >
+                              {w.overdue}
+                            </span>
+                          </td>
+                          <td className="py-2 px-3 text-right">
+                            <Link
+                              href={`/?ward=${encodeURIComponent(w.id)}`}
+                              className="inline-flex items-center gap-1 text-[11px] font-bold text-orange-600 hover:text-orange-700 hover:underline"
+                            >
+                              <span>View</span>
+                              <ExternalLink className="w-3 h-3" />
+                            </Link>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot>
+                      <tr className="border-t-2 border-gray-200 font-bold bg-gray-50 text-gray-900">
+                        <td className="py-2.5 px-3">Total (Pilot)</td>
+                        <td className="py-2.5 px-3 text-center font-extrabold">114</td>
+                        <td className="py-2.5 px-3 text-center text-amber-700">40</td>
+                        <td className="py-2.5 px-3 text-center text-emerald-700">68</td>
+                        <td className="py-2.5 px-3 text-center text-red-700">6</td>
+                        <td className="py-2.5 px-3 text-right">
+                          <Link
+                            href="/"
+                            className="inline-flex items-center gap-1 text-[11px] font-bold text-gray-700 hover:text-gray-900"
+                          >
+                            <span>Feed</span>
+                            <ExternalLink className="w-3 h-3" />
+                          </Link>
+                        </td>
+                      </tr>
+                    </tfoot>
+                  </table>
                 </div>
               </div>
 
-              {/* Attached Offices & SLAs list */}
-              <div className="lg:col-span-2 bg-white p-5 rounded-2xl border border-gray-200 shadow-xs space-y-4">
+              {/* Table 2: Category Breakdown */}
+              <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-xs space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Layers className="w-4 h-4 text-purple-700" />
+                    <h4 className="font-bold text-sm text-gray-900">{t('categoryBreakdownTitle')}</h4>
+                  </div>
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wide bg-slate-100 px-2 py-0.5 rounded-full">
+                    Departments
+                  </span>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr className="border-b border-gray-200 text-gray-500 font-semibold bg-gray-50/75">
+                        <th className="py-2.5 px-3">{t('categoryCol')}</th>
+                        <th className="py-2.5 px-3 text-center">{t('totalIssuesCol')}</th>
+                        <th className="py-2.5 px-3 text-center">{t('openIssuesCol')}</th>
+                        <th className="py-2.5 px-3 text-center">{t('resolvedIssuesCol')}</th>
+                        <th className="py-2.5 px-3 text-center">{t('slaBreachedCol')}</th>
+                        <th className="py-2.5 px-3 text-right">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {PILOT_CATEGORY_METRICS.map((c) => (
+                        <tr key={c.id} className="hover:bg-purple-50/40 transition">
+                          <td className="py-2 px-3 font-semibold text-gray-900">
+                            {t(c.key)}
+                          </td>
+                          <td className="py-2 px-3 text-center font-bold text-gray-800">{c.total}</td>
+                          <td className="py-2 px-3 text-center">
+                            <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
+                              {c.open}
+                            </span>
+                          </td>
+                          <td className="py-2 px-3 text-center">
+                            <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                              {c.resolved}
+                            </span>
+                          </td>
+                          <td className="py-2 px-3 text-center">
+                            <span
+                              className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
+                                c.overdue > 0
+                                  ? 'bg-red-50 text-red-700 border border-red-200'
+                                  : 'bg-gray-50 text-gray-500'
+                              }`}
+                            >
+                              {c.overdue}
+                            </span>
+                          </td>
+                          <td className="py-2 px-3 text-right">
+                            <Link
+                              href={`/?category=${c.id}`}
+                              className="inline-flex items-center gap-1 text-[11px] font-bold text-purple-700 hover:text-purple-800 hover:underline"
+                            >
+                              <span>Filter</span>
+                              <ExternalLink className="w-3 h-3" />
+                            </Link>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot>
+                      <tr className="border-t-2 border-gray-200 font-bold bg-gray-50 text-gray-900">
+                        <td className="py-2.5 px-3">Total (Pilot)</td>
+                        <td className="py-2.5 px-3 text-center font-extrabold">114</td>
+                        <td className="py-2.5 px-3 text-center text-amber-700">40</td>
+                        <td className="py-2.5 px-3 text-center text-emerald-700">68</td>
+                        <td className="py-2.5 px-3 text-center text-red-700">6</td>
+                        <td className="py-2.5 px-3 text-right">
+                          <Link
+                            href="/"
+                            className="inline-flex items-center gap-1 text-[11px] font-bold text-gray-700 hover:text-gray-900"
+                          >
+                            <span>Feed</span>
+                            <ExternalLink className="w-3 h-3" />
+                          </Link>
+                        </td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            {/* Attached Offices & SLAs list */}
+            <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-xs space-y-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Building className="w-4 h-4 text-purple-700" />
@@ -1396,7 +1642,6 @@ export default function AdminPanelPage() {
                 )}
               </div>
             </div>
-          </div>
         )}
 
         {/* ============================================================ */}

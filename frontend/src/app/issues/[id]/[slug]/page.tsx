@@ -1,5 +1,6 @@
 import React, { Suspense } from 'react';
 import type { Metadata } from 'next';
+import { cookies } from 'next/headers';
 import IssueDetailClient from './IssueDetailClient';
 import { slugifyTitle } from '../../../../lib/slug';
 
@@ -12,10 +13,15 @@ interface PageProps {
 
 async function fetchIssue(id: string) {
   try {
+    const cookieStore = await cookies();
+    const token = cookieStore.get('raise_token')?.value || cookieStore.get('accessToken')?.value;
     const res = await fetch(
       `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/issues/${id}`,
       {
-        next: { revalidate: 60 },
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        cache: 'no-store',
       }
     );
     if (!res.ok) return null;
