@@ -14,6 +14,8 @@ import {
   MessageSquare,
   Building2,
   CheckCircle2,
+  AlertCircle,
+  X,
   ArrowLeft,
   Send,
   Sparkles,
@@ -64,7 +66,7 @@ function TownhallDetailContent() {
   const id = params?.id as string;
 
   const { t, language } = useLanguage();
-  const { user, token } = useAuth();
+  const { user, token, openAuthModal } = useAuth();
 
   const [topic, setTopic] = useState<TopicDetail | null>(null);
   const [feedbackList, setFeedbackList] = useState<FeedbackItem[]>([]);
@@ -72,20 +74,44 @@ function TownhallDetailContent() {
 
   // Voting states
   const [votedClauses, setVotedClauses] = useState<Record<string, 'up' | 'down'>>({});
+  const [voteNotice, setVoteNotice] = useState<{ type: 'error' | 'success'; message: string } | null>(null);
 
   // Feedback form
   const [feedbackType, setFeedbackType] = useState<'support' | 'concern' | 'amendment'>('amendment');
   const [selectedClauseId, setSelectedClauseId] = useState<string>('');
   const [feedbackContent, setFeedbackContent] = useState('');
   const [submittingFeedback, setSubmittingFeedback] = useState(false);
+  const [feedbackStatus, setFeedbackStatus] = useState<{ type: 'error' | 'success'; message: string } | null>(null);
 
   // Official Response form
   const [responseText, setResponseText] = useState('');
   const [submittingResponse, setSubmittingResponse] = useState(false);
+  const [officialResponseStatus, setOfficialResponseStatus] = useState<{ type: 'error' | 'success'; message: string } | null>(null);
 
   useEffect(() => {
     if (id) fetchTopicDetail();
   }, [id]);
+
+  useEffect(() => {
+    if (feedbackStatus?.type === 'success') {
+      const timer = setTimeout(() => setFeedbackStatus(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [feedbackStatus]);
+
+  useEffect(() => {
+    if (voteNotice?.type === 'success') {
+      const timer = setTimeout(() => setVoteNotice(null), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [voteNotice]);
+
+  useEffect(() => {
+    if (officialResponseStatus?.type === 'success') {
+      const timer = setTimeout(() => setOfficialResponseStatus(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [officialResponseStatus]);
 
   const fetchTopicDetail = async () => {
     setLoading(true);
@@ -107,8 +133,18 @@ function TownhallDetailContent() {
   };
 
   const handleVoteClause = async (clauseId: string, vote: 'up' | 'down') => {
+    setVoteNotice(null);
     if (!user) {
-      alert('Authentication required to cast vote on legislation clauses');
+      setVoteNotice({
+        type: 'error',
+        message:
+          language === 'mr'
+            ? 'मतदान करण्यासाठी कृपया साइन इन करा.'
+            : language === 'hi'
+            ? 'मतदान करने के लिए कृपया साइन इन करें।'
+            : 'Authentication required to cast vote on legislation clauses.',
+      });
+      openAuthModal();
       return;
     }
     try {
@@ -126,6 +162,15 @@ function TownhallDetailContent() {
       const data = await res.json();
       if (data.success && topic) {
         setVotedClauses((prev) => ({ ...prev, [clauseId]: vote }));
+        setVoteNotice({
+          type: 'success',
+          message:
+            language === 'mr'
+              ? 'तुमचे मत यशस्वीरीत्या नोंदवले गेले!'
+              : language === 'hi'
+              ? 'आपका मत सफलतापूर्वक दर्ज कर लिया गया!'
+              : 'Vote recorded successfully!',
+        });
         setTopic({
           ...topic,
           clauses: topic.clauses.map((c) =>
@@ -138,19 +183,62 @@ function TownhallDetailContent() {
               : c
           ),
         });
+      } else {
+        setVoteNotice({
+          type: 'error',
+          message: data.message || 'Failed to record vote',
+        });
       }
     } catch {
-      alert('Failed to record vote');
+      setVoteNotice({
+        type: 'error',
+        message: 'Failed to record vote',
+      });
     }
   };
 
   const handleSubmitFeedback = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFeedbackStatus(null);
     if (!user) {
-      alert('Please log in to submit deliberation feedback');
+      setFeedbackStatus({
+        type: 'error',
+        message:
+          language === 'mr'
+            ? 'अभिप्राय नोंदवण्यासाठी कृपया साइन इन करा.'
+            : language === 'hi'
+            ? 'सुझाव दर्ज करने के लिए कृपया साइन इन करें।'
+            : 'Please log in to submit deliberation feedback.',
+      });
+      openAuthModal();
       return;
     }
-    if (!feedbackContent.trim()) return;
+    const trimmed = feedbackContent.trim();
+    if (!trimmed) {
+      setFeedbackStatus({
+        type: 'error',
+        message:
+          language === 'mr'
+            ? 'कृपया तुमचा अभिप्राय लिहा.'
+            : language === 'hi'
+            ? 'कृपया अपना सुझाव लिखें।'
+            : 'Please enter your feedback text.',
+      });
+      return;
+    }
+
+    if (trimmed.length < 3) {
+      setFeedbackStatus({
+        type: 'error',
+        message:
+          language === 'mr'
+            ? 'कृपया किमान ३ अक्षरे प्रविष्ट करा.'
+            : language === 'hi'
+            ? 'कृपया कम से कम ३ अक्षर दर्ज करें।'
+            : 'Feedback must contain at least 3 characters.',
+      });
+      return;
+    }
 
     setSubmittingFeedback(true);
     try {
@@ -164,7 +252,7 @@ function TownhallDetailContent() {
           },
           body: JSON.stringify({
             type: feedbackType,
-            content: feedbackContent,
+            content: trimmed,
             clauseId: selectedClauseId || undefined,
           }),
         }
@@ -172,12 +260,27 @@ function TownhallDetailContent() {
       const data = await res.json();
       if (data.success) {
         setFeedbackContent('');
+        setFeedbackStatus({
+          type: 'success',
+          message:
+            language === 'mr'
+              ? 'तुमचा अभिप्राय यशस्वीरीत्या नोंदवला गेला!'
+              : language === 'hi'
+              ? 'आपका सुझाव सफलतापूर्वक दर्ज किया गया!'
+              : 'Your input was posted to the deliberation feed successfully!',
+        });
         fetchTopicDetail();
       } else {
-        alert(data.error || 'Failed to submit feedback');
+        setFeedbackStatus({
+          type: 'error',
+          message: data.error || data.message || 'Failed to submit feedback',
+        });
       }
     } catch {
-      alert('Network error while posting feedback');
+      setFeedbackStatus({
+        type: 'error',
+        message: 'Network error while posting feedback. Please check connection.',
+      });
     } finally {
       setSubmittingFeedback(false);
     }
@@ -185,7 +288,22 @@ function TownhallDetailContent() {
 
   const handleOfficialResponse = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!responseText.trim()) return;
+    setOfficialResponseStatus(null);
+    const trimmed = responseText.trim();
+    if (!trimmed) return;
+
+    if (trimmed.length < 10) {
+      setOfficialResponseStatus({
+        type: 'error',
+        message:
+          language === 'mr'
+            ? 'अधिकृत उत्तर किमान १० अक्षरांचे असावे.'
+            : language === 'hi'
+            ? 'आधिकारिक उत्तर कम से कम १० अक्षरों का होना चाहिए।'
+            : 'Official response must be at least 10 characters.',
+      });
+      return;
+    }
 
     setSubmittingResponse(true);
     try {
@@ -197,18 +315,33 @@ function TownhallDetailContent() {
             Authorization: `Bearer ${token}`,
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ responseText }),
+          body: JSON.stringify({ responseText: trimmed }),
         }
       );
       const data = await res.json();
       if (data.success) {
         setResponseText('');
+        setOfficialResponseStatus({
+          type: 'success',
+          message:
+            language === 'mr'
+              ? 'अधिकृत उत्तर यशस्वीरीत्या प्रसिद्ध केले गेले!'
+              : language === 'hi'
+              ? 'आधिकारिक उत्तर सफलतापूर्वक प्रकाशित किया गया!'
+              : 'Official response published successfully!',
+        });
         fetchTopicDetail();
       } else {
-        alert(data.message || 'Failed to post official response');
+        setOfficialResponseStatus({
+          type: 'error',
+          message: data.message || data.error || 'Failed to post official response',
+        });
       }
     } catch {
-      alert('Network error');
+      setOfficialResponseStatus({
+        type: 'error',
+        message: 'Network error while publishing response',
+      });
     } finally {
       setSubmittingResponse(false);
     }
@@ -311,6 +444,31 @@ function TownhallDetailContent() {
                 ? 'कार्यालयीन / ग्राम पंचायत आधिकारिक रुख दर्ज करें'
                 : 'Post Official Department / Gram Panchayat Position'}
             </h4>
+            {officialResponseStatus && (
+              <div
+                className={`p-3 rounded-xl mb-3 flex items-start justify-between gap-2 text-xs font-semibold ${
+                  officialResponseStatus.type === 'success'
+                    ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                    : 'bg-rose-50 text-rose-800 border border-rose-200'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  {officialResponseStatus.type === 'success' ? (
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  ) : (
+                    <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                  )}
+                  <span>{officialResponseStatus.message}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setOfficialResponseStatus(null)}
+                  className="text-gray-400 hover:text-gray-600 p-0.5"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
             <textarea
               required
               rows={2}
@@ -328,7 +486,7 @@ function TownhallDetailContent() {
             <button
               type="submit"
               disabled={submittingResponse}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold"
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold cursor-pointer disabled:opacity-50"
             >
               {submittingResponse
                 ? language === 'mr' ? 'नोंदवत आहे...' : language === 'hi' ? 'दर्ज हो रहा है...' : 'Posting...'
@@ -356,6 +514,32 @@ function TownhallDetailContent() {
               {topic.clauses.length} {language === 'mr' ? 'कलमे' : language === 'hi' ? 'खंड' : 'clauses'}
             </span>
           </div>
+
+          {voteNotice && (
+            <div
+              className={`p-3 rounded-2xl mb-4 flex items-center justify-between gap-2 text-xs font-semibold ${
+                voteNotice.type === 'success'
+                  ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                  : 'bg-rose-50 text-rose-800 border border-rose-200'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                {voteNotice.type === 'success' ? (
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                ) : (
+                  <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                )}
+                <span>{voteNotice.message}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setVoteNotice(null)}
+                className="text-gray-400 hover:text-gray-600 p-0.5"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
 
           <div className="space-y-4">
             {topic.clauses.map((clause, idx) => {
@@ -454,7 +638,7 @@ function TownhallDetailContent() {
                 key={t}
                 type="button"
                 onClick={() => setFeedbackType(t)}
-                className={`px-3 py-1 rounded-full text-xs font-bold capitalize transition ${
+                className={`px-3 py-1 rounded-full text-xs font-bold capitalize transition cursor-pointer ${
                   feedbackType === t
                     ? t === 'amendment'
                       ? 'bg-indigo-600 text-white'
@@ -472,6 +656,32 @@ function TownhallDetailContent() {
               </button>
             ))}
           </div>
+
+          {feedbackStatus && (
+            <div
+              className={`p-3 rounded-2xl mb-3 flex items-start justify-between gap-2 text-xs font-semibold ${
+                feedbackStatus.type === 'success'
+                  ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                  : 'bg-rose-50 text-rose-800 border border-rose-200'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                {feedbackStatus.type === 'success' ? (
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                ) : (
+                  <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                )}
+                <span>{feedbackStatus.message}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setFeedbackStatus(null)}
+                className="text-gray-400 hover:text-gray-600 p-0.5 cursor-pointer"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
 
           <textarea
             required
@@ -491,14 +701,33 @@ function TownhallDetailContent() {
             }
             value={feedbackContent}
             onChange={(e) => setFeedbackContent(e.target.value)}
-            className="w-full text-xs p-3 rounded-2xl border border-gray-300 focus:ring-2 focus:ring-indigo-500 mb-3"
+            className="w-full text-xs p-3 rounded-2xl border border-gray-300 focus:ring-2 focus:ring-indigo-500 mb-2"
           />
+
+          <div className="flex items-center justify-between mb-3 text-[11px] text-gray-500">
+            <span>
+              {language === 'mr'
+                ? 'किमान ३ अक्षरे आवश्यक'
+                : language === 'hi'
+                ? 'कम से कम ३ अक्षर आवश्यक'
+                : 'Minimum 3 characters required'}
+            </span>
+            <span
+              className={
+                feedbackContent.length > 0 && feedbackContent.trim().length < 3
+                  ? 'text-amber-600 font-bold'
+                  : 'text-gray-400'
+              }
+            >
+              {feedbackContent.length}/1000
+            </span>
+          </div>
 
           <div className="flex justify-end">
             <button
               type="submit"
               disabled={submittingFeedback}
-              className="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition disabled:opacity-50"
+              className="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition disabled:opacity-50 cursor-pointer"
             >
               <Send className="w-3.5 h-3.5" />
               <span>

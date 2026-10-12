@@ -167,7 +167,7 @@ export class SessionService {
   /**
    * Generate 15-minute access token JWT
    */
-  public static generateAccessToken(user: IUser): string {
+  public static generateAccessToken(user: IUser, isPublicComputer?: boolean): string {
     return jwt.sign(
       {
         userId: user._id.toString(),

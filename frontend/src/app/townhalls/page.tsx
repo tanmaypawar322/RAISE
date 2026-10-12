@@ -12,6 +12,8 @@ import {
   MessageSquare,
   Building2,
   CheckCircle2,
+  AlertCircle,
+  X,
   Plus,
   Filter,
   Sparkles,
@@ -54,6 +56,7 @@ export default function TownhallsFeedPage() {
   const [summary, setSummary] = useState('');
   const [clausesText, setClausesText] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchTopics();
@@ -83,7 +86,8 @@ export default function TownhallsFeedPage() {
 
   const handleCreateTopic = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title || !summary || !villageOrWard) return;
+    setCreateError(null);
+    if (!title.trim() || !summary.trim() || !villageOrWard.trim()) return;
 
     setSubmitting(true);
     try {
@@ -115,6 +119,7 @@ export default function TownhallsFeedPage() {
       );
       const data = await res.json();
       if (data.success) {
+        setCreateError(null);
         setShowCreateModal(false);
         setTitle('');
         setSummary('');
@@ -122,10 +127,10 @@ export default function TownhallsFeedPage() {
         setClausesText('');
         fetchTopics();
       } else {
-        alert(data.error || 'Failed to publish townhall topic');
+        setCreateError(data.error || data.message || 'Failed to publish townhall topic');
       }
     } catch {
-      alert('Network error while publishing topic');
+      setCreateError('Network error while publishing topic');
     } finally {
       setSubmitting(false);
     }
@@ -349,6 +354,21 @@ export default function TownhallsFeedPage() {
             </p>
 
             <form onSubmit={handleCreateTopic} className="space-y-4">
+              {createError && (
+                <div className="p-3 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-semibold flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                    <span>{createError}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setCreateError(null)}
+                    className="text-gray-400 hover:text-gray-600 p-0.5 cursor-pointer"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )}
               <div>
                 <label className="block text-xs font-bold text-gray-700 mb-1">
                   {language === 'mr' ? 'विषय शीर्षक' : language === 'hi' ? 'विषय शीर्षक' : 'Title'}

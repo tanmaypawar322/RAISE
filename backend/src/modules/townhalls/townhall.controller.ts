@@ -23,7 +23,7 @@ const CreateTopicSchema = z.object({
 
 const AddFeedbackSchema = z.object({
   type: z.enum(['support', 'concern', 'amendment']),
-  content: z.string().min(10).max(1000),
+  content: z.string().min(3, 'Feedback must be at least 3 characters').max(1000, 'Feedback cannot exceed 1000 characters'),
   clauseId: z.string().optional(),
 });
 
@@ -131,7 +131,8 @@ export class TownhallController {
       const { id } = req.params;
       const parsed = AddFeedbackSchema.safeParse(req.body);
       if (!parsed.success) {
-        res.status(400).json({ success: false, error: 'Validation failed', details: parsed.error.flatten() });
+        const errorMsg = parsed.error.issues[0]?.message || 'Validation failed';
+        res.status(400).json({ success: false, error: errorMsg, message: errorMsg, details: parsed.error.flatten() });
         return;
       }
 

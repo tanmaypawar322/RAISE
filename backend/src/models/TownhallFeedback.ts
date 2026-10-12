@@ -42,7 +42,7 @@ const TownhallFeedbackSchema = new Schema<ITownhallFeedback>(
       type: String,
       required: true,
       trim: true,
-      minlength: 10,
+      minlength: 3,
       maxlength: 1000,
     },
     upvotes: {

@@ -245,6 +245,16 @@ export default function HomePage() {
   // Admin escalation copy state
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
+  // In-app citizen action notification state
+  const [citizenActionNotice, setCitizenActionNotice] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (citizenActionNotice) {
+      const timer = setTimeout(() => setCitizenActionNotice(null), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [citizenActionNotice]);
+
   // Automatically switch tab when an official or admin logs in
   useEffect(() => {
     if (user?.role === 'official') {
@@ -696,6 +706,21 @@ export default function HomePage() {
               </div>
             ) : (
               <div className="space-y-6">
+                {citizenActionNotice && (
+                  <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold flex items-center justify-between gap-2 shadow-xs">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                      <span>{citizenActionNotice}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setCitizenActionNotice(null)}
+                      className="text-emerald-500 hover:text-emerald-700 p-0.5 cursor-pointer"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                )}
                 <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div>
                     <h2 className="text-lg font-black text-gray-900">{t('myIssuesAndBackedTitle')}</h2>
@@ -746,14 +771,30 @@ export default function HomePage() {
                     {issue.status === 'resolved' ? (
                       <div className="flex items-center gap-2">
                         <button
-                          onClick={() => alert(language === 'mr' ? 'निवारण मान्य केले धन्यवाद!' : language === 'hi' ? 'समाधान स्वीकृत किया गया, धन्यवाद!' : 'Resolution confirmed, thank you!')}
-                          className="px-3 py-1 bg-emerald-600 text-white rounded-lg font-bold text-xs"
+                          onClick={() =>
+                            setCitizenActionNotice(
+                              language === 'mr'
+                                ? 'निवारण मान्य केले धन्यवाद!'
+                                : language === 'hi'
+                                ? 'समाधान स्वीकृत किया गया, धन्यवाद!'
+                                : 'Resolution confirmed, thank you!'
+                            )
+                          }
+                          className="px-3 py-1 bg-emerald-600 text-white rounded-lg font-bold text-xs cursor-pointer hover:bg-emerald-700 transition"
                         >
                           {t('confirmResolution')}
                         </button>
                         <button
-                          onClick={() => alert(language === 'mr' ? 'आक्षेप नोंदवला गेला आहे. कार्यालयीन पथक पुन्हा तपासणी करेल.' : language === 'hi' ? 'आपत्ति दर्ज की गई। कार्यालयीन दल पुनः जांच करेगा।' : 'Dispute registered. Official team will re-inspect.')}
-                          className="px-3 py-1 bg-red-50 text-red-700 border border-red-200 rounded-lg font-bold text-xs"
+                          onClick={() =>
+                            setCitizenActionNotice(
+                              language === 'mr'
+                                ? 'आक्षेप नोंदवला गेला आहे. कार्यालयीन पथक पुन्हा तपासणी करेल.'
+                                : language === 'hi'
+                                ? 'आपत्ति दर्ज की गई। कार्यालयीन दल पुनः जांच करेगा।'
+                                : 'Dispute registered. Official team will re-inspect.'
+                            )
+                          }
+                          className="px-3 py-1 bg-red-50 text-red-700 border border-red-200 rounded-lg font-bold text-xs cursor-pointer hover:bg-red-100 transition"
                         >
                           {t('disputeResolution')}
                         </button>
