@@ -217,15 +217,21 @@ export default function TownhallsFeedPage() {
         </div>
 
         <div className="flex items-center gap-2 self-end sm:self-auto text-xs font-semibold text-gray-600">
-          <span>{language === 'mr' ? 'भाग:' : 'Region:'}</span>
+          <span>{language === 'mr' ? 'भाग:' : language === 'hi' ? 'क्षेत्र:' : 'Region:'}</span>
           <select
             value={settlementFilter}
             onChange={(e) => setSettlementFilter(e.target.value)}
             className="p-1.5 rounded-lg border border-gray-200 bg-white text-xs font-medium"
           >
-            <option value="all">All India (Rural & Urban)</option>
-            <option value="rural_panchayat">Gram Panchayat (Rural)</option>
-            <option value="urban_municipal">Urban Ward (Municipal)</option>
+            <option value="all">
+              {language === 'mr' ? 'अखिल भारत (सर्व)' : language === 'hi' ? 'अखिल भारत (सभी)' : 'All India (Rural & Urban)'}
+            </option>
+            <option value="rural_panchayat">
+              {language === 'mr' ? 'ग्रामपंचायत (ग्रामीण)' : language === 'hi' ? 'ग्राम पंचायत (ग्रामीण)' : 'Gram Panchayat (Rural)'}
+            </option>
+            <option value="urban_municipal">
+              {language === 'mr' ? 'नागरी प्रभाग (म.न.पा.)' : language === 'hi' ? 'शहरी वार्ड (नगर पालिका)' : 'Urban Ward (Municipal)'}
+            </option>
           </select>
         </div>
       </div>
@@ -234,17 +240,21 @@ export default function TownhallsFeedPage() {
       {loading ? (
         <div className="p-16 text-center text-gray-500 bg-white rounded-2xl border border-gray-200">
           <Vote className="w-8 h-8 animate-spin mx-auto mb-2 text-blue-600" />
-          <p className="text-sm">Loading deliberations...</p>
+          <p className="text-sm">
+            {language === 'mr' ? 'चर्चा व अजेंडा लोड होत आहेत...' : language === 'hi' ? 'विमर्श एवं कार्यसूची लोड हो रहे हैं...' : 'Loading deliberations...'}
+          </p>
         </div>
       ) : topics.length === 0 ? (
         <div className="p-16 text-center bg-white rounded-3xl border border-gray-200">
           <Users2 className="w-12 h-12 text-gray-400 mx-auto mb-3" />
           <h3 className="text-lg font-bold text-gray-900">
-            {language === 'mr' ? 'कोणतीही चर्चा उपलब्ध नाही' : 'No deliberations active in this category'}
+            {language === 'mr' ? 'कोणतीही चर्चा उपलब्ध नाही' : language === 'hi' ? 'इस श्रेणी में कोई विमर्श सक्रिय नहीं है' : 'No deliberations active in this category'}
           </h3>
           <p className="text-sm text-gray-500 mt-1 max-w-md mx-auto">
             {language === 'mr'
               ? 'आपल्या गावासाठी किंवा प्रभागासाठी पहिली डिजिटल ग्रामसभा किंवा लोकचर्चा सुरू करा.'
+              : language === 'hi'
+              ? 'अपने गाँव या वार्ड के लिए पहली डिजिटल ग्राम सभा अथवा नागरिक नीति विमर्श शुरू करें।'
               : 'Be the first to publish a Gram Sabha agenda or civic deliberation topic for your region.'}
           </p>
         </div>
@@ -263,8 +273,8 @@ export default function TownhallsFeedPage() {
                   <span className="text-xs font-semibold text-gray-500">
                     📍 {tItem.villageOrWard} (
                     {tItem.settlementType === 'rural_panchayat'
-                      ? language === 'mr' ? 'ग्रामपंचायत' : 'Gram Panchayat'
-                      : language === 'mr' ? 'प्रभाग' : 'Ward'}
+                      ? language === 'mr' ? 'ग्रामपंचायत' : language === 'hi' ? 'ग्राम पंचायत' : 'Gram Panchayat'
+                      : language === 'mr' ? 'प्रभाग' : language === 'hi' ? 'वार्ड' : 'Ward'}
                     )
                   </span>
                 </div>
@@ -285,7 +295,7 @@ export default function TownhallsFeedPage() {
                     </span>
                     <span className="text-slate-500">
                       {tItem.clauses.reduce((acc, c) => acc + (c.voteUp || 0) + (c.voteDown || 0), 0)}{' '}
-                      {language === 'mr' ? 'नागरिक मते' : 'citizen votes'}
+                      {language === 'mr' ? 'नागरिक मते' : language === 'hi' ? 'नागरिक मत' : 'citizen votes'}
                     </span>
                   </div>
                 )}
@@ -296,6 +306,8 @@ export default function TownhallsFeedPage() {
                     <span className="font-semibold">
                       {language === 'mr'
                         ? 'शासनाकडून अधिकृत उत्तर प्राप्त ✓'
+                        : language === 'hi'
+                        ? 'शासन/पंचायत से आधिकारिक उत्तर दर्ज ✓'
                         : 'Official Government / Panchayat Response Recorded ✓'}
                     </span>
                   </div>
@@ -326,19 +338,31 @@ export default function TownhallsFeedPage() {
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-xl w-full p-6 sm:p-8 shadow-2xl relative max-h-[90vh] overflow-y-auto">
             <h3 className="text-xl font-bold text-gray-900 mb-1">
-              {language === 'mr' ? 'नवीन डिजिटल ग्रामसभा / लोकचर्चा सुरू करा' : 'Propose Townhall Deliberation Topic'}
+              {language === 'mr' ? 'नवीन डिजिटल ग्रामसभा / लोकचर्चा सुरू करा' : language === 'hi' ? 'नई डिजिटल ग्राम सभा / नीति विमर्श शुरू करें' : 'Propose Townhall Deliberation Topic'}
             </h3>
             <p className="text-xs text-gray-500 mb-5">
-              Draft topics for collective citizen voting, ward budget priorities, or Gram Sabha agendas.
+              {language === 'mr'
+                ? 'गावातील किंवा प्रभागातील विकासाच्या मुद्द्यांवर सामूहिक मतदान, अंदाजपत्रक व धोरणांचा मसुदा मांडा.'
+                : language === 'hi'
+                ? 'गाँव अथवा वार्ड के विकास मुद्दों पर सामूहिक मतदान, बजट और नीतियों का प्रारूप प्रस्तुत करें।'
+                : 'Draft topics for collective citizen voting, ward budget priorities, or Gram Sabha agendas.'}
             </p>
 
             <form onSubmit={handleCreateTopic} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1">Title</label>
+                <label className="block text-xs font-bold text-gray-700 mb-1">
+                  {language === 'mr' ? 'विषय शीर्षक' : language === 'hi' ? 'विषय शीर्षक' : 'Title'}
+                </label>
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Village Drinking Water Tank Proposal / Ward 12 Sanitation Plan"
+                  placeholder={
+                    language === 'mr'
+                      ? 'उदा. पाणी साठवण विहीर प्रस्ताव / प्रभाग १२ स्वच्छता कृती आराखडा'
+                      : language === 'hi'
+                      ? 'उदा. पेयजल टंकी प्रस्ताव / वार्ड १२ स्वच्छता कार्य योजना'
+                      : 'e.g. Village Drinking Water Tank Proposal / Ward 12 Sanitation Plan'
+                  }
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   className="w-full text-xs p-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500"
@@ -347,40 +371,62 @@ export default function TownhallsFeedPage() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Topic Type</label>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">
+                    {language === 'mr' ? 'विषयाचा प्रकार' : language === 'hi' ? 'विषय का प्रकार' : 'Topic Type'}
+                  </label>
                   <select
                     value={type}
                     onChange={(e) => setType(e.target.value)}
                     className="w-full text-xs p-2.5 rounded-xl border border-gray-300"
                   >
-                    <option value="gram_sabha_agenda">Gram Sabha Agenda</option>
-                    <option value="ward_budget">Ward Budget</option>
-                    <option value="government_policy">Government Policy</option>
-                    <option value="community_topic">Community Topic</option>
+                    <option value="gram_sabha_agenda">
+                      {language === 'mr' ? 'ग्रामसभा विषयपत्रिका' : language === 'hi' ? 'ग्राम सभा कार्यसूची' : 'Gram Sabha Agenda'}
+                    </option>
+                    <option value="ward_budget">
+                      {language === 'mr' ? 'प्रभाग अंदाजपत्रक' : language === 'hi' ? 'वार्ड बजट' : 'Ward Budget'}
+                    </option>
+                    <option value="government_policy">
+                      {language === 'mr' ? 'शासकीय धोरण मसुदा' : language === 'hi' ? 'सरकारी नीति प्रारूप' : 'Government Policy'}
+                    </option>
+                    <option value="community_topic">
+                      {language === 'mr' ? 'नागरिक लोकचर्चा' : language === 'hi' ? 'नागरिक लोकचर्चा' : 'Community Topic'}
+                    </option>
                   </select>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Settlement Track</label>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">
+                    {language === 'mr' ? 'प्रशासकीय स्तर' : language === 'hi' ? 'प्रशासनिक स्तर' : 'Settlement Track'}
+                  </label>
                   <select
                     value={settlementType}
                     onChange={(e) => setSettlementType(e.target.value as any)}
                     className="w-full text-xs p-2.5 rounded-xl border border-gray-300"
                   >
-                    <option value="rural_panchayat">Gram Panchayat (Rural)</option>
-                    <option value="urban_municipal">Urban Ward (Municipal)</option>
+                    <option value="rural_panchayat">
+                      {language === 'mr' ? 'ग्रामपंचायत (ग्रामीण)' : language === 'hi' ? 'ग्राम पंचायत (ग्रामीण)' : 'Gram Panchayat (Rural)'}
+                    </option>
+                    <option value="urban_municipal">
+                      {language === 'mr' ? 'नागरी प्रभाग (म.न.पा.)' : language === 'hi' ? 'शहरी वार्ड (नगर पालिका)' : 'Urban Ward (Municipal)'}
+                    </option>
                   </select>
                 </div>
               </div>
 
               <div>
                 <label className="block text-xs font-bold text-gray-700 mb-1">
-                  {language === 'mr' ? 'गाव / वाडी किंवा प्रभाग' : 'Village / Gram Panchayat / Ward Name'}
+                  {language === 'mr' ? 'गाव / वाडी किंवा प्रभाग' : language === 'hi' ? 'गाँव / ग्राम पंचायत अथवा वार्ड' : 'Village / Gram Panchayat / Ward Name'}
                 </label>
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Nigdi / Pimprigaon / Mauje Shelpimpalgaon"
+                  placeholder={
+                    language === 'mr'
+                      ? 'उदा. निगडी / पिंपरी गाव / मौजे शेळपिंपळगाव'
+                      : language === 'hi'
+                      ? 'उदा. निगडी / पिंपरी गाँव / मौजे शेलपिंपलगाँव'
+                      : 'e.g. Nigdi / Pimprigaon / Mauje Shelpimpalgaon'
+                  }
                   value={villageOrWard}
                   onChange={(e) => setVillageOrWard(e.target.value)}
                   className="w-full text-xs p-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500"
@@ -388,11 +434,19 @@ export default function TownhallsFeedPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1">Summary & Background</label>
+                <label className="block text-xs font-bold text-gray-700 mb-1">
+                  {language === 'mr' ? 'पार्श्वभूमी व सविस्तर सारांश' : language === 'hi' ? 'पृष्ठभूमि एवं विस्तृत सारांश' : 'Summary & Background'}
+                </label>
                 <textarea
                   required
                   rows={3}
-                  placeholder="Context, problem statement, and purpose of this deliberation..."
+                  placeholder={
+                    language === 'mr'
+                      ? 'समस्येचा संदर्भ, नागरिकांना होणारा त्रास आणि या विमर्शचा हेतू...'
+                      : language === 'hi'
+                      ? 'समस्या का संदर्भ, नागरिकों पर प्रभाव और इस विमर्श का उद्देश्य...'
+                      : 'Context, problem statement, and purpose of this deliberation...'
+                  }
                   value={summary}
                   onChange={(e) => setSummary(e.target.value)}
                   className="w-full text-xs p-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500"
@@ -401,11 +455,17 @@ export default function TownhallsFeedPage() {
 
               <div>
                 <label className="block text-xs font-bold text-gray-700 mb-1">
-                  {language === 'mr' ? 'कलमे (प्रत्येक ओळीवर एक कलम)' : 'Clauses (One per line for clause-by-clause voting)'}
+                  {language === 'mr' ? 'कलमे (प्रत्येक ओळीवर एक कलम)' : language === 'hi' ? 'खंड (प्रत्येक पंक्ति पर एक खंड)' : 'Clauses (One per line for clause-by-clause voting)'}
                 </label>
                 <textarea
                   rows={3}
-                  placeholder="Clause 1: 24x7 solar water pump installation&#10;Clause 2: Pipeline maintenance audit by committee&#10;Clause 3: Monthly Gram Sabha water cess report"
+                  placeholder={
+                    language === 'mr'
+                      ? 'कलम १: सौर ऊर्जेवर चालणारा २४ तास पाणी पंप बसवणे\nकलम २: समितीद्वारे जलवाहिनी देखभाल व ऑडिट\nकलम ३: मासिक ग्रामसभा पाणी उपकर अहवाल'
+                      : language === 'hi'
+                      ? 'खंड १: सौर ऊर्जा चालित २४ घंटे पानी पंप स्थापना\nखंड २: समिति द्वारा पाइपलाइन रखरखाव ऑडिट\nखंड ३: मासिक ग्राम सभा जल उपकर रिपोर्ट'
+                      : 'Clause 1: 24x7 solar water pump installation\nClause 2: Pipeline maintenance audit by committee\nClause 3: Monthly Gram Sabha water cess report'
+                  }
                   value={clausesText}
                   onChange={(e) => setClausesText(e.target.value)}
                   className="w-full text-xs p-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 font-mono text-[11px]"
@@ -418,14 +478,16 @@ export default function TownhallsFeedPage() {
                   onClick={() => setShowCreateModal(false)}
                   className="px-4 py-2.5 rounded-xl text-xs font-bold text-gray-600 hover:bg-gray-100"
                 >
-                  Cancel
+                  {language === 'mr' ? 'रद्द करा' : language === 'hi' ? 'रद्द करें' : 'Cancel'}
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
                   className="px-5 py-2.5 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50"
                 >
-                  {submitting ? 'Publishing...' : 'Publish Deliberation'}
+                  {submitting
+                    ? language === 'mr' ? 'प्रसिद्ध करत आहे...' : language === 'hi' ? 'प्रकाशित हो रहा है...' : 'Publishing...'
+                    : language === 'mr' ? 'विमर्श प्रसिद्ध करा' : language === 'hi' ? 'विमर्श प्रकाशित करें' : 'Publish Deliberation'}
                 </button>
               </div>
             </form>

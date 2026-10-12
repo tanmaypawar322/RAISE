@@ -249,7 +249,7 @@ function TownhallDetailContent() {
         className="inline-flex items-center gap-1.5 text-xs font-bold text-gray-500 hover:text-gray-900 mb-6 transition"
       >
         <ArrowLeft className="w-4 h-4" />
-        <span>{language === 'mr' ? 'ग्रामसभा यादीकडे परत' : 'Back to Deliberations'}</span>
+        <span>{language === 'mr' ? 'ग्रामसभा यादीकडे परत' : language === 'hi' ? 'ग्राम सभा सूची पर वापस' : 'Back to Deliberations'}</span>
       </Link>
 
       {/* Header Card */}
@@ -260,7 +260,10 @@ function TownhallDetailContent() {
           </span>
           <span className="text-xs font-semibold text-gray-500">
             📍 {topic.villageOrWard} (
-            {topic.settlementType === 'rural_panchayat' ? 'Gram Panchayat' : 'Urban Ward'})
+            {topic.settlementType === 'rural_panchayat'
+              ? language === 'mr' ? 'ग्रामपंचायत' : language === 'hi' ? 'ग्राम पंचायत' : 'Gram Panchayat'
+              : language === 'mr' ? 'नागरी प्रभाग' : language === 'hi' ? 'शहरी वार्ड' : 'Urban Ward'}
+            )
           </span>
         </div>
 
@@ -281,30 +284,43 @@ function TownhallDetailContent() {
                 <span>
                   {language === 'mr'
                     ? 'ग्रामपंचायत / प्रशासकीय विभागाचे अधिकृत उत्तर:'
+                    : language === 'hi'
+                    ? 'ग्राम पंचायत / प्रशासनिक विभाग का आधिकारिक उत्तर:'
                     : 'Official Administrative / Gram Panchayat Statement:'}
                 </span>
               </div>
               <CivicSealBadge
                 tier={topic.settlementType === 'rural_panchayat' ? 'panchayat' : 'executive'}
-                officeName={topic.officialResponse.respondedByOfficeId?.name || (topic.settlementType === 'rural_panchayat' ? 'Gram Panchayat' : 'Civic Office')}
-                designation={topic.settlementType === 'rural_panchayat' ? 'Sarpanch / Gram Sevak' : 'Ward Officer'}
+                officeName={topic.officialResponse.respondedByOfficeId?.name || (topic.settlementType === 'rural_panchayat' ? (language === 'mr' ? 'ग्रामपंचायत' : language === 'hi' ? 'ग्राम पंचायत' : 'Gram Panchayat') : (language === 'mr' ? 'प्रशासकीय कार्यालय' : language === 'hi' ? 'प्रशासनिक कार्यालय' : 'Civic Office'))}
+                designation={topic.settlementType === 'rural_panchayat' ? (language === 'mr' ? 'सरपंच / ग्रामसेवक' : language === 'hi' ? 'सरपंच / ग्राम सेवक' : 'Sarpanch / Gram Sevak') : (language === 'mr' ? 'प्रभाग अधिकारी' : language === 'hi' ? 'वार्ड अधिकारी' : 'Ward Officer')}
                 size="xs"
               />
             </div>
             <p className="text-sm leading-relaxed">{topic.officialResponse.text}</p>
             <div className="text-[11px] text-emerald-700 mt-2">
-              Recorded on {new Date(topic.officialResponse.respondedAt).toLocaleDateString()}
+              {language === 'mr' ? 'नोंद दिनांक: ' : language === 'hi' ? 'दर्ज दिनांक: ' : 'Recorded on '}
+              {new Date(topic.officialResponse.respondedAt).toLocaleDateString()}
             </div>
           </div>
         ) : isOfficial ? (
           <form onSubmit={handleOfficialResponse} className="p-5 rounded-2xl bg-blue-50 border border-blue-200">
             <h4 className="text-xs font-bold text-blue-900 mb-1">
-              Post Official Department / Gram Panchayat Position
+              {language === 'mr'
+                ? 'कार्यालयीन / ग्रामपंचायत अधिकृत भूमिका नोंदवा'
+                : language === 'hi'
+                ? 'कार्यालयीन / ग्राम पंचायत आधिकारिक रुख दर्ज करें'
+                : 'Post Official Department / Gram Panchayat Position'}
             </h4>
             <textarea
               required
               rows={2}
-              placeholder="State the official action taken, budget sanctioned, or committee review timeline..."
+              placeholder={
+                language === 'mr'
+                  ? 'कार्यालयीन कार्यवाही, मंजूर केलेला निधी किंवा पुनरावलोकन कालमर्यादा नमूद करा...'
+                  : language === 'hi'
+                  ? 'कार्यालयीन कार्यवाही, स्वीकृत बजट अथवा समीक्षा समय-सीमा का उल्लेख करें...'
+                  : 'State the official action taken, budget sanctioned, or committee review timeline...'
+              }
               value={responseText}
               onChange={(e) => setResponseText(e.target.value)}
               className="w-full text-xs p-2.5 rounded-xl border border-blue-300 bg-white mb-2"
@@ -314,7 +330,9 @@ function TownhallDetailContent() {
               disabled={submittingResponse}
               className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold"
             >
-              {submittingResponse ? 'Posting...' : 'Publish Official Position'}
+              {submittingResponse
+                ? language === 'mr' ? 'नोंदवत आहे...' : language === 'hi' ? 'दर्ज हो रहा है...' : 'Posting...'
+                : language === 'mr' ? 'अधिकृत उत्तर प्रसिद्ध करा' : language === 'hi' ? 'आधिकारिक उत्तर प्रकाशित करें' : 'Publish Official Position'}
             </button>
           </form>
         ) : null}
@@ -335,7 +353,7 @@ function TownhallDetailContent() {
               </span>
             </h2>
             <span className="text-xs text-gray-500 font-semibold">
-              {topic.clauses.length} {language === 'mr' ? 'कलमे' : 'clauses'}
+              {topic.clauses.length} {language === 'mr' ? 'कलमे' : language === 'hi' ? 'खंड' : 'clauses'}
             </span>
           </div>
 
@@ -351,12 +369,16 @@ function TownhallDetailContent() {
                 >
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
                     <span className="text-xs font-bold text-blue-700 uppercase tracking-wide">
-                      Clause {idx + 1}: {clause.title}
+                      {language === 'mr' ? 'कलम' : language === 'hi' ? 'खंड' : 'Clause'} {idx + 1}: {clause.title}
                     </span>
                     <div className="text-xs text-gray-500 flex items-center gap-2">
-                      <span className="text-emerald-700 font-semibold">{clause.voteUp || 0} Agree</span>
+                      <span className="text-emerald-700 font-semibold">
+                        {clause.voteUp || 0} {language === 'mr' ? 'मान्य' : language === 'hi' ? 'सहमति' : 'Agree'}
+                      </span>
                       <span>•</span>
-                      <span className="text-rose-700 font-semibold">{clause.voteDown || 0} Disagree</span>
+                      <span className="text-rose-700 font-semibold">
+                        {clause.voteDown || 0} {language === 'mr' ? 'अमान्य' : language === 'hi' ? 'असहमत' : 'Disagree'}
+                      </span>
                     </div>
                   </div>
 
@@ -374,8 +396,8 @@ function TownhallDetailContent() {
 
                   <div className="flex items-center justify-between pt-2 border-t border-gray-100">
                     <span className="text-[11px] text-gray-500">
-                      {totalVotes} {language === 'mr' ? 'नागरिक कौल' : 'citizen votes'} (
-                      {supportPercent}% approval)
+                      {totalVotes} {language === 'mr' ? 'नागरिक कौल' : language === 'hi' ? 'नागरिक मत' : 'citizen votes'} (
+                      {supportPercent}% {language === 'mr' ? 'संमती' : language === 'hi' ? 'स्वीकृति' : 'approval'})
                     </span>
 
                     <div className="flex items-center gap-2">
@@ -388,7 +410,7 @@ function TownhallDetailContent() {
                         }`}
                       >
                         <ThumbsUp className="w-3.5 h-3.5" />
-                        <span>{language === 'mr' ? 'मान्य' : 'Agree'}</span>
+                        <span>{language === 'mr' ? 'मान्य' : language === 'hi' ? 'सहमति' : 'Agree'}</span>
                       </button>
 
                       <button
@@ -400,7 +422,7 @@ function TownhallDetailContent() {
                         }`}
                       >
                         <ThumbsDown className="w-3.5 h-3.5" />
-                        <span>{language === 'mr' ? 'अमान्य' : 'Disagree'}</span>
+                        <span>{language === 'mr' ? 'अमान्य' : language === 'hi' ? 'असहमत' : 'Disagree'}</span>
                       </button>
                     </div>
                   </div>
@@ -443,10 +465,10 @@ function TownhallDetailContent() {
                 }`}
               >
                 {t === 'amendment'
-                  ? language === 'mr' ? 'विधायक दुरुस्ती (Amendment)' : 'Amendment'
+                  ? language === 'mr' ? 'विधायक दुरुस्ती' : language === 'hi' ? 'रचनात्मक संशोधन' : 'Amendment'
                   : t === 'concern'
-                  ? language === 'mr' ? 'चिंता / आक्षेप (Concern)' : 'Concern'
-                  : language === 'mr' ? 'समर्थन (Support)' : 'Support'}
+                  ? language === 'mr' ? 'चिंता / आक्षेप' : language === 'hi' ? 'चिंता / आपत्ति' : 'Concern'
+                  : language === 'mr' ? 'समर्थन' : language === 'hi' ? 'समर्थन' : 'Support'}
               </button>
             ))}
           </div>
@@ -456,7 +478,15 @@ function TownhallDetailContent() {
             rows={3}
             placeholder={
               feedbackType === 'amendment'
-                ? 'Propose a specific wording change or constructive alternative clause...'
+                ? language === 'mr'
+                  ? 'विशिष्ट शब्दरचना किंवा पर्यायी विधायक कलमाचा मसुदा सुचवा...'
+                  : language === 'hi'
+                  ? 'विशिष्ट शब्दावली अथवा वैकल्पिक रचनात्मक खंड का प्रारूप प्रस्तावित करें...'
+                  : 'Propose a specific wording change or constructive alternative clause...'
+                : language === 'mr'
+                ? 'या धोरणाचा समाजावर होणारा परिणाम किंवा आपला दृष्टिकोन मांडा...'
+                : language === 'hi'
+                ? 'इस नीति का जनमानस पर प्रभाव अथवा अपना दृष्टिकोण साझा करें...'
                 : 'Share your perspective on public impact...'
             }
             value={feedbackContent}
@@ -471,7 +501,11 @@ function TownhallDetailContent() {
               className="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition disabled:opacity-50"
             >
               <Send className="w-3.5 h-3.5" />
-              <span>{submittingFeedback ? 'Posting...' : 'Submit Constructive Input'}</span>
+              <span>
+                {submittingFeedback
+                  ? language === 'mr' ? 'नोंदवत आहे...' : language === 'hi' ? 'दर्ज हो रहा है...' : 'Posting...'
+                  : language === 'mr' ? 'सुधारणा नोंदवा' : language === 'hi' ? 'सुझाव दर्ज करें' : 'Submit Constructive Input'}
+              </span>
             </button>
           </div>
         </form>
@@ -479,7 +513,11 @@ function TownhallDetailContent() {
         {/* Feedback Feed */}
         {feedbackList.length === 0 ? (
           <p className="text-xs text-gray-500 text-center py-6">
-            No amendments posted yet. Propose the first constructive clause adjustment above.
+            {language === 'mr'
+              ? 'अद्याप कोणत्याही दुरुस्त्या मांडलेल्या नाहीत. पहिली विधायक दुरुस्ती सुचवा.'
+              : language === 'hi'
+              ? 'अभी तक कोई संशोधन प्रस्तावित नहीं किया गया है। पहला रचनात्मक संशोधन प्रस्तुत करें।'
+              : 'No amendments posted yet. Propose the first constructive clause adjustment above.'}
           </p>
         ) : (
           <div className="space-y-3">

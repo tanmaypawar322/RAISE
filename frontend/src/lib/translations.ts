@@ -3,7 +3,7 @@ export type Language = 'mr' | 'hi' | 'en';
 export const translations = {
   mr: {
     appTitle: 'RAISE',
-    tagline: 'Report • Amplify • Inform • Solve • Escalate',
+    tagline: 'नोंदवा • आवाज उठवा • माहिती द्या • निवारण करा • पाठपुरावा करा',
     raisePillars: 'नोंदवा • आवाज उठवा • माहिती द्या • निवारण करा • पाठपुरावा करा',
     pilotNotice: 'पिंपरी-चिंचवड आणि पुणे महानगरपालिका क्षेत्रातील अधिकृत नागरिक मंच',
     raiseIssueBtn: 'आवाज उठवा (समस्या मांडा)',
@@ -723,7 +723,7 @@ export const translations = {
 
   hi: {
     appTitle: 'RAISE',
-    tagline: 'Report • Amplify • Inform • Solve • Escalate',
+    tagline: 'दर्ज करें • आवाज बढ़ाएं • सूचित करें • समाधान पाएं • एस्केलेट करें',
     raisePillars: 'दर्ज करें • आवाज बढ़ाएं • सूचित करें • समाधान पाएं • एस्केलेट करें',
     pilotNotice: 'पिंपरी-चिंचवड और पुणे नगर निगम क्षेत्र का आधिकारिक नागरिक मंच',
     raiseIssueBtn: 'मुद्दा उठाएं (समस्या दर्ज करें)',
