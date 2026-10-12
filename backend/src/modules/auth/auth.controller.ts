@@ -11,6 +11,7 @@ import { Office } from '../../models/Office.js';
 import { OfficeClaim } from '../../models/OfficeClaim.js';
 import { OfficeInvite } from '../../models/OfficeInvite.js';
 import { PasswordResetToken } from '../../models/PasswordResetToken.js';
+import { RefreshToken } from '../../models/RefreshToken.js';
 import { RepresentativeProfile } from '../../models/RepresentativeProfile.js';
 import { Jurisdiction } from '../../models/Jurisdiction.js';
 import { OtpService } from '../../services/otp.service.js';
@@ -1149,6 +1150,38 @@ export class AuthController {
     try {
       const rawRefreshToken = req.cookies[SessionService.COOKIE_NAME];
       if (!rawRefreshToken) {
+        // Fallback: If cookie is absent (e.g. cross-port dev or strict third-party cookie restrictions),
+        // check if a bearer token was passed, and locate the user's active session in MongoDB
+        const authHeader = req.headers.authorization;
+        if (authHeader && authHeader.startsWith('Bearer ')) {
+          const token = authHeader.split(' ')[1];
+          try {
+            const decoded = jwt.verify(token, config.jwtSecret, { ignoreExpiration: true }) as any;
+            if (decoded && decoded.userId) {
+              const activeSession = await RefreshToken.findOne({
+                userId: decoded.userId,
+                isRevoked: false,
+                expiresAt: { $gt: new Date() },
+              }).sort({ createdAt: -1 });
+
+              if (activeSession) {
+                const user = await User.findById(activeSession.userId);
+                if (user && user.status !== 'suspended' && user.status !== 'deleted') {
+                  await RefreshToken.updateOne({ _id: activeSession._id }, { isRevoked: true });
+                  const newSession = await SessionService.createSession(user, activeSession.isPublicComputer, req);
+                  SessionService.setRefreshCookie(res, newSession.rawRefreshToken, newSession.maxAgeMs);
+                  res.json({
+                    success: true,
+                    token: newSession.accessToken,
+                    user: sanitizeUser(user),
+                  });
+                  return;
+                }
+              }
+            }
+          } catch {}
+        }
+
         res.status(401).json({ success: false, message: 'No active session found.' });
         return;
       }

@@ -57,7 +57,7 @@ export class SessionService {
       ipAddress: (req?.ip || req?.socket?.remoteAddress || '').replace(/^::ffff:/, ''),
     });
 
-    const accessToken = this.generateAccessToken(user);
+    const accessToken = this.generateAccessToken(user, isPublicComputer);
 
     return {
       accessToken,
@@ -137,7 +137,7 @@ export class SessionService {
       ipAddress: (req?.ip || req?.socket?.remoteAddress || '').replace(/^::ffff:/, ''),
     });
 
-    const accessToken = this.generateAccessToken(user);
+    const accessToken = this.generateAccessToken(user, tokenDoc.isPublicComputer);
 
     return {
       success: true,

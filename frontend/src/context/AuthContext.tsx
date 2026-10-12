@@ -149,13 +149,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const setSessionCookie = (sessionToken: string) => {
     if (typeof document !== 'undefined') {
       const isSecure = typeof window !== 'undefined' && window.location.protocol === 'https:';
-      document.cookie = `raise_token=${sessionToken}; path=/; max-age=604800; SameSite=Lax; ${isSecure ? 'Secure;' : ''}`;
+      const cookieOpts = `path=/; max-age=2592000; SameSite=Lax; ${isSecure ? 'Secure;' : ''}`;
+      document.cookie = `raise_token=${sessionToken}; ${cookieOpts}`;
+      document.cookie = `accessToken=${sessionToken}; ${cookieOpts}`;
     }
   };
 
   const clearSessionCookie = () => {
     if (typeof document !== 'undefined') {
       document.cookie = 'raise_token=; path=/; max-age=0; SameSite=Lax;';
+      document.cookie = 'accessToken=; path=/; max-age=0; SameSite=Lax;';
     }
   };
 
@@ -278,7 +281,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  // Silent automatic refresh timer (refresh access token every 13 minutes)
+  // Silent automatic refresh timer (refresh access token every 10 minutes) + on tab focus
   useEffect(() => {
     if (refreshTimerRef.current) {
       clearTimeout(refreshTimerRef.current);
@@ -286,15 +289,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     if (token) {
-      // 13 minutes = 13 * 60 * 1000 = 780,000 ms
+      // 10 minutes = 10 * 60 * 1000 = 600,000 ms
       refreshTimerRef.current = setTimeout(() => {
         refreshSession();
-      }, 13 * 60 * 1000);
+      }, 10 * 60 * 1000);
+    }
+
+    const handleVisibilityChange = () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible' && token) {
+        refreshSession();
+      }
+    };
+
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', handleVisibilityChange);
     }
 
     return () => {
       if (refreshTimerRef.current) {
         clearTimeout(refreshTimerRef.current);
+      }
+      if (typeof document !== 'undefined') {
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
       }
     };
   }, [token, refreshSession]);

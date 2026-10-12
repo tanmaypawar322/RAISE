@@ -1,10 +1,12 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import crypto from 'crypto';
 
 interface AuthMeResponse {
   success: boolean;
   user?: {
-    userId: string;
+    userId?: string;
+    id?: string;
     role: 'citizen' | 'official' | 'agency' | 'moderator' | 'admin';
     displayName: string;
     email?: string;
@@ -12,6 +14,41 @@ interface AuthMeResponse {
     officialOfficeId?: string;
   };
   message?: string;
+}
+
+function verifyJwtLocally(token: string, secret?: string) {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+
+    if (secret) {
+      const data = `${parts[0]}.${parts[1]}`;
+      const expectedSig = crypto.createHmac('sha256', secret).update(data).digest('base64url');
+      if (expectedSig !== parts[2]) {
+        return null;
+      }
+    }
+
+    const payload = Buffer.from(parts[1], 'base64').toString('utf-8');
+    const decoded = JSON.parse(payload);
+    if (!decoded || !decoded.exp || decoded.exp * 1000 <= Date.now()) {
+      return { expired: true };
+    }
+
+    return {
+      expired: false,
+      user: {
+        userId: decoded.userId || decoded.id,
+        role: (decoded.role || 'citizen') as 'citizen' | 'official' | 'agency' | 'moderator' | 'admin',
+        displayName: decoded.displayName || 'User',
+        email: decoded.email,
+        status: (decoded.status || 'active') as 'active' | 'pending' | 'suspended',
+        officialOfficeId: decoded.officialOfficeId,
+      },
+    };
+  } catch {
+    return null;
+  }
 }
 
 // Routes exempted from authentication gate
@@ -104,71 +141,99 @@ export async function proxy(request: NextRequest) {
   let validatedUser: AuthMeResponse['user'] | null = null;
   let isTokenStale = false;
 
+  let refreshedToken: string | null = null;
+
   if (token) {
-    const apiUrl =
-      process.env.INTERNAL_API_URL ||
-      process.env.NEXT_PUBLIC_API_URL ||
-      'http://127.0.0.1:5000/api';
+    const secret = process.env.JWT_SECRET || 'raise_super_secret_jwt_key_2026_dev_mode';
+    const local = verifyJwtLocally(token, secret);
 
-    try {
-      const verifyRes = await fetch(`${apiUrl}/auth/me`, {
-        method: 'GET',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Accept: 'application/json',
-        },
-        signal: AbortSignal.timeout(5000),
-      });
+    if (local?.expired) {
+      // Token expired, attempt silent background rotation with backend
+      const apiUrl =
+        process.env.INTERNAL_API_URL ||
+        process.env.NEXT_PUBLIC_API_URL ||
+        'http://127.0.0.1:5000/api';
 
-      if (verifyRes.ok) {
-        const data: AuthMeResponse = await verifyRes.json();
-        if (data.success && data.user) {
-          validatedUser = data.user;
-        } else {
-          isTokenStale = true;
-        }
-      } else if (verifyRes.status === 401) {
-        isTokenStale = true;
-      } else {
-        // Non-401 failure (server 500, gateway timeout, etc.) - attempt safe JWT fallback
-        try {
-          const parts = token.split('.');
-          if (parts.length === 3) {
-            const payload = Buffer.from(parts[1], 'base64').toString('utf-8');
-            const decoded = JSON.parse(payload);
-            if (decoded && decoded.exp && decoded.exp * 1000 > Date.now()) {
-              validatedUser = {
-                userId: decoded.userId || decoded.id,
-                role: decoded.role || 'citizen',
-                displayName: decoded.displayName || 'User',
-                status: decoded.status || 'active',
-              };
-            }
-          }
-        } catch {}
-      }
-    } catch {
-      // Backend unreachable or network delay during dev/test
-      // Fallback: decode JWT safely using Buffer to inspect basic token structure
       try {
-        const parts = token.split('.');
-        if (parts.length === 3) {
-          const payload = Buffer.from(parts[1], 'base64').toString('utf-8');
-          const decoded = JSON.parse(payload);
-          if (decoded && decoded.exp && decoded.exp * 1000 > Date.now()) {
+        const refreshRes = await fetch(`${apiUrl}/auth/refresh`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          signal: AbortSignal.timeout(2000),
+        });
+
+        if (refreshRes.ok) {
+          const refreshData = await refreshRes.json();
+          if (refreshData.success && refreshData.token && refreshData.user) {
+            refreshedToken = refreshData.token;
             validatedUser = {
-              userId: decoded.userId || decoded.id,
-              role: decoded.role || 'citizen',
-              displayName: decoded.displayName || 'User',
-              status: decoded.status || 'active',
+              userId: refreshData.user.userId || (refreshData.user as any).id || '',
+              role: refreshData.user.role || 'citizen',
+              displayName: refreshData.user.displayName || 'User',
+              email: refreshData.user.email,
+              status: refreshData.user.status || 'active',
+              officialOfficeId: refreshData.user.officialOfficeId,
             };
+            isTokenStale = false;
           } else {
             isTokenStale = true;
           }
+        } else {
+          isTokenStale = true;
         }
       } catch {
         isTokenStale = true;
       }
+    } else if (local?.user) {
+      validatedUser = local.user;
+
+      // Optional backend sync to verify against immediate database revocation
+      const apiUrl =
+        process.env.INTERNAL_API_URL ||
+        process.env.NEXT_PUBLIC_API_URL ||
+        'http://127.0.0.1:5000/api';
+
+      try {
+        const verifyRes = await fetch(`${apiUrl}/auth/me`, {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: 'application/json',
+          },
+          signal: AbortSignal.timeout(2000),
+        });
+
+        if (verifyRes.ok) {
+          const data: AuthMeResponse = await verifyRes.json();
+          if (data.success && data.user) {
+            validatedUser = {
+              userId: data.user.userId || (data.user as any).id || local.user.userId,
+              role: data.user.role || local.user.role,
+              displayName: data.user.displayName || local.user.displayName,
+              email: data.user.email || local.user.email,
+              status: data.user.status || local.user.status,
+              officialOfficeId: data.user.officialOfficeId || local.user.officialOfficeId,
+            };
+          }
+        } else if (verifyRes.status === 401) {
+          const errData = await verifyRes.json().catch(() => ({}));
+          // Only invalidate session if backend explicitly revoked session or suspended user
+          if (
+            errData?.message?.includes('revoked') ||
+            errData?.message?.includes('suspended') ||
+            errData?.message?.includes('deleted')
+          ) {
+            validatedUser = null;
+            isTokenStale = true;
+          }
+        }
+      } catch {
+        // Backend timeout or temporary restart: retain cryptographically valid token
+      }
+    } else {
+      isTokenStale = true;
     }
   }
 
@@ -178,6 +243,10 @@ export async function proxy(request: NextRequest) {
     if (isAuthRoute(pathname)) {
       const homePath = getRoleHome(validatedUser.role);
       const res = NextResponse.redirect(new URL(homePath, request.url));
+      if (refreshedToken) {
+        res.cookies.set('raise_token', refreshedToken, { path: '/', maxAge: 2592000, sameSite: 'lax' });
+        res.cookies.set('accessToken', refreshedToken, { path: '/', maxAge: 2592000, sameSite: 'lax' });
+      }
       if (appRequireLogin) res.headers.set('X-Robots-Tag', 'noindex, nofollow');
       return res;
     }
@@ -204,6 +273,10 @@ export async function proxy(request: NextRequest) {
     }
 
     const res = NextResponse.next();
+    if (refreshedToken) {
+      res.cookies.set('raise_token', refreshedToken, { path: '/', maxAge: 2592000, sameSite: 'lax' });
+      res.cookies.set('accessToken', refreshedToken, { path: '/', maxAge: 2592000, sameSite: 'lax' });
+    }
     if (appRequireLogin) res.headers.set('X-Robots-Tag', 'noindex, nofollow');
     return res;
   }
