@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
@@ -15,7 +16,6 @@ import {
   Plus,
   Flame,
   MapPin,
-  Sparkles,
   FileText,
   ThumbsUp,
   Settings,
@@ -27,7 +27,6 @@ import {
   Copy,
   Check,
   ShieldCheck,
-  User as UserIcon,
   LogOut,
   Search,
   X,
@@ -197,6 +196,7 @@ const pilotOfficesList = [
 ];
 
 export default function HomePage() {
+  const router = useRouter();
   const { t, language } = useLanguage();
   const {
     openAuthModal,
@@ -206,7 +206,15 @@ export default function HomePage() {
     user,
     logout,
     token,
+    isInitializing,
   } = useAuth();
+
+  // Redirect unauthenticated visitors immediately to /sign-in
+  useEffect(() => {
+    if (!isInitializing && !user) {
+      router.replace('/sign-in');
+    }
+  }, [user, isInitializing, router]);
 
   const [activeTab, setActiveTab] = useState<AppTab>('home');
   const [issues, setIssues] = useState<IssueItem[]>(initialSampleIssues);
@@ -440,6 +448,17 @@ export default function HomePage() {
     return true;
   });
 
+  if (isInitializing || !user) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-slate-950 flex flex-col items-center justify-center">
+        <div className="w-10 h-10 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mb-4" />
+        <p className="text-sm font-semibold text-gray-600 dark:text-gray-300">
+          {t('sessionInitializing') || 'Loading...'}
+        </p>
+      </div>
+    );
+  }
+
   return (
     <AppShell
       activeTab={activeTab}
@@ -453,176 +472,6 @@ export default function HomePage() {
         {/* ============================================================ */}
         {activeTab === 'home' && (
           <div>
-            {!user ? (
-              /* Signed-Out Public Civic Landing View */
-              <div className="space-y-8 pb-12">
-                {/* Hero Section */}
-                <div className="relative overflow-hidden rounded-3xl bg-linear-to-br from-slate-900 via-slate-800 to-orange-950 text-white p-8 sm:p-12 shadow-xl border border-slate-700/50">
-                  <div className="relative z-10 max-w-3xl">
-                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-500/20 text-orange-300 text-xs font-semibold border border-orange-500/30 mb-4 backdrop-blur-xs">
-                      <Sparkles className="w-3.5 h-3.5" />
-                      <span>RAISE Civic Infrastructure</span>
-                    </div>
-                    <h1 className="text-2xl sm:text-4xl lg:text-5xl font-black tracking-tight leading-tight text-white mb-4">
-                      {t('landingHeroHeading')}
-                    </h1>
-                    <p className="text-sm sm:text-base text-slate-300 font-normal leading-relaxed mb-8 max-w-2xl">
-                      {t('landingHeroSubtext')}
-                    </p>
-
-                    <div className="flex flex-wrap items-center gap-3">
-                      <Link
-                        href="/sign-in"
-                        className="px-5 py-3 rounded-xl bg-orange-600 hover:bg-orange-500 text-white text-xs sm:text-sm font-bold shadow-lg shadow-orange-600/30 transition flex items-center gap-2"
-                      >
-                        <UserIcon className="w-4 h-4" />
-                        <span>{t('signInAsCitizenBtn')}</span>
-                      </Link>
-                      <Link
-                        href="/sign-up"
-                        className="px-5 py-3 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs sm:text-sm font-bold backdrop-blur-xs border border-white/20 transition flex items-center gap-2"
-                      >
-                        <Plus className="w-4 h-4" />
-                        <span>{t('registerCitizenBtn')}</span>
-                      </Link>
-                      <Link
-                        href="/office/sign-in"
-                        className="px-5 py-3 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 text-slate-200 text-xs sm:text-sm font-semibold border border-slate-600/40 transition flex items-center gap-2"
-                      >
-                        <Briefcase className="w-4 h-4" />
-                        <span>{t('signInAsOfficialBtn')}</span>
-                      </Link>
-                    </div>
-                  </div>
-
-                  {/* Trust Strips */}
-                  <div className="mt-8 pt-6 border-t border-white/10 grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs text-slate-300">
-                    <div className="flex items-center gap-2">
-                      <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
-                      <span>{t('dpdpShieldBanner')}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Clock className="w-4 h-4 text-orange-400 shrink-0" />
-                      <span>{t('statutorySlaBanner')}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <CheckCircle2 className="w-4 h-4 text-blue-400 shrink-0" />
-                      <span>{t('publicAuditBanner')}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* 5 Pillars of RAISE */}
-                <div className="space-y-4">
-                  <div className="text-center sm:text-left">
-                    <h2 className="text-lg sm:text-xl font-black text-slate-900 dark:text-slate-100">
-                      {t('howItWorksTitle') || '5 Pillars of Accountable Governance'}
-                    </h2>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                      {t('raisePillars')}
-                    </p>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
-                    {/* Pillar 1 */}
-                    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-xs hover:border-orange-500/50 transition">
-                      <div className="w-8 h-8 rounded-lg bg-orange-100 dark:bg-orange-950/60 text-orange-600 dark:text-orange-400 font-black flex items-center justify-center text-xs mb-3">
-                        01
-                      </div>
-                      <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100 mb-1">
-                        {t('pillar1Title')}
-                      </h3>
-                      <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                        {t('pillar1Desc')}
-                      </p>
-                    </div>
-
-                    {/* Pillar 2 */}
-                    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-xs hover:border-orange-500/50 transition">
-                      <div className="w-8 h-8 rounded-lg bg-orange-100 dark:bg-orange-950/60 text-orange-600 dark:text-orange-400 font-black flex items-center justify-center text-xs mb-3">
-                        02
-                      </div>
-                      <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100 mb-1">
-                        {t('pillar2Title')}
-                      </h3>
-                      <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                        {t('pillar2Desc')}
-                      </p>
-                    </div>
-
-                    {/* Pillar 3 */}
-                    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-xs hover:border-orange-500/50 transition">
-                      <div className="w-8 h-8 rounded-lg bg-orange-100 dark:bg-orange-950/60 text-orange-600 dark:text-orange-400 font-black flex items-center justify-center text-xs mb-3">
-                        03
-                      </div>
-                      <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100 mb-1">
-                        {t('pillar3Title')}
-                      </h3>
-                      <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                        {t('pillar3Desc')}
-                      </p>
-                    </div>
-
-                    {/* Pillar 4 */}
-                    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-xs hover:border-orange-500/50 transition">
-                      <div className="w-8 h-8 rounded-lg bg-orange-100 dark:bg-orange-950/60 text-orange-600 dark:text-orange-400 font-black flex items-center justify-center text-xs mb-3">
-                        04
-                      </div>
-                      <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100 mb-1">
-                        {t('pillar4Title')}
-                      </h3>
-                      <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                        {t('pillar4Desc')}
-                      </p>
-                    </div>
-
-                    {/* Pillar 5 */}
-                    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-xs hover:border-orange-500/50 transition">
-                      <div className="w-8 h-8 rounded-lg bg-orange-100 dark:bg-orange-950/60 text-orange-600 dark:text-orange-400 font-black flex items-center justify-center text-xs mb-3">
-                        05
-                      </div>
-                      <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100 mb-1">
-                        {t('pillar5Title')}
-                      </h3>
-                      <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                        {t('pillar5Desc')}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Privacy & Democratic Governance Shield */}
-                <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-xs flex flex-col md:flex-row items-center justify-between gap-6">
-                  <div className="space-y-1 text-center md:text-left">
-                    <div className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
-                      <ShieldCheck className="w-4 h-4" />
-                      <span>{t('privacyGuaranteeTitle')}</span>
-                    </div>
-                    <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
-                      {t('dpdpNoticeHeading')}
-                    </h3>
-                    <p className="text-xs text-slate-600 dark:text-slate-400 max-w-2xl leading-relaxed">
-                      {t('privacyGuaranteeText')}
-                    </p>
-                  </div>
-                  <div className="shrink-0 flex items-center gap-3">
-                    <button
-                      onClick={() => openAuthModal()}
-                      className="px-5 py-2.5 bg-orange-600 hover:bg-orange-700 text-white rounded-xl text-xs font-bold shadow-xs transition cursor-pointer"
-                    >
-                      {t('signIn')}
-                    </button>
-                    <Link
-                      href="/how-it-works"
-                      className="px-4 py-2.5 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-bold transition"
-                    >
-                      {t('viewMethodologyBtn')}
-                    </Link>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div>
                 {/* Search Bar */}
             <div className="mb-4">
               <div className="relative">
@@ -825,8 +674,6 @@ export default function HomePage() {
               <Plus className="w-5 h-5 stroke-[3]" />
               <span>{t('raiseIssueBtn')}</span>
             </button>
-          </div>
-        )}
           </div>
         )}
 

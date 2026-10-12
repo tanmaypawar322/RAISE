@@ -332,6 +332,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (typeof window !== 'undefined') {
       localStorage.removeItem('raise_token');
       localStorage.removeItem('raise_user');
+      window.location.href = '/sign-in';
     }
   };
 
@@ -355,6 +356,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (typeof window !== 'undefined') {
       localStorage.removeItem('raise_token');
       localStorage.removeItem('raise_user');
+      window.location.href = '/sign-in';
     }
   };
 

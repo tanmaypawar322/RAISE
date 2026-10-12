@@ -63,7 +63,6 @@ const AUTH_ROUTES = [
 ];
 
 const PUBLIC_STATIC_ROUTES = [
-  '/',
   '/terms',
   '/privacy',
   '/community-guidelines',
@@ -282,6 +281,13 @@ export async function proxy(request: NextRequest) {
   }
 
   // 2. Unauthenticated Visitor Handling
+  // If unauthenticated visitor visits root '/', redirect directly to '/sign-in'
+  if (pathname === '/') {
+    const res = NextResponse.redirect(new URL('/sign-in', request.url));
+    if (appRequireLogin) res.headers.set('X-Robots-Tag', 'noindex, nofollow');
+    return res;
+  }
+
   // Allow Auth routes through
   if (isAuthRoute(pathname)) {
     const res = NextResponse.next();
